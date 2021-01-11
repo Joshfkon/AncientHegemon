@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class CivManager : MonoBehaviour
 {
@@ -17,13 +18,58 @@ public TextMeshProUGUI EventTitle;
 public TextMeshProUGUI EventDescription;
 
 public int turnloop = 0;
+[Tooltip("Test of this Function")]public Toggle Toggle_leaderpresent;
+public Toggle Toggle_leaderfighting;
 
 
 public TextMeshProUGUI CollectResources;
 
 public int EventNumber;
 
+public int unittypeval;
+
+public int unittype_val_Saved;
+
 public string yourname;
+
+public int Morale = 0; 
+
+public int LeaderSurvial;
+
+public int Dropdown_unittype_value;
+
+public void dropdownunits(int dropdown_value){
+
+    if (dropdown_value == 0)
+    {
+     unittypeval = 1;
+     unittype_val_Saved = unittypeval;
+     Debug.Log( "unit " + unittype_val_Saved);
+    }
+
+   if (dropdown_value == 1)
+    {
+     unittypeval = 2;
+     unittype_val_Saved = unittypeval;
+     Debug.Log( "Melee unit " + unittype_val_Saved);
+    }
+
+    
+     if (dropdown_value == 2)
+    {
+     unittypeval = 3;
+     unittype_val_Saved = unittypeval;
+     Debug.Log( "Archer unit " + unittype_val_Saved);
+    }
+     if (dropdown_value == 3)
+    {
+     unittypeval = 4;
+     unittype_val_Saved = unittypeval;
+     Debug.Log( "calvery unit " + unittype_val_Saved);
+    }
+
+}
+
 public void Turn() {
     
 
@@ -52,6 +98,7 @@ PlayerOneTurn();
 turnloop = turnloop + 1; 
 Debug.Log("it's player " + turnloop + "'s turn");
 
+if(turnloop == 1);
 
 }
 
@@ -148,6 +195,57 @@ void PlayerOneTurn(){
 
     GenerateEvent();
 }
+
+}
+
+void BattleMechanics(){
+
+
+//1. Check if the leader token was present for the attacker. If so, boost Morale.
+
+if (Toggle_leaderpresent.isOn)
+{
+    Morale = Morale + 3;
+    Debug.Log("leader is present");
+}
+//2. Check if the leader was fighting with the troops for the attacker. If so, boost Morale.
+
+if (Toggle_leaderfighting.isOn)
+{
+    Morale = Morale + 4;
+    Debug.Log("Leader is fighting");
+}
+
+//3. Check if the leader survided the battle. If he died (odds depending of if he was there / if he was fighting with the troops) decrease morale.
+
+if (Toggle_leaderfighting.isOn)
+{
+    LeaderSurvial = Random.Range(1, 50);
+    if(LeaderSurvial == 1)
+    {
+        Morale = Morale -6;
+    }
+}
+else if (Toggle_leaderpresent.isOn)
+{
+     LeaderSurvial = Random.Range(1, 150);
+    if(LeaderSurvial == 1)
+    {
+        Morale = Morale -6;
+    }
+}
+
+//2. Sum up the stregth of all units. Stregth being a fucntion of their base strength (a random determination from a fixed range) modified by their morale and experience.
+
+
+//2a Figure out what units are present
+
+
+
 }
 }
+
+
+
+
 
