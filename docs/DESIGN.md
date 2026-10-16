@@ -39,12 +39,12 @@ One **turn** = one season-year. Each player turn:
 2. **Harvest & upkeep**: Territories produce resources; population grows from grain surplus; armies
    consume grain along their supply route. Unsupplied armies take attrition.
 3. **Government**: Ruler ages; loyalty and legitimacy update; succession resolves if the ruler died.
-4. **Orders**: Recruit units, move armies and fleets, establish or cut trade routes, propose
-   agreements.
+4. **Orders**: Recruit units, move armies and fleets, make war or peace. (Supply and trade
+   routes follow automatically from territory control; see §11.)
 5. **Battles**: Any contested territory triggers a battle: set formation, watch it resolve.
-6. **End turn**: Pass the device (MVP hot-seat).
+6. **End turn**: AI empires take their turns (§12).
 
-Target session: **45–90 minutes** for a full game, playable in sittings. (Open question; see §13.)
+Target session: **45–90 minutes** for a full game, playable in sittings. (Open question; see §14.)
 
 ## 4. The map
 
@@ -84,10 +84,11 @@ army is how most battles end.
 
 ### Battle flow: "design the formation, watch it play out"
 
-1. **Deploy**: Each side places units on its 2 rows of the 5×5 grid (the physical battle board),
-   hidden from the opponent. Terrain tiles are shown.
-2. **Orders**: Each unit or flank gets a simple stance: *Hold*, *Advance*, *Flank*, *Skirmish*
-   (archers fall back when engaged).
+1. **Formation**: Each side picks a formation template (e.g. *Phalanx*, *Hammer and Anvil*,
+   *Skirmish Screen*, *Refused Flank*, *Wedge*) that places its units on its 2 rows of the 5×5
+   grid (the physical battle board), hidden from the opponent. Terrain tiles are shown.
+   Free-form placement with per-unit stances (*Hold*, *Advance*, *Flank*, *Skirmish*) is post-MVP.
+2. **Generals**: The commanding general's traits modify the army.
 3. **Resolve**: A deterministic, seeded simulation runs in rounds and is animated on screen
    (~20–40 seconds). Players watch; no input.
 4. **Outcome**: Casualties, routs, captured general, territory control.
@@ -106,7 +107,7 @@ Optional **auto-resolve** skips steps 1–3 using an AI-chosen formation, for mi
 ### Navy
 
 - Fleets occupy sea zones, transport armies, and fight naval battles (simplified: same formation
-  system on a sea grid, or auto-resolve only for MVP; see §13).
+  system on a sea grid, or auto-resolve only for MVP; see §14).
 - Fleets **protect or blockade sea lanes**, which is how naval power plugs into trade and supply.
 - Ships require **timber**.
 
@@ -234,35 +235,94 @@ Carthage, Macedonia, Gaul... Each has a starting government, territory, and one 
 
 ## 11. MVP scope
 
-The MVP is a **playtestable vertical slice**, not a store launch.
+The guiding split: **the player makes Risk-sized decisions; the world simulates everything else.**
+Supply, trade, events, and succession run automatically. They create pressure and consequences,
+but they are not extra menus to manage. This keeps the game readable on a phone and keeps the AI
+tractable (see §12).
 
-**In**
-- iPhone (portrait-first; iPad universal if cheap)
-- 2–4 player **hot-seat** (pass and play)
-- Full painted map (~45 territories), terrain, sea zones
-- Infantry, archers, cavalry, ships
-- Formation battles with animated resolution + auto-resolve
-- Generals with traits and renown
-- Grain supply with visible supply lines and attrition
-- Resources and basic trade routes, with chokepoints
-- Agreements: passage rights and trade pact
-- Neutral barbarians (simple scripted behavior)
-- Monarchy + Republic, rulers, succession, civil war
-- ~10 events
+### What the player does each turn
+1. **Recruit**: Place new units (reinforcements come from territory income, like Risk).
+2. **Attack / move**: Armies and fleets move between adjacent territories / sea zones.
+3. **Formation**: Pick a formation *template* for a battle, or accept the default.
+4. **Crisis decisions** (occasional): Answer prompts the simulation raises, such as backing a
+   claimant in a succession crisis or accepting/refusing a peace offer.
+
+### What happens automatically
+- **Supply**: Routes are computed every turn; out-of-supply armies take attrition. Drawn on the map.
+- **Trade**: Routes form automatically between your territories and with empires at peace with you;
+  they break when a territory or sea lane on the path is lost or blockaded.
+- **Events**: Drawn and resolved each turn.
+- **Rulers and generals**: Age, gain renown, lose loyalty; succession resolves by rule, prompting
+  the player only at real forks.
+- **Barbarians**: Spawn and raid by script.
+
+### In
+- iPhone, portrait-first
+- **1 human vs. 1–3 AI empires** (single-player first); hot-seat is a cheap extra if time allows
+- Full painted map (~40 territories), terrain, sea zones
+- Infantry, archers, cavalry; ships as **transports and sea-lane control** (naval battles
+  auto-resolve)
+- Formation battles: 4–5 formation templates, animated resolution, auto-resolve
+- Generals with 1 trait each and renown
+- Automatic grain supply with attrition, visible on the map
+- 4 resources (grain, bronze, horses, gold); automatic trade routes; chokepoints
+- Diplomacy: **war / peace only** (peace enables trade)
+- Monarchy + Republic; succession; civil war (rebels become an independent faction)
+- ~8 events
+- Barbarians (scripted)
 - Save/resume
 
-**Out (post-MVP)**
-- AI opponent for single-player (biggest post-MVP item; required for launch)
+### Out (post-MVP)
 - Online multiplayer (Game Center turn-based)
-- Tribal government, tribute/embargo, neutral trading cities
-- Bronze → Iron Age transition
+- Free-form formation editing (templates only for now)
+- Agreements beyond war/peace (passage rights, tribute, embargo)
+- Tribal government; neutral trading cities
+- Copper/tin/iron/timber split; Bronze → Iron Age transition
 - Sieges and city walls; tactical naval battles
-- Additional civilizations
+- More civilizations
 
-Note: **without a single-player AI this is a playtest build, not a product.** Most phone players
-play alone. The architecture must make adding AI straightforward (see §12).
+## 12. AI
 
-## 12. Technical architecture
+### Baseline: Risk AI
+Risk AI is well-trodden ground. The standard heuristic bots (border-strength ratios, region-bonus
+valuation, attack-odds tables) play competently with very little code. The MVP AI starts there:
+
+- **Recruit**: Reinforce threatened borders (enemy strength vs. own strength on each frontier) and
+  the staging territory for the next planned attack.
+- **Attack**: Score each possible attack by `P(win) × value(target) − risk(exposed border)`,
+  execute in order while the score stays positive. `P(win)` comes from the battle simulator itself
+  (run the deterministic sim a few times with sampled seeds), so the AI's estimate always matches
+  the real rules.
+- **Fortify**: Pull units from safe interior territories to borders.
+
+### Extensions for this game
+Because supply, trade, and succession are automatic, the AI doesn't plan them. It only needs
+them **in its scoring**:
+
+- **Target value** = territory resources + trade routes it would gain/cut + chokepoints + region
+  completion (Risk-style continent bonus).
+- **Supply penalty**: An attack that leaves the army out of supply is heavily discounted. This one
+  term is what stops the AI from overextending like a Risk bot does.
+- **Stability term**: Avoid long wars when ruler legitimacy is low or a general's loyalty is
+  falling; prefer peace when it would restore trade income.
+- **Formation choice**: Pick the template with the best simulated outcome against the visible
+  enemy composition and terrain.
+- **Crisis choices**: Simple rules (back the strongest claimant; accept peace when losing).
+
+### Personalities
+Weights per AI empire give variety cheaply: *Conqueror* (high aggression), *Merchant* (values
+trade and peace), *Turtle* (defensive, fortifies chokepoints), *Opportunist* (attacks whoever is
+in a civil war).
+
+### Difficulty
+Easy/Normal/Hard adjust **search depth and noise**, not cheating. A small reinforcement bonus at
+Hard is acceptable if the honest AI tops out.
+
+### Later
+If the heuristic AI plateaus, the deterministic engine supports Monte Carlo search (simulate
+candidate turns forward) without redesign.
+
+## 13. Technical architecture
 
 - **Platform**: iOS 17+, Swift, SwiftUI for menus/HUD, **SpriteKit** for the map and battle
   animation.
@@ -280,12 +340,12 @@ play alone. The architecture must make adding AI straightforward (see §12).
 - **Art**: the painted board, photographed/scanned at high resolution as the base map layer.
   Territory hit-areas are drawn as polygons over it.
 
-## 13. Open questions
+## 14. Open questions
 
 1. **Session length**: 45–90 min target, or a shorter (~30 min) mode for phone play?
-2. **Battle depth**: is the stance system (Hold/Advance/Flank/Skirmish) enough, or do players want
-   to give per-unit orders?
-3. **Naval battles**: same formation system on a sea grid, or auto-resolve only?
+2. **Battle depth**: are formation templates enough, or do players want to place units and give
+   per-unit orders? (MVP: templates.)
+3. **Naval battles**: auto-resolve for MVP; is a tactical sea grid ever worth it?
 4. **Civil war in multiplayer**: does the losing faction become neutral, or can another player
    back a claimant?
 5. **Victory conditions**: domination, wealth, prestige score at the end of the time track, or all
