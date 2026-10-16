@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "notes": "Draft transcription of the painted board. Grain and resource values are first-pass estimates, not the board's printed values; adjacency follows the painted borders. Items marked 'confirm' need a check against the physical board.",
+  "notes": "Transcribed from the painted board. Grain and resource values are balancing data (first-pass estimates), not the board's printed values; adjacency follows the painted borders. See docs/DESIGN.md appendix for map decisions.",
   "territories": [
     { "id": "hibernia",    "name": "Hibernia",    "terrain": "plains",    "grain": 3,  "resources": {},                              "seas": ["atlantic"] },
     { "id": "caledonia",   "name": "Caledonia",   "terrain": "hills",     "grain": 2,  "resources": {},                              "seas": ["atlantic", "north_sea"] },
@@ -15,6 +15,7 @@
     { "id": "baetica",     "name": "Baetica",     "terrain": "plains",    "grain": 5,  "resources": { "copper": 1, "gold": 1 },      "seas": ["atlantic", "western_med"] },
     { "id": "alps",        "name": "Alps",        "terrain": "mountains", "grain": 1,  "resources": { "copper": 1 },                 "seas": ["western_med"] },
     { "id": "italia",      "name": "Italia",      "terrain": "plains",    "grain": 6,  "resources": {},                              "seas": ["tyrrhenian", "ionian"] },
+    { "id": "sardinia",    "name": "Sardinia",    "terrain": "hills",     "grain": 3,  "resources": {},                              "seas": ["western_med", "tyrrhenian"] },
     { "id": "sicilia",     "name": "Sicilia",     "terrain": "plains",    "grain": 7,  "resources": {},                              "seas": ["tyrrhenian", "ionian"] },
     { "id": "macedonia",   "name": "Macedonia",   "terrain": "hills",     "grain": 3,  "resources": { "timber": 2, "gold": 1 },      "seas": ["ionian", "aegean"] },
     { "id": "greece",      "name": "Greece",      "terrain": "hills",     "grain": 2,  "resources": {},                              "seas": ["ionian", "aegean"] },
@@ -28,7 +29,7 @@
     { "id": "armenia",     "name": "Armenia",     "terrain": "hills",     "grain": 3,  "resources": { "horses": 1, "copper": 1 },    "seas": ["black_sea"] },
     { "id": "media",       "name": "Media",       "terrain": "hills",     "grain": 3,  "resources": { "horses": 2 },                 "seas": ["caspian"] },
     { "id": "persia",      "name": "Persia",      "terrain": "hills",     "grain": 4,  "resources": { "gold": 1 },                   "seas": ["persian_gulf"] },
-    { "id": "taurus",      "name": "Taurus",      "terrain": "mountains", "grain": 1,  "resources": { "copper": 1 },                 "seas": ["eastern_med"], "confirm": "Is Taurus its own territory or a mountain border between Anatolia and Armenia?" },
+    { "id": "taurus",      "name": "Taurus",      "terrain": "mountains", "grain": 1,  "resources": { "copper": 1 },                 "seas": ["eastern_med"] },
     { "id": "anatolia",    "name": "Anatolia",    "terrain": "plains",    "grain": 5,  "resources": { "copper": 1, "gold": 1 },      "seas": ["aegean", "black_sea", "eastern_med"] },
     { "id": "cyprus",      "name": "Cyprus",      "terrain": "hills",     "grain": 2,  "resources": { "copper": 3 },                 "seas": ["eastern_med"] },
     { "id": "syria",       "name": "Syria",       "terrain": "hills",     "grain": 4,  "resources": { "timber": 2 },                 "seas": ["eastern_med"] },

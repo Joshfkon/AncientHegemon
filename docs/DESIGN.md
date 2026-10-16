@@ -356,9 +356,24 @@ candidate turns forward) without redesign.
    where they conflict, decide which wins.
 7. **Territory list**: confirm the final territory set and adjacency from the painted map.
 
-## Appendix: territories on the painted map
+## Appendix: map decisions
 
-Hibernia, Caledonia, Britain, Sitones, Saxone, Suebi, Venedi, Gaul, Hispania, Pyrenees, Baetica,
-Alps, Italia, Sicilia, Macedonia, Greece, Crete, Mauretania, Numidia, Sahara, Cyrenaica, Libya,
-Dacia, Thrace, Scythe, Sarmatia, Caucasus, Dahā, Media, Armenia, Taurus, Anatolia, Cyprus, Syria,
-Mesopotamia, Persia, Petraea, Egypt, Arabia. *(Plus unnamed regions to confirm.)*
+Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is checked by
+`tools/validate_map.py`.
+
+- **40 territories**: Hibernia, Caledonia, Britain, Sitones, Saxone, Suebi, Venedi, Gaul, Hispania,
+  Pyrenees, Baetica, Alps, Italia, Sardinia, Sicilia, Macedonia, Greece, Crete, Mauretania, Numidia,
+  Sahara, Cyrenaica, Libya, Dacia, Thrace, Scythe, Sarmatia, Caucasus, Dahā, Media, Armenia, Taurus,
+  Anatolia, Cyprus, Syria, Mesopotamia, Persia, Petraea, Egypt, Arabia.
+- **Taurus is a territory**: a mountain territory holding the Cilician Gates, the pass between
+  Anatolia and Syria/Mesopotamia. Mountain territories as chokepoints are a deliberate pattern
+  (Pyrenees, Alps, Caucasus, Taurus).
+- **Gaul ↔ Hispania only through the Pyrenees** by land. The pass is a mandatory chokepoint; the
+  sea route around it remains open to fleets.
+- **Sardinia added** (covers Corsica): the unnamed islands west of Italia become one territory,
+  giving the western Mediterranean a contested island between Italia and Numidia.
+- **Unnamed regions east of Armenia** and the small islands (Balearics) are folded into
+  neighbors or left as sea.
+- **Grain and resource values are balancing data**, first-pass estimates rather than the board's
+  printed numbers. Every territory produces at least 1 grain. Tin is deliberately scarce
+  (Britain, Hispania only).
