@@ -265,7 +265,9 @@ tractable (see §12).
 - Formation battles: 4–5 formation templates, animated resolution, auto-resolve
 - Generals with 1 trait each and renown
 - Automatic grain supply with attrition, visible on the map
-- 4 resources (grain, bronze, horses, gold); automatic trade routes; chokepoints
+- 6 resources: grain, copper, tin, horses, timber, gold. Bronze is made automatically wherever
+  copper and tin meet, so the tin routes from Britain/Iberia matter. Automatic trade routes;
+  chokepoints
 - Diplomacy: **war / peace only** (peace enables trade)
 - Monarchy + Republic; succession; civil war (rebels become an independent faction)
 - ~8 events
@@ -277,7 +279,7 @@ tractable (see §12).
 - Free-form formation editing (templates only for now)
 - Agreements beyond war/peace (passage rights, tribute, embargo)
 - Tribal government; neutral trading cities
-- Copper/tin/iron/timber split; Bronze → Iron Age transition
+- Iron and the Bronze → Iron Age transition
 - Sieges and city walls; tactical naval battles
 - More civilizations
 
