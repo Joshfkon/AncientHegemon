@@ -419,3 +419,49 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     to a stockpile. What bronze buys (battle equipment bonus or unit cost) is decided in step 4.
   - Seas are all uncontested for now; fleets (blockades, transports) plug into the network later.
     Until ships exist, armies can't cross water, so islands can't be captured.
+- **Battle model (build step 4, provisional; values under `battle` in `rules.json`)**:
+  - The 5×5 board: attacker on rows 0–1, defender on rows 3–4 (columns mirrored), row 2 empty.
+    Each army splits into at most 10 single-type blocks; larger armies make heavier blocks.
+  - **Formations** (Phalanx, Hammer and Anvil, Skirmish Screen, Refused Flank, Wedge) set each
+    unit type's preferred squares and whether it advances or holds. Each army keeps a formation
+    (`setFormation`) used both attacking and defending. A holding block that is struck engages;
+    the attacker's holding blocks advance after round 1 (the attacker must attack).
+  - **Rounds**: blocks move toward the nearest enemy (cavalry 2 squares, others 1; which side
+    moves first alternates), then strike simultaneously: melee if adjacent, else archers shoot
+    (range 3; 2 in forest; half damage in melee). Cavalry get +50% on their first melee (charge).
+  - **Triangle**: infantry ×1.5 vs cavalry, archers ×1.5 vs infantry, cavalry ×1.75 vs archers;
+    the reverse matchups are ×0.75. With equal numbers, the counter wins almost always.
+  - **Terrain**: plains cavalry +25%; hills archers +25% and defender −20% damage taken;
+    mountains cavalry −25%, defender −35%, impassable squares; forest infantry +25%, archers
+    −25%, defender −10%, impassable squares; desert neutral. Attacker penalties: river −20%,
+    strait −25%, amphibious landing −30%.
+  - **Morale**: blocks lose morale with damage taken, plus extra when hit by two enemies in
+    one round; at 0 they rout. An army that has lost 60% of its strength breaks. If both
+    break in the same round, the side with more strength left wins; after 20 rounds the defender
+    holds. Damage has a ±25% per-strike swing plus a ±25% per-round "fortune" roll for each side,
+    so odds are gradual: on open ground 6 vs 6 is about even, 7 vs 6 wins about 75–95%.
+  - **Aftermath**: the loser loses 25% of its survivors in the retreat. A beaten defender falls
+    back to an adjacent friendly territory (home network first) or is destroyed; a beaten
+    attacker returns where it came from, its move spent.
+  - **Generals**: each civ starts with one (Miltiades/Tactician, Thutmose/Cavalry Commander,
+    Fabius/Cautious, Sargon/Reckless). A general moves with an army (`move … general: true`),
+    gains 1 renown per victory (+5% attack per renown, max +25%), and dies 10% of the time
+    on defeat, 3% on victory (×2 if Reckless). A general caught without an army is lost.
+  - **Bronze**: the stockpile works as equipment: up to +20% attack, scaled by
+    stockpile ÷ army size, not consumed.
+  - Every battle produces a `BattleReport` with frame-by-frame replay (block positions, units,
+    morale, strikes) for the iOS battle view. Auto-resolve is the same simulation, unwatched.
+  - **Known gap: formation balance.** On open ground with mixed armies, Phalanx beats every
+    other formation, and Skirmish Screen loses to all of them. Wedge does counter Hammer and
+    Anvil. Tune this in step 5 using AI-vs-AI formation matrices.
+- **Ships (build step 4, provisional; `ships` and `naval` in `rules.json`)**:
+  - `buildShips` at a coastal home-network territory: 4 gold each, one per point of timber
+    yield (including trade access) per turn; new ships sail next turn. Each ship's crew eats 1
+    grain from home, as do the troops aboard.
+  - Each ship carries 2 land units. `embark` (units that haven't moved; free), `moveFleet` (one
+    sea per turn, cargo travels along; blocked by enemy-held chokepoints), `land` (uses the
+    units' move; landing on an enemy army is an amphibious battle). Generals don't sail yet.
+  - Sailing into an enemy fleet triggers an auto-resolved naval battle (strength by ships; a
+    fleet that loses half its ships withdraws). Sunk ships drown cargo that no longer fits.
+    A beaten defender fleet withdraws to a neighboring open sea or is lost. Civs at peace share seas.
+  - **Blockade**: a sea with an enemy fleet and none of yours is closed to your supply and trade.

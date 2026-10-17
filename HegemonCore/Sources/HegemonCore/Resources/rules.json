@@ -2,9 +2,19 @@
   "version": 1,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
-    "infantry": { "cost": 2, "upkeep": 1 },
-    "archers": { "cost": 2, "upkeep": 1 },
-    "cavalry": { "cost": 3, "upkeep": 1, "requires": "horses" }
+    "infantry": {
+      "cost": 2,
+      "upkeep": 1
+    },
+    "archers": {
+      "cost": 2,
+      "upkeep": 1
+    },
+    "cavalry": {
+      "cost": 3,
+      "upkeep": 1,
+      "requires": "horses"
+    }
   },
   "economy": {
     "populationPerGrain": 2,
@@ -27,6 +37,330 @@
     "gold": 6,
     "granary": 6,
     "populationPercent": 50,
-    "army": { "infantry": 2, "archers": 0, "cavalry": 0 }
+    "army": {
+      "infantry": 2,
+      "archers": 0,
+      "cavalry": 0
+    },
+    "generals": {
+      "greece": {
+        "name": "Miltiades",
+        "trait": "tactician"
+      },
+      "egypt": {
+        "name": "Thutmose",
+        "trait": "cavalryCommander"
+      },
+      "italia": {
+        "name": "Fabius",
+        "trait": "cautious"
+      },
+      "mesopotamia": {
+        "name": "Sargon",
+        "trait": "reckless"
+      }
+    }
+  },
+  "ships": {
+    "cost": 4,
+    "upkeep": 1,
+    "requires": "timber",
+    "capacity": 2
+  },
+  "battle": {
+    "hpPerUnit": 60,
+    "maxBlocks": 10,
+    "maxRounds": 20,
+    "attackerHoldRounds": 1,
+    "attack": {
+      "infantry": 10,
+      "archers": 8,
+      "cavalry": 12
+    },
+    "speed": {
+      "infantry": 1,
+      "archers": 1,
+      "cavalry": 2
+    },
+    "archerRange": 3,
+    "archerMeleePercent": 50,
+    "chargeBonusPercent": 50,
+    "matchupPercent": {
+      "infantry": {
+        "infantry": 100,
+        "archers": 100,
+        "cavalry": 150
+      },
+      "archers": {
+        "infantry": 150,
+        "archers": 100,
+        "cavalry": 75
+      },
+      "cavalry": {
+        "infantry": 75,
+        "archers": 175,
+        "cavalry": 100
+      }
+    },
+    "randomSpreadPercent": 25,
+    "fortunePercent": 25,
+    "flankMoraleLoss": 10,
+    "breakPercent": 60,
+    "pursuitPercent": 25,
+    "bronzeBonusPercent": 20,
+    "crossingPenaltyPercent": {
+      "river": 20,
+      "strait": 25,
+      "amphibious": 30
+    },
+    "terrain": {
+      "plains": {
+        "unitPercent": {
+          "cavalry": 25
+        },
+        "defensePercent": 0,
+        "impassable": []
+      },
+      "hills": {
+        "unitPercent": {
+          "archers": 25
+        },
+        "defensePercent": 20,
+        "impassable": []
+      },
+      "mountains": {
+        "unitPercent": {
+          "cavalry": -25
+        },
+        "defensePercent": 35,
+        "impassable": [
+          [0, 2],
+          [1, 2],
+          [4, 2]
+        ]
+      },
+      "forest": {
+        "unitPercent": {
+          "infantry": 25,
+          "archers": -25
+        },
+        "defensePercent": 10,
+        "impassable": [
+          [1, 2],
+          [3, 2]
+        ],
+        "archerRange": 2
+      },
+      "desert": {
+        "unitPercent": {},
+        "defensePercent": 0,
+        "impassable": []
+      }
+    },
+    "fallbackSlots": [
+      [2, 0],
+      [1, 0],
+      [3, 0],
+      [0, 0],
+      [4, 0],
+      [2, 1],
+      [1, 1],
+      [3, 1],
+      [0, 1],
+      [4, 1]
+    ],
+    "formations": [
+      {
+        "id": "phalanx",
+        "name": "Phalanx",
+        "order": [
+          "infantry",
+          "archers",
+          "cavalry"
+        ],
+        "slots": {
+          "infantry": [
+            [2, 0],
+            [1, 0],
+            [3, 0],
+            [0, 0],
+            [4, 0]
+          ],
+          "archers": [
+            [2, 1],
+            [1, 1],
+            [3, 1]
+          ],
+          "cavalry": [
+            [0, 1],
+            [4, 1]
+          ]
+        },
+        "advance": {
+          "infantry": true,
+          "archers": false,
+          "cavalry": false
+        }
+      },
+      {
+        "id": "hammer_and_anvil",
+        "name": "Hammer and Anvil",
+        "order": [
+          "cavalry",
+          "infantry",
+          "archers"
+        ],
+        "slots": {
+          "cavalry": [
+            [0, 0],
+            [4, 0],
+            [0, 1],
+            [4, 1]
+          ],
+          "infantry": [
+            [2, 0],
+            [1, 0],
+            [3, 0]
+          ],
+          "archers": [
+            [2, 1],
+            [1, 1],
+            [3, 1]
+          ]
+        },
+        "advance": {
+          "infantry": false,
+          "archers": false,
+          "cavalry": true
+        }
+      },
+      {
+        "id": "skirmish_screen",
+        "name": "Skirmish Screen",
+        "order": [
+          "archers",
+          "infantry",
+          "cavalry"
+        ],
+        "slots": {
+          "archers": [
+            [1, 0],
+            [3, 0],
+            [2, 0],
+            [0, 0],
+            [4, 0]
+          ],
+          "infantry": [
+            [2, 1],
+            [1, 1],
+            [3, 1]
+          ],
+          "cavalry": [
+            [0, 1],
+            [4, 1]
+          ]
+        },
+        "advance": {
+          "infantry": false,
+          "archers": false,
+          "cavalry": true
+        }
+      },
+      {
+        "id": "refused_flank",
+        "name": "Refused Flank",
+        "order": [
+          "infantry",
+          "cavalry",
+          "archers"
+        ],
+        "slots": {
+          "infantry": [
+            [0, 0],
+            [1, 0],
+            [2, 0]
+          ],
+          "cavalry": [
+            [0, 1],
+            [1, 1]
+          ],
+          "archers": [
+            [3, 1],
+            [4, 1],
+            [2, 1]
+          ]
+        },
+        "advance": {
+          "infantry": true,
+          "archers": false,
+          "cavalry": true
+        }
+      },
+      {
+        "id": "wedge",
+        "name": "Wedge",
+        "order": [
+          "cavalry",
+          "infantry",
+          "archers"
+        ],
+        "slots": {
+          "cavalry": [
+            [2, 0],
+            [1, 0],
+            [3, 0]
+          ],
+          "infantry": [
+            [2, 1],
+            [1, 1],
+            [3, 1],
+            [0, 0],
+            [4, 0]
+          ],
+          "archers": [
+            [0, 1],
+            [4, 1]
+          ]
+        },
+        "advance": {
+          "infantry": true,
+          "archers": false,
+          "cavalry": true
+        }
+      }
+    ],
+    "defaultFormation": "phalanx"
+  },
+  "naval": {
+    "attackPerShip": 4,
+    "hpPerShip": 10,
+    "maxRounds": 10,
+    "randomSpreadPercent": 20,
+    "retreatPercent": 50
+  },
+  "generals": {
+    "traits": {
+      "tactician": {
+        "moralePercent": 20
+      },
+      "cavalryCommander": {
+        "unitPercent": {
+          "cavalry": 25
+        }
+      },
+      "cautious": {
+        "defensePercent": 15,
+        "attackPercent": -10
+      },
+      "reckless": {
+        "attackPercent": 15,
+        "deathChanceMultiplier": 2
+      }
+    },
+    "presentMorale": 10,
+    "renownAttackPercent": 5,
+    "maxRenownAttackPercent": 25,
+    "deathChanceOnDefeatPercent": 10,
+    "deathChanceOnVictoryPercent": 3
   }
 }

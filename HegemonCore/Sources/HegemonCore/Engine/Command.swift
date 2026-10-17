@@ -3,8 +3,21 @@ public enum Command: Codable, Sendable, Equatable {
     /// Recruit units in an owned territory. Costs gold and turns population into soldiers.
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
     /// Move units across a land border. Each unit moves once per turn. Entering an unowned or
-    /// undefended enemy territory captures it.
-    case move(from: TerritoryID, to: TerritoryID, units: UnitCounts)
+    /// undefended enemy territory captures it; entering an enemy army's territory is a battle.
+    /// With `general`, the general standing in `from` goes with them.
+    case move(from: TerritoryID, to: TerritoryID, units: UnitCounts, general: Bool = false)
+    /// Choose the formation an army fights in, attacking or defending.
+    case setFormation(territory: TerritoryID, formation: FormationID)
+    /// Build ships at a coastal territory in the home network, into one of its seas.
+    case buildShips(territory: TerritoryID, sea: SeaZoneID, count: Int)
+    /// Sail ships (and the cargo they carry) to an adjacent sea. Ships sail once per turn.
+    /// Sailing into an enemy fleet is a naval battle.
+    case moveFleet(from: SeaZoneID, to: SeaZoneID, ships: Int, cargo: UnitCounts = .zero)
+    /// Load units that haven't moved this turn onto the civilization's fleet in an adjacent sea.
+    case embark(territory: TerritoryID, sea: SeaZoneID, units: UnitCounts)
+    /// Land units from a fleet onto a coast. Uses their move; landing on an enemy army is an
+    /// amphibious battle.
+    case land(sea: SeaZoneID, territory: TerritoryID, units: UnitCounts)
     /// Offer peace. The other civilization accepts on its turn.
     case offerPeace(to: CivilizationID)
     /// Accept an outstanding peace offer.
@@ -28,6 +41,18 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
+    case formationSet(civ: CivilizationID, territory: TerritoryID, formation: FormationID)
+    case battle(BattleReport)
+    case navalBattle(sea: SeaZoneID, report: NavalReport)
+    case retreated(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
+    case fleetRetreated(civ: CivilizationID, from: SeaZoneID, to: SeaZoneID, ships: Int)
+    /// Units wiped out with nowhere to retreat, or lost at sea with sunk ships.
+    case destroyed(civ: CivilizationID, units: UnitCounts, ships: Int)
+    case generalKilled(GeneralID)
+    case shipsBuilt(civ: CivilizationID, sea: SeaZoneID, count: Int)
+    case fleetMoved(civ: CivilizationID, from: SeaZoneID, to: SeaZoneID, ships: Int, cargo: UnitCounts)
+    case embarked(civ: CivilizationID, territory: TerritoryID, sea: SeaZoneID, units: UnitCounts)
+    case landed(civ: CivilizationID, sea: SeaZoneID, territory: TerritoryID, units: UnitCounts)
     case eliminated(civ: CivilizationID)
     case victory(civ: CivilizationID)
     case turnStarted(civ: CivilizationID, turn: Int)
@@ -51,6 +76,17 @@ public enum GameError: Error, Equatable, Sendable {
     case resourceLimit(Resource)
     case notAdjacent(TerritoryID, TerritoryID)
     case insufficientUnits(TerritoryID)
-    /// Moving into a territory held by another civilization's army needs a battle (build step 4).
+    /// Recruiting where another civilization's army stands.
     case contested(TerritoryID)
+    case unknownFormation(FormationID)
+    case noGeneral(TerritoryID)
+    case unknownSea(SeaZoneID)
+    case notCoastal(TerritoryID, SeaZoneID)
+    case noFleet(SeaZoneID)
+    case insufficientShips(SeaZoneID)
+    case overCapacity(SeaZoneID)
+    /// The sea lane is shut by an enemy-held chokepoint.
+    case chokepointClosed(SeaZoneID, SeaZoneID)
+    /// An enemy fleet controls the sea.
+    case blockaded(SeaZoneID)
 }

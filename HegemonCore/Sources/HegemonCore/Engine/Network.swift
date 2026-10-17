@@ -2,7 +2,7 @@
 /// of civilizations owns, coastlines, and sea lanes. A sea lane gated by a chokepoint is closed to
 /// travelers when the chokepoint's holder is at war with any of them.
 ///
-/// Every sea is treated as uncontested for now; fleets will plug in here (blockades) later.
+/// A sea holding an enemy fleet, and none of the travelers' own, is blockaded and impassable.
 enum NetworkNode: Hashable {
     case land(TerritoryID)
     case sea(SeaZoneID)
@@ -47,13 +47,14 @@ extension Engine {
     private func neighbors(of node: NetworkNode, through owners: Set<CivilizationID>,
                            travelers: [CivilizationID], in state: GameState) -> [NetworkNode] {
         func passable(_ t: TerritoryID) -> Bool { state.owner(of: t).map(owners.contains) ?? false }
+        func open(_ s: SeaZoneID) -> Bool { !blockaded(s, for: travelers, in: state) }
         switch node {
         case .land(let t):
             return map.landNeighbors(of: t).filter(passable).map(NetworkNode.land)
-                + map.seas(bordering: t).map(NetworkNode.sea)
+                + map.seas(bordering: t).filter(open).map(NetworkNode.sea)
         case .sea(let s):
             return map.seaNeighbors(of: s)
-                .filter { seaLinkOpen(s, $0, for: travelers, in: state) }.map(NetworkNode.sea)
+                .filter { seaLinkOpen(s, $0, for: travelers, in: state) && open($0) }.map(NetworkNode.sea)
                 + map.coastalTerritories(of: s).filter(passable).map(NetworkNode.land)
         }
     }

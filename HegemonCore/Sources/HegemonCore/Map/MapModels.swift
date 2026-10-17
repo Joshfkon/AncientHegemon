@@ -6,7 +6,7 @@ public typealias SeaZoneID = String
 public typealias ChokepointID = String
 public typealias CivilizationID = String
 
-public enum Terrain: String, Codable, Sendable, CaseIterable {
+public enum Terrain: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {
     case plains, hills, mountains, forest, desert
 }
 

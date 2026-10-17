@@ -14,7 +14,9 @@ extension Engine {
         for (i, pocket) in pockets.enumerated() {
             let isHome = i == 0
             let production = yield(of: .grain, in: pocket)
-            let consumption = grainConsumption(of: civ, in: pocket, state)
+            // Ships' crews and the troops they carry are fed from home.
+            let atSea = isHome ? fleetUpkeep(of: civ, state) : 0
+            let consumption = grainConsumption(of: civ, in: pocket, state) + atSea
             var granary = isHome ? state.civs[civ]!.granary : 0
             var grown = 0
 
@@ -23,7 +25,7 @@ extension Engine {
                 granary = min(granary + production - consumption - grown,
                               production * rules.economy.granaryCapTurns)
             } else {
-                let available = production + granary
+                let available = production + granary - atSea
                 let lost = starve(civ, pocket, toFit: available, &state)
                 popLost += lost.population
                 unitsLost += lost.units
@@ -73,6 +75,10 @@ extension Engine {
         let population = territories.reduce(0) { $0 + state.population(of: $1) }
         let units = state.armies(of: civ).filter { set.contains($0.territory) }.reduce(.zero) { $0 + $1.units }
         return rules.grainEaten(byPopulation: population) + rules.upkeep(of: units)
+    }
+
+    func fleetUpkeep(of civ: CivilizationID, _ state: GameState) -> Int {
+        state.fleets(of: civ).reduce(0) { $0 + $1.ships * rules.ships.upkeep + rules.upkeep(of: $1.cargo) }
     }
 
     /// Gold a civilization earns from trade: its own routes net of tolls, plus tolls it collects

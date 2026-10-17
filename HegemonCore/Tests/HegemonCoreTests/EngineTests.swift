@@ -99,14 +99,6 @@ import Testing
         }
     }
 
-    @Test func enemyArmyBlocksMoveUntilBattlesExist() throws {
-        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
-        s.armies["media"] = Army(owner: "greece", units: UnitCounts(infantry: 1))
-        #expect(throws: GameError.contested("media")) {
-            try engine.apply(.move(from: "mesopotamia", to: "media", units: UnitCounts(infantry: 1)), to: &s)
-        }
-    }
-
     @Test func failedCommandLeavesStateUnchanged() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         let before = s

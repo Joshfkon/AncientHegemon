@@ -25,8 +25,18 @@ public struct Engine: Sendable {
         switch command {
         case let .recruit(territory, unit, count):
             return try recruit(territory, unit, count, &state)
-        case let .move(from, to, units):
-            return try move(from, to, units, &state)
+        case let .move(from, to, units, general):
+            return try move(from, to, units, general, &state)
+        case let .setFormation(territory, formation):
+            return try setFormation(territory, formation, &state)
+        case let .buildShips(territory, sea, count):
+            return try buildShips(territory, sea, count, &state)
+        case let .moveFleet(from, to, ships, cargo):
+            return try moveFleet(from, to, ships, cargo, &state)
+        case let .embark(territory, sea, units):
+            return try embark(territory, sea, units, &state)
+        case let .land(sea, territory, units):
+            return try land(sea, territory, units, &state)
         case let .offerPeace(to):
             return try offerPeace(to, &state)
         case let .acceptPeace(from):
@@ -76,7 +86,7 @@ public struct Engine: Sendable {
 
     // MARK: Move
 
-    private func move(_ from: TerritoryID, _ to: TerritoryID, _ units: UnitCounts,
+    private func move(_ from: TerritoryID, _ to: TerritoryID, _ units: UnitCounts, _ withGeneral: Bool,
                       _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer
         guard units.isNonNegative, !units.isEmpty else { throw GameError.invalidCount }
@@ -86,27 +96,42 @@ public struct Engine: Sendable {
         let ready = army.units - (state.moved[from] ?? .zero)
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
         guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
-        if let defender = state.armies[to], defender.owner != civ { throw GameError.contested(to) }
         if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
+        var general: General?
+        if withGeneral {
+            guard let g = state.general(of: civ, at: from), !state.generalsMoved.contains(g.id) else {
+                throw GameError.noGeneral(from)
+            }
+            general = g
+            state.generalsMoved.insert(g.id)
+        }
 
         state.armies[from]!.units -= units
         if state.armies[from]!.units.isEmpty { state.armies[from] = nil }
-        state.armies[to, default: Army(owner: civ, units: .zero)].units += units
-        state.moved[to, default: .zero] += units
-
-        var events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
-        let previous = state.land[to]!.owner
-        if previous != civ {
-            state.land[to]!.owner = civ
-            events.append(.captured(civ: civ, territory: to, from: previous))
-            if let previous { events += checkElimination(previous, &state) }
+        let approach: Approach = switch map.crossing(between: from, and: to) {
+        case .river: .river
+        case .strait: .strait
+        case nil: .overland
         }
-        return events
+        let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
+        return events + advance(civ, units, general: general, formation: army.formation, into: to,
+                                from: .territory(from), approach: approach, &state)
     }
 
-    private func checkElimination(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+    private func setFormation(_ territory: TerritoryID, _ formation: FormationID,
+                              _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard rules.battle.formation(formation) != nil else { throw GameError.unknownFormation(formation) }
+        guard let army = state.armies[territory], army.owner == civ else {
+            throw GameError.insufficientUnits(territory)
+        }
+        state.armies[territory]!.formation = formation
+        return [.formationSet(civ: civ, territory: territory, formation: formation)]
+    }
+
+    func checkElimination(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         guard !state.civs[civ]!.eliminated, state.territories(of: civ).isEmpty,
-              state.armies(of: civ).isEmpty else { return [] }
+              state.armies(of: civ).isEmpty, state.fleets(of: civ).isEmpty else { return [] }
         state.civs[civ]!.eliminated = true
         var events: [GameEvent] = [.eliminated(civ: civ)]
         let alive = state.players.filter { !state.civs[$0]!.eliminated }
@@ -121,6 +146,8 @@ public struct Engine: Sendable {
 
     private func endTurn(_ state: inout GameState) -> [GameEvent] {
         state.moved = [:]
+        state.generalsMoved = []
+        for i in state.fleets.indices { state.fleets[i].movedShips = 0 }
         state.civs[state.activePlayer]!.resourceUsedThisTurn = [:]
 
         let count = state.players.count

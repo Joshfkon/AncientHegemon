@@ -36,6 +36,25 @@ public struct PeaceOffer: Codable, Sendable, Hashable {
 public struct Army: Codable, Sendable, Equatable {
     public var owner: CivilizationID
     public var units: UnitCounts
+    /// The formation this army fights in, attacking or defending. Nil means the rules' default.
+    public var formation: FormationID?
+
+    public init(owner: CivilizationID, units: UnitCounts, formation: FormationID? = nil) {
+        self.owner = owner
+        self.units = units
+        self.formation = formation
+    }
+}
+
+/// A civilization's ships in a sea zone, with the land units they carry. Civilizations at peace
+/// can share a sea; civilizations at war fight when one sails into the other.
+public struct Fleet: Codable, Sendable, Equatable {
+    public var sea: SeaZoneID
+    public var owner: CivilizationID
+    public var ships: Int
+    /// Ships that have already sailed or been built this turn.
+    public var movedShips: Int = 0
+    public var cargo: UnitCounts = .zero
 }
 
 /// Everything that changes during a game. Fully Codable so a game can be saved, reloaded,
@@ -59,6 +78,10 @@ public struct GameState: Codable, Sendable, Equatable {
     public var armies: [TerritoryID: Army]
     /// Units that have already moved this turn, by the territory they moved into.
     public var moved: [TerritoryID: UnitCounts]
+    public var generals: [GeneralID: General]
+    public var fleets: [Fleet]
+    /// Generals who have already moved this turn.
+    public var generalsMoved: Set<GeneralID>
     /// Pairs of civilizations at peace. Everyone else is at war.
     public var peace: Set<CivPair>
     /// Outstanding peace offers, accepted by the recipient on their turn.
@@ -77,6 +100,7 @@ public struct GameState: Codable, Sendable, Equatable {
         }
         var civs: [CivilizationID: CivState] = [:]
         var armies: [TerritoryID: Army] = [:]
+        var generals: [GeneralID: General] = [:]
         for id in ids {
             guard let civ = map.civilization(id) else {
                 throw MapError.invalid("unknown civilization '\(id)'")
@@ -85,6 +109,11 @@ public struct GameState: Codable, Sendable, Equatable {
             civs[civ.id] = CivState(gold: rules.start.gold, granary: rules.start.granary)
             if !rules.start.army.isEmpty {
                 armies[civ.capital] = Army(owner: civ.id, units: rules.start.army)
+            }
+            if let g = rules.start.generals[civ.id] {
+                let gid = "\(civ.id)-1"
+                generals[gid] = General(id: gid, name: g.name, owner: civ.id, trait: g.trait,
+                                        renown: 0, location: civ.capital)
             }
         }
 
@@ -100,6 +129,9 @@ public struct GameState: Codable, Sendable, Equatable {
         self.civs = civs
         self.armies = armies
         self.moved = [:]
+        self.generals = generals
+        self.fleets = []
+        self.generalsMoved = []
         self.peace = []
         self.peaceOffers = []
     }
@@ -133,8 +165,22 @@ public struct GameState: Codable, Sendable, Equatable {
         armies.filter { $0.value.owner == civ }.map { ($0.key, $0.value.units) }.sorted { $0.0 < $1.0 }
     }
 
+    /// Units in a civilization's armies on land (not counting cargo at sea).
     public func totalUnits(of civ: CivilizationID) -> UnitCounts {
         armies(of: civ).reduce(.zero) { $0 + $1.units }
+    }
+
+    public func fleet(of civ: CivilizationID, in sea: SeaZoneID) -> Fleet? {
+        fleets.first { $0.owner == civ && $0.sea == sea }
+    }
+
+    public func fleets(of civ: CivilizationID) -> [Fleet] {
+        fleets.filter { $0.owner == civ }
+    }
+
+    /// The living general of a civilization standing in a territory, if any.
+    public func general(of civ: CivilizationID, at territory: TerritoryID) -> General? {
+        generals.values.filter { $0.owner == civ && $0.location == territory }.min { $0.id < $1.id }
     }
 
     public func totalPopulation(of civ: CivilizationID) -> Int {

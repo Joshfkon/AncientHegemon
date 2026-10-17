@@ -54,6 +54,8 @@ public struct StartRules: Codable, Sendable, Equatable {
     public let populationPercent: Int
     /// Army placed in each civilization's capital.
     public let army: UnitCounts
+    /// The general leading each civilization's starting army.
+    public let generals: [CivilizationID: StartingGeneral]
 }
 
 /// Tunable game rules, loaded from `rules.json`.
@@ -63,6 +65,10 @@ public struct Rules: Codable, Sendable, Equatable {
     public let economy: EconomyRules
     public let supply: SupplyRules
     public let trade: TradeRules
+    public let ships: ShipRules
+    public let battle: BattleRules
+    public let naval: NavalRules
+    public let generals: GeneralRules
     public let start: StartRules
 
     public static func bundled() throws -> Rules {
@@ -80,6 +86,18 @@ public struct Rules: Codable, Sendable, Equatable {
         if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1
             || trade.shareDivisor < 1 {
             throw MapError.invalid("rules.json economy divisors must be at least 1")
+        }
+        guard battle.formation(battle.defaultFormation) != nil else {
+            throw MapError.invalid("rules.json default formation '\(battle.defaultFormation)' is not defined")
+        }
+        for t in Terrain.allCases where battle.terrain[t] == nil {
+            throw MapError.invalid("rules.json has no battle rules for terrain '\(t.rawValue)'")
+        }
+        for type in UnitType.allCases {
+            guard battle.attack[type] != nil, battle.speed[type] != nil,
+                  UnitType.allCases.allSatisfy({ battle.matchupPercent[type]?[$0] != nil }) else {
+                throw MapError.invalid("rules.json battle stats incomplete for '\(type.rawValue)'")
+            }
         }
     }
 

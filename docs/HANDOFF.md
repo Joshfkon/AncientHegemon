@@ -20,8 +20,11 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     holders, sea lanes), per-pocket harvest with out-of-supply attrition, war/peace commands,
     automatic trade routes with chokepoint tolls and resource sharing, bronze stockpile.
     `hegemon-sim [seed] [turns] [--peace]`. 59 tests.
-  - **Not yet scheduled**: ships / naval movement (transports, blockades). The build order
-    doesn't place them; suggest adding them alongside naval auto-resolve in step 4.
+  - **Build step 4 complete** (Josh asked to fold ships into it): `BattleSimulator` (5×5 land
+    battles with formations, triangle, terrain, morale, generals, bronze; replay frames) and
+    naval auto-resolve; engine battles on contested moves with retreats; generals; formations;
+    ships (build, sail, embark, land, naval battles, blockades). 85 tests. Battle and ship rules,
+    plus the open formation-balance issue, are in the DESIGN.md appendix.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.
