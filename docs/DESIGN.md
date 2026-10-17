@@ -380,3 +380,19 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
 - **Starting realms (provisional)**: each civilization starts holding only its capital; every
   other territory is unowned. This is a placeholder for the engine. Starting realm size is a
   balancing question to settle with `hegemon-sim` in build step 5.
+- **Economy model (build step 2, provisional; values in `rules.json`)**:
+  - Each grain feeds 2 people; each army unit eats 1 grain. A territory's population is capped at
+    its grain yield, so a fully grown territory still has about half its grain free for armies.
+  - Territories start at half their population cap. A surplus grows population by up to +1 per
+    territory per turn (emptiest first, one grain each); what's left fills a granary holding up
+    to one turn of production.
+  - A deficit drains the granary, then people starve (from the fullest territories, never below
+    1), then army units desert (from the largest stack).
+  - Gold income = population ÷ 2 + gold yields. Recruiting costs gold and turns 1 population into
+    1 unit, so manpower, not gold, limits armies. Cavalry need horses: each point of horse yield
+    allows one cavalry recruit per turn.
+  - Grain is pooled empire-wide for now. Build step 3 limits it to territories connected by supply.
+  - Moving into an unowned or undefended territory captures it. Moving into another civ's army is
+    blocked until the battle sim (step 4). Everyone is implicitly at war until diplomacy exists.
+  - **Known gap**: gold accumulates with no sink yet. Sinks (loyalty, bribes, mercenaries) arrive
+    with step 6. Greece (2 grain) starts in deficit and must expand or import; intended for now.

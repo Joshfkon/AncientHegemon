@@ -11,6 +11,11 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
   - **Build step 1 complete**: `HegemonCore` package with typed map models, validated
     `GameMap` loading and adjacency queries, `SeededRNG` (SplitMix64), Codable `GameState`,
     a stub `hegemon-sim` CLI, and 18 passing tests (`swift test` in `HegemonCore/`).
+  - **Build step 2 complete**: `rules.json` (unit stats, economy, start), `Engine.apply` with
+    `Command`s (`recruit`, `move`, `endTurn`) returning `GameEvent`s, harvest/growth/starvation,
+    gold income, capture and elimination. `hegemon-sim [seed] [turns]` runs a placeholder
+    land-grab policy and prints a per-civ table. 38 tests. Economy decisions are in the
+    DESIGN.md appendix.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

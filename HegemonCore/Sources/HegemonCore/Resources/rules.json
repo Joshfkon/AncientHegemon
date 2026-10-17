@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
+  "units": {
+    "infantry": { "cost": 2, "upkeep": 1 },
+    "archers": { "cost": 2, "upkeep": 1 },
+    "cavalry": { "cost": 3, "upkeep": 1, "requires": "horses" }
+  },
+  "economy": {
+    "populationPerGrain": 2,
+    "populationCapPerGrain": 1,
+    "growthPerTerritory": 1,
+    "populationPerGold": 2,
+    "granaryCapTurns": 1,
+    "minPopulation": 1
+  },
+  "start": {
+    "gold": 6,
+    "granary": 6,
+    "populationPercent": 50,
+    "army": { "infantry": 2, "archers": 0, "cavalry": 0 }
+  }
+}

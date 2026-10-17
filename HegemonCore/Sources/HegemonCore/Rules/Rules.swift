@@ -1,0 +1,85 @@
+import Foundation
+
+public enum UnitType: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {
+    case infantry, archers, cavalry
+}
+
+public struct UnitStats: Codable, Sendable, Equatable {
+    /// Gold to recruit one unit.
+    public let cost: Int
+    /// Grain eaten per turn.
+    public let upkeep: Int
+    /// Resource the empire must produce to recruit this unit. Each point of yield allows one
+    /// recruit of this type per turn.
+    public let requires: Resource?
+}
+
+public struct EconomyRules: Codable, Sendable, Equatable {
+    /// Mouths fed by one grain. An empire's population eats `ceil(population / populationPerGrain)`.
+    public let populationPerGrain: Int
+    /// A territory's population can grow to `grain × populationCapPerGrain`. At the cap, a
+    /// territory still has grain left over to feed armies.
+    public let populationCapPerGrain: Int
+    /// Maximum population growth per territory per turn.
+    public let growthPerTerritory: Int
+    /// Gold income per turn is `total population / populationPerGold`, plus gold yields.
+    public let populationPerGold: Int
+    /// The granary holds at most this many turns of grain production.
+    public let granaryCapTurns: Int
+    /// Starvation and recruitment never take a territory below this population.
+    public let minPopulation: Int
+}
+
+public struct StartRules: Codable, Sendable, Equatable {
+    public let gold: Int
+    public let granary: Int
+    /// Starting population of every territory, as a percentage of its population cap
+    /// (rounded up, at least 1).
+    public let populationPercent: Int
+    /// Army placed in each civilization's capital.
+    public let army: UnitCounts
+}
+
+/// Tunable game rules, loaded from `rules.json`.
+public struct Rules: Codable, Sendable, Equatable {
+    public let version: Int
+    public let units: [UnitType: UnitStats]
+    public let economy: EconomyRules
+    public let start: StartRules
+
+    public static func bundled() throws -> Rules {
+        guard let url = Bundle.module.url(forResource: "rules", withExtension: "json") else {
+            throw MapError.resourceMissing("rules.json")
+        }
+        return try Rules(json: Data(contentsOf: url))
+    }
+
+    public init(json: Data) throws {
+        self = try JSONDecoder().decode(Rules.self, from: json)
+        for type in UnitType.allCases where units[type] == nil {
+            throw MapError.invalid("rules.json has no stats for unit '\(type.rawValue)'")
+        }
+        if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1 {
+            throw MapError.invalid("rules.json economy divisors must be at least 1")
+        }
+    }
+
+    public func stats(_ type: UnitType) -> UnitStats { units[type]! }
+
+    /// Grain eaten per turn by a population.
+    public func grainEaten(byPopulation population: Int) -> Int {
+        (population + economy.populationPerGrain - 1) / economy.populationPerGrain
+    }
+
+    public func populationCap(grain: Int) -> Int {
+        grain * economy.populationCapPerGrain
+    }
+
+    public func startingPopulation(grain: Int) -> Int {
+        max(1, (populationCap(grain: grain) * start.populationPercent + 99) / 100)
+    }
+
+    public func upkeep(of units: UnitCounts) -> Int {
+        UnitType.allCases.reduce(0) { $0 + units[$1] * stats($1).upkeep }
+    }
+}

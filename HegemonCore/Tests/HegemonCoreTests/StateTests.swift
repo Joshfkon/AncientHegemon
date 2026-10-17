@@ -32,29 +32,41 @@ import Testing
 
 @Suite struct GameStateTests {
     let map = try! GameMap.bundled()
+    let rules = try! Rules.bundled()
 
     @Test func civsStartWithTheirCapitals() throws {
-        let state = try GameState(map: map, seed: 1)
+        let state = try GameState(map: map, rules: rules, seed: 1)
         #expect(state.turn == 1)
         #expect(state.players.count == 4)
         for civ in map.civilizations {
             #expect(state.owner(of: civ.capital) == civ.id)
             #expect(state.territories(of: civ.id) == [civ.capital])
+            #expect(state.armies[civ.capital]?.units == rules.start.army)
+            #expect(state.civs[civ.id]?.gold == rules.start.gold)
+        }
+    }
+
+    @Test func populationStartsAtHalfCap() throws {
+        let state = try GameState(map: map, rules: rules, seed: 1)
+        for t in map.territories {
+            #expect(state.population(of: t.id) == rules.startingPopulation(grain: t.grain))
         }
     }
 
     @Test func subsetOfCivs() throws {
-        let state = try GameState(map: map, seed: 1, civilizations: ["greece", "egypt"])
+        let state = try GameState(map: map, rules: rules, seed: 1, civilizations: ["greece", "egypt"])
         #expect(state.players == ["greece", "egypt"])
         #expect(state.owner(of: "italia") == nil)
     }
 
     @Test func rejectsUnknownCiv() {
-        #expect(throws: MapError.self) { try GameState(map: map, seed: 1, civilizations: ["atlantis"]) }
+        #expect(throws: MapError.self) {
+            try GameState(map: map, rules: rules, seed: 1, civilizations: ["atlantis"])
+        }
     }
 
     @Test func codableRoundTrip() throws {
-        var state = try GameState(map: map, seed: 99)
+        var state = try GameState(map: map, rules: rules, seed: 99)
         _ = state.rng.next()
         let data = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(GameState.self, from: data)

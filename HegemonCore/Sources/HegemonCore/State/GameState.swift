@@ -1,45 +1,111 @@
+/// Per-territory facts that change during a game.
+public struct TerritoryState: Codable, Sendable, Equatable {
+    public var owner: CivilizationID?
+    public var population: Int
+}
+
+/// Per-civilization facts that change during a game.
+public struct CivState: Codable, Sendable, Equatable {
+    public var gold: Int
+    /// Stored grain, drawn on when consumption exceeds production.
+    public var granary: Int
+    public var eliminated: Bool = false
+    /// Recruits of resource-limited units this turn, by resource (e.g. cavalry against horses).
+    public var resourceUsedThisTurn: [Resource: Int] = [:]
+}
+
+/// An army stack in a territory. At most one civilization has an army in a territory;
+/// moving into a territory held by another civilization's army is a battle (build step 4).
+public struct Army: Codable, Sendable, Equatable {
+    public var owner: CivilizationID
+    public var units: UnitCounts
+}
+
 /// Everything that changes during a game. Fully Codable so a game can be saved, reloaded,
-/// or attached to a bug report as JSON. Static map data is not stored here; `mapVersion`
-/// records which map the state was built against.
+/// or attached to a bug report as JSON. Static map data and rules are not stored here;
+/// `mapVersion` and `rulesVersion` record which ones the state was built against.
+///
+/// Dictionaries here have no stable iteration order. Engine code must sort keys before
+/// iterating whenever order affects the result.
 public struct GameState: Codable, Sendable, Equatable {
     public var mapVersion: Int
+    public var rulesVersion: Int
     public var seed: UInt64
     public var turn: Int
     public var rng: SeededRNG
     /// Civilizations in play, in turn order.
     public var players: [CivilizationID]
-    /// Who controls each territory. Territories absent from the dictionary are unowned.
-    public var owners: [TerritoryID: CivilizationID]
+    public var activePlayerIndex: Int
+    public var winner: CivilizationID?
+    public var land: [TerritoryID: TerritoryState]
+    public var civs: [CivilizationID: CivState]
+    public var armies: [TerritoryID: Army]
+    /// Units that have already moved this turn, by the territory they moved into.
+    public var moved: [TerritoryID: UnitCounts]
 
-    /// Starts a new game. Each participating civilization begins holding only its capital;
-    /// everything else is unowned. (Larger starting realms are a balancing question for step 5.)
-    public init(map: GameMap, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
+    /// Starts a new game. Each participating civilization begins holding only its capital,
+    /// with the starting army there; everything else is unowned.
+    public init(map: GameMap, rules: Rules, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
         let ids = civilizations ?? map.civilizations.map(\.id)
         guard !ids.isEmpty else { throw MapError.invalid("a game needs at least one civilization") }
         guard Set(ids).count == ids.count else { throw MapError.invalid("duplicate civilization in game setup") }
 
-        var owners: [TerritoryID: CivilizationID] = [:]
+        var land: [TerritoryID: TerritoryState] = [:]
+        for t in map.territories {
+            land[t.id] = TerritoryState(owner: nil, population: rules.startingPopulation(grain: t.grain))
+        }
+        var civs: [CivilizationID: CivState] = [:]
+        var armies: [TerritoryID: Army] = [:]
         for id in ids {
             guard let civ = map.civilization(id) else {
                 throw MapError.invalid("unknown civilization '\(id)'")
             }
-            owners[civ.capital] = civ.id
+            land[civ.capital]!.owner = civ.id
+            civs[civ.id] = CivState(gold: rules.start.gold, granary: rules.start.granary)
+            if !rules.start.army.isEmpty {
+                armies[civ.capital] = Army(owner: civ.id, units: rules.start.army)
+            }
         }
 
         self.mapVersion = map.version
+        self.rulesVersion = rules.version
         self.seed = seed
         self.turn = 1
         self.rng = SeededRNG(seed: seed)
         self.players = ids
-        self.owners = owners
+        self.activePlayerIndex = 0
+        self.winner = nil
+        self.land = land
+        self.civs = civs
+        self.armies = armies
+        self.moved = [:]
     }
 
+    public var activePlayer: CivilizationID { players[activePlayerIndex] }
+
     public func owner(of territory: TerritoryID) -> CivilizationID? {
-        owners[territory]
+        land[territory]?.owner
+    }
+
+    public func population(of territory: TerritoryID) -> Int {
+        land[territory]?.population ?? 0
     }
 
     /// Territories held by a civilization, sorted for deterministic iteration.
     public func territories(of civ: CivilizationID) -> [TerritoryID] {
-        owners.filter { $0.value == civ }.map(\.key).sorted()
+        land.filter { $0.value.owner == civ }.map(\.key).sorted()
+    }
+
+    /// Army stacks owned by a civilization, by territory, sorted for deterministic iteration.
+    public func armies(of civ: CivilizationID) -> [(territory: TerritoryID, units: UnitCounts)] {
+        armies.filter { $0.value.owner == civ }.map { ($0.key, $0.value.units) }.sorted { $0.0 < $1.0 }
+    }
+
+    public func totalUnits(of civ: CivilizationID) -> UnitCounts {
+        armies(of: civ).reduce(.zero) { $0 + $1.units }
+    }
+
+    public func totalPopulation(of civ: CivilizationID) -> Int {
+        territories(of: civ).reduce(0) { $0 + population(of: $1) }
     }
 }
