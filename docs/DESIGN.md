@@ -377,3 +377,6 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
 - **Grain and resource values are balancing data**, first-pass estimates rather than the board's
   printed numbers. Every territory produces at least 1 grain. Tin is deliberately scarce
   (Britain, Hispania only).
+- **Starting realms (provisional)**: each civilization starts holding only its capital; every
+  other territory is unowned. This is a placeholder for the engine. Starting realm size is a
+  balancing question to settle with `hegemon-sim` in build step 5.

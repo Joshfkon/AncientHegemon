@@ -7,4 +7,4 @@ Native iPhone strategy game adapted from Josh's board game.
 - Map data: `HegemonCore/Sources/HegemonCore/Resources/map.json`. After editing, run
   `python3 tools/validate_map.py`.
 - The engine must stay deterministic: all randomness goes through the seeded RNG in game state.
-- Root-level `*.cs` files are a 2021 Unity prototype; nothing is ported from them.
+- `legacy/*.cs` is a 2021 Unity prototype; nothing is ported from it.

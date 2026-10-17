@@ -7,14 +7,16 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
 - **Project**: turn Josh's *Ancient Hegemon* board game (hand-painted Mediterranean map, unit
   cubes, 5×5 battle board, rulebook) into a native iPhone game.
 - **Branch**: `claude/charming-fermat-eb6vmf`. Work continues here.
-- **Done so far** (design only, no Swift written yet):
+- **Done so far**:
+  - **Build step 1 complete**: `HegemonCore` package with typed map models, validated
+    `GameMap` loading and adjacency queries, `SeededRNG` (SplitMix64), Codable `GameState`,
+    a stub `hegemon-sim` CLI, and 18 passing tests (`swift test` in `HegemonCore/`).
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.
   - `tools/validate_map.py`: checks the map data. Run it after any map edit:
     `python3 tools/validate_map.py`.
-- **Legacy**: `CivManager.cs`, `Dropdown.cs`, `LeaderName.cs` at the repo root are a 2021 Unity
-  prototype. Nothing is being ported from them. Moving them to `legacy/` is fine.
+- **Legacy**: `legacy/*.cs` is a 2021 Unity prototype. Nothing is being ported from it.
 - **Previous blocker**: the cloud session couldn't install a Swift toolchain. The Mac has Xcode,
   so that's resolved.
 
