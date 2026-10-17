@@ -10,8 +10,25 @@ public struct CivState: Codable, Sendable, Equatable {
     /// Stored grain, drawn on when consumption exceeds production.
     public var granary: Int
     public var eliminated: Bool = false
+    /// Stockpiled bronze, made each turn from copper and tin.
+    public var bronze: Int = 0
     /// Recruits of resource-limited units this turn, by resource (e.g. cavalry against horses).
     public var resourceUsedThisTurn: [Resource: Int] = [:]
+}
+
+/// An unordered pair of civilizations, for relations.
+public struct CivPair: Codable, Sendable, Hashable {
+    public let a: CivilizationID
+    public let b: CivilizationID
+
+    public init(_ x: CivilizationID, _ y: CivilizationID) {
+        (a, b) = x < y ? (x, y) : (y, x)
+    }
+}
+
+public struct PeaceOffer: Codable, Sendable, Hashable {
+    public let from: CivilizationID
+    public let to: CivilizationID
 }
 
 /// An army stack in a territory. At most one civilization has an army in a territory;
@@ -42,9 +59,13 @@ public struct GameState: Codable, Sendable, Equatable {
     public var armies: [TerritoryID: Army]
     /// Units that have already moved this turn, by the territory they moved into.
     public var moved: [TerritoryID: UnitCounts]
+    /// Pairs of civilizations at peace. Everyone else is at war.
+    public var peace: Set<CivPair>
+    /// Outstanding peace offers, accepted by the recipient on their turn.
+    public var peaceOffers: Set<PeaceOffer>
 
     /// Starts a new game. Each participating civilization begins holding only its capital,
-    /// with the starting army there; everything else is unowned.
+    /// with the starting army there; everything else is unowned. Everyone starts at war.
     public init(map: GameMap, rules: Rules, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
         let ids = civilizations ?? map.civilizations.map(\.id)
         guard !ids.isEmpty else { throw MapError.invalid("a game needs at least one civilization") }
@@ -79,9 +100,20 @@ public struct GameState: Codable, Sendable, Equatable {
         self.civs = civs
         self.armies = armies
         self.moved = [:]
+        self.peace = []
+        self.peaceOffers = []
     }
 
     public var activePlayer: CivilizationID { players[activePlayerIndex] }
+
+    public func atPeace(_ a: CivilizationID, _ b: CivilizationID) -> Bool {
+        peace.contains(CivPair(a, b))
+    }
+
+    /// Distinct civilizations are at war unless they have made peace.
+    public func atWar(_ a: CivilizationID, _ b: CivilizationID) -> Bool {
+        a != b && !atPeace(a, b)
+    }
 
     public func owner(of territory: TerritoryID) -> CivilizationID? {
         land[territory]?.owner

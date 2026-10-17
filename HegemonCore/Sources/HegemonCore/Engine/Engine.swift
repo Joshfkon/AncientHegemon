@@ -27,6 +27,12 @@ public struct Engine: Sendable {
             return try recruit(territory, unit, count, &state)
         case let .move(from, to, units):
             return try move(from, to, units, &state)
+        case let .offerPeace(to):
+            return try offerPeace(to, &state)
+        case let .acceptPeace(from):
+            return try acceptPeace(from, &state)
+        case let .declareWar(on):
+            return try declareWar(on, &state)
         case .endTurn:
             return endTurn(&state)
         }
@@ -41,6 +47,9 @@ public struct Engine: Sendable {
         guard let t = state.land[territory] else { throw GameError.unknownTerritory(territory) }
         guard t.owner == civ else { throw GameError.notOwner(territory) }
         if let army = state.armies[territory], army.owner != civ { throw GameError.contested(territory) }
+        guard homeNetwork(of: civ, in: state).contains(territory) else {
+            throw GameError.outOfSupply(territory)
+        }
 
         let stats = rules.stats(unit)
         let cost = stats.cost * count
@@ -51,7 +60,7 @@ public struct Engine: Sendable {
         }
         if let resource = stats.requires {
             let used = state.civs[civ]!.resourceUsedThisTurn[resource] ?? 0
-            guard used + count <= yield(of: resource, for: civ, in: state) else {
+            guard used + count <= effectiveYield(of: resource, for: civ, in: state) else {
                 throw GameError.resourceLimit(resource)
             }
             state.civs[civ]!.resourceUsedThisTurn[resource] = used + count
@@ -78,6 +87,7 @@ public struct Engine: Sendable {
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
         guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
         if let defender = state.armies[to], defender.owner != civ { throw GameError.contested(to) }
+        if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
 
         state.armies[from]!.units -= units
         if state.armies[from]!.units.isEmpty { state.armies[from] = nil }
@@ -131,13 +141,42 @@ public struct Engine: Sendable {
         return events
     }
 
-    // MARK: Helpers
+    // MARK: Diplomacy
 
-    /// Total yield of a resource across a civilization's territories.
-    public func yield(of resource: Resource, for civ: CivilizationID, in state: GameState) -> Int {
-        state.territories(of: civ).reduce(0) { total, id in
-            let t = map.territory(id)!
-            return total + (resource == .grain ? t.grain : t.resources[resource] ?? 0)
+    private func rival(_ other: CivilizationID, _ state: GameState) throws -> CivilizationID {
+        guard other != state.activePlayer, let c = state.civs[other], !c.eliminated else {
+            throw GameError.unknownCivilization(other)
         }
+        return other
+    }
+
+    private func offerPeace(_ to: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        _ = try rival(to, state)
+        guard !state.atPeace(civ, to) else { throw GameError.alreadyAtPeace(to) }
+        state.peaceOffers.insert(PeaceOffer(from: civ, to: to))
+        return [.peaceOffered(from: civ, to: to)]
+    }
+
+    private func acceptPeace(_ from: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        _ = try rival(from, state)
+        guard state.peaceOffers.contains(PeaceOffer(from: from, to: civ)) else {
+            throw GameError.noPeaceOffer(from)
+        }
+        state.peaceOffers.remove(PeaceOffer(from: from, to: civ))
+        state.peaceOffers.remove(PeaceOffer(from: civ, to: from))
+        state.peace.insert(CivPair(civ, from))
+        return [.peaceMade(CivPair(civ, from))]
+    }
+
+    private func declareWar(_ on: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        _ = try rival(on, state)
+        guard state.atPeace(civ, on) else { throw GameError.notAtPeace(on) }
+        state.peace.remove(CivPair(civ, on))
+        state.peaceOffers.remove(PeaceOffer(from: civ, to: on))
+        state.peaceOffers.remove(PeaceOffer(from: on, to: civ))
+        return [.warDeclared(by: civ, on: on)]
     }
 }

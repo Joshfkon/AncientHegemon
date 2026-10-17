@@ -30,6 +30,22 @@ public struct EconomyRules: Codable, Sendable, Equatable {
     public let minPopulation: Int
 }
 
+public struct SupplyRules: Codable, Sendable, Equatable {
+    /// Units lost per stack per turn when cut off from the home supply network.
+    public let outOfSupplyAttrition: Int
+    /// Extra units lost when the cut-off stack is in desert.
+    public let desertAttrition: Int
+}
+
+public struct TradeRules: Codable, Sendable, Equatable {
+    /// Gold each side earns per trade route per turn, before tolls.
+    public let goldPerRoute: Int
+    /// Gold a third-party chokepoint holder takes from each side of a route crossing it.
+    public let chokepointToll: Int
+    /// A trade partner shares `yield / shareDivisor` of each non-grain resource.
+    public let shareDivisor: Int
+}
+
 public struct StartRules: Codable, Sendable, Equatable {
     public let gold: Int
     public let granary: Int
@@ -45,6 +61,8 @@ public struct Rules: Codable, Sendable, Equatable {
     public let version: Int
     public let units: [UnitType: UnitStats]
     public let economy: EconomyRules
+    public let supply: SupplyRules
+    public let trade: TradeRules
     public let start: StartRules
 
     public static func bundled() throws -> Rules {
@@ -59,7 +77,8 @@ public struct Rules: Codable, Sendable, Equatable {
         for type in UnitType.allCases where units[type] == nil {
             throw MapError.invalid("rules.json has no stats for unit '\(type.rawValue)'")
         }
-        if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1 {
+        if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1
+            || trade.shareDivisor < 1 {
             throw MapError.invalid("rules.json economy divisors must be at least 1")
         }
     }

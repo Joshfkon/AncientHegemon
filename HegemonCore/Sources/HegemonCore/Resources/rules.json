@@ -14,6 +14,15 @@
     "granaryCapTurns": 1,
     "minPopulation": 1
   },
+  "supply": {
+    "outOfSupplyAttrition": 1,
+    "desertAttrition": 1
+  },
+  "trade": {
+    "goldPerRoute": 2,
+    "chokepointToll": 1,
+    "shareDivisor": 2
+  },
   "start": {
     "gold": 6,
     "granary": 6,

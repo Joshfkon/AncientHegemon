@@ -16,6 +16,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     gold income, capture and elimination. `hegemon-sim [seed] [turns]` runs a placeholder
     land-grab policy and prints a per-civ table. 38 tests. Economy decisions are in the
     DESIGN.md appendix.
+  - **Build step 3 complete**: supply network (`Network.swift`: pockets, seat, chokepoint
+    holders, sea lanes), per-pocket harvest with out-of-supply attrition, war/peace commands,
+    automatic trade routes with chokepoint tolls and resource sharing, bronze stockpile.
+    `hegemon-sim [seed] [turns] [--peace]`. 59 tests.
+  - **Not yet scheduled**: ships / naval movement (transports, blockades). The build order
+    doesn't place them; suggest adding them alongside naval auto-resolve in step 4.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

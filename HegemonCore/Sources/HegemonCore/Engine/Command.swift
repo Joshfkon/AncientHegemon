@@ -5,6 +5,12 @@ public enum Command: Codable, Sendable, Equatable {
     /// Move units across a land border. Each unit moves once per turn. Entering an unowned or
     /// undefended enemy territory captures it.
     case move(from: TerritoryID, to: TerritoryID, units: UnitCounts)
+    /// Offer peace. The other civilization accepts on its turn.
+    case offerPeace(to: CivilizationID)
+    /// Accept an outstanding peace offer.
+    case acceptPeace(from: CivilizationID)
+    /// End a peace. Withdraws any offers between the two.
+    case declareWar(on: CivilizationID)
     /// End the active player's turn.
     case endTurn
 }
@@ -13,6 +19,12 @@ public enum Command: Codable, Sendable, Equatable {
 public enum GameEvent: Codable, Sendable, Equatable {
     case harvest(civ: CivilizationID, production: Int, consumption: Int, grown: Int, granary: Int, income: Int)
     case starvation(civ: CivilizationID, populationLost: Int, unitsLost: Int)
+    case outOfSupply(civ: CivilizationID, territory: TerritoryID, unitsLost: Int)
+    case trade(civ: CivilizationID, partners: [CivilizationID], income: Int)
+    case bronzeMade(civ: CivilizationID, amount: Int)
+    case peaceOffered(from: CivilizationID, to: CivilizationID)
+    case peaceMade(CivPair)
+    case warDeclared(by: CivilizationID, on: CivilizationID)
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
@@ -23,6 +35,14 @@ public enum GameEvent: Codable, Sendable, Equatable {
 
 public enum GameError: Error, Equatable, Sendable {
     case gameOver
+    case unknownCivilization(CivilizationID)
+    case alreadyAtPeace(CivilizationID)
+    case notAtPeace(CivilizationID)
+    case noPeaceOffer(CivilizationID)
+    /// Recruiting needs a territory in the home supply network.
+    case outOfSupply(TerritoryID)
+    /// Armies can't enter a peace partner's territory; declare war first.
+    case atPeace(TerritoryID)
     case unknownTerritory(TerritoryID)
     case notOwner(TerritoryID)
     case invalidCount

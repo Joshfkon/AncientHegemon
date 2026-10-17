@@ -396,3 +396,26 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     blocked until the battle sim (step 4). Everyone is implicitly at war until diplomacy exists.
   - **Known gap**: gold accumulates with no sink yet. Sinks (loyalty, bribes, mercenaries) arrive
     with step 6. Greece (2 grain) starts in deficit and must expand or import; intended for now.
+- **Supply, trade and diplomacy model (build step 3, provisional; values in `rules.json`)**:
+  - **Supply network**: a civ's territories connect through its own land borders and through
+    sea lanes (every coast reaches its seas; seas reach linked seas). A sea link gated by a
+    chokepoint is closed while the chokepoint is held (all its territories) by a civ at war with
+    the traveler. Land passes need no special rule: you must own the pass territory to use it.
+  - **Seat and home network**: supply traces from the capital, or, if it has fallen, from the
+    civ's highest-grain territory. The pocket connected to it is the home network: it shares
+    grain and the granary, pays taxes and gold yields, makes bronze, and is the only place
+    units can be recruited.
+  - **Cut-off pockets** feed themselves with no granary, pay nothing, and their armies lose
+    1 unit per stack per turn (2 in desert), on top of any starvation.
+  - **Diplomacy**: everyone starts at war. `offerPeace` / `acceptPeace` (on the other civ's
+    turn) / `declareWar`. You can't enter a peace partner's land. No credibility cost yet.
+  - **Trade routes** form automatically between civs at peace whose home networks connect
+    through their own land and open sea lanes (no passage through third parties' land). Each side
+    earns 2 gold per route per turn and gets half (rounded down) of the partner's copper, tin,
+    horses, timber and gold yields as "access". Grain is not traded yet.
+  - **Chokepoint tolls**: a route crossing a sea chokepoint held by a third civ at peace with
+    both pays that holder 1 gold from each side. A holder at war with either side closes it.
+  - **Bronze**: each turn, `min(copper, tin)` across the home network plus trade access is added
+    to a stockpile. What bronze buys (battle equipment bonus or unit cost) is decided in step 4.
+  - Seas are all uncontested for now; fleets (blockades, transports) plug into the network later.
+    Until ships exist, armies can't cross water, so islands can't be captured.
