@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -267,6 +267,8 @@
     "flankMoraleLoss": 10,
     "breakPercent": 60,
     "pursuitPercent": 25,
+    "pursuitCavalryPercent": 15,
+    "rearguardArchersPerLoss": 3,
     "bronzeBonusPercent": 20,
     "homeGroundPercent": 2,
     "crossingPenaltyPercent": {
@@ -632,6 +634,17 @@
       "barbariansPerExposure": 20,
       "revoltPerDistantTerritory": 10
     }
+  },
+  "tribes": {
+    "giftGoldBase": 3,
+    "giftGoldPerWarrior": 2,
+    "giftChanceBase": 40,
+    "giftChancePerTroop": 8,
+    "giftChanceMin": 10,
+    "giftChanceMax": 85,
+    "demandRatio": 3,
+    "demandRefusedLegitimacy": 3,
+    "warriorsJoinPercent": 50
   },
   "collapse": {
     "startRound": 12,

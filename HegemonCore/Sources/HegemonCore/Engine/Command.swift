@@ -2,6 +2,8 @@
 public enum Command: Codable, Sendable, Equatable {
     /// Recruit units in an owned territory. Costs gold and turns population into soldiers.
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
+    /// Talk to the tribe on unclaimed land next to yours.
+    case parley(territory: TerritoryID, Parley)
     /// Sends soldiers home: on the empire's own land they go back to the fields as people.
     case disband(territory: TerritoryID, units: UnitCounts)
     /// Move units across a land border. Each unit moves once per turn. Entering an unowned or
@@ -56,6 +58,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case warDeclared(by: CivilizationID, on: CivilizationID)
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
+    case tribeJoined(civ: CivilizationID, territory: TerritoryID, parley: Parley, warriors: Int)
+    case tribeRefused(civ: CivilizationID, territory: TerritoryID, parley: Parley)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
     case formationSet(civ: CivilizationID, territory: TerritoryID, formation: FormationID)
@@ -173,6 +177,9 @@ public enum GameError: Error, Equatable, Sendable {
     case invalidTaxRate
     /// The formation or stratagem isn't unlocked for this army.
     case planLocked
+    case noTribe(TerritoryID)
+    /// Each tribe hears one embassy a turn.
+    case alreadyParleyed(TerritoryID)
     /// Already built, or something is being built there.
     case projectUnavailable(TerritoryID, ProjectKind)
     case insufficientStock(Resource, needed: Int, available: Int)

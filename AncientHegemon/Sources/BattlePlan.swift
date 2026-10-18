@@ -45,6 +45,17 @@ struct BattlePlanEditor: View {
             Text(plan.depth == .deep ? "Two ranks: the rear steps into gaps as the front falls."
                                      : "Everyone in the front rank: hard to outflank, but no reserve.")
                 .font(.caption2).foregroundStyle(.secondary)
+            HStack {
+                Text("If they break").font(.caption.bold())
+                Picker("If they break", selection: $plan.pursue) {
+                    Text("Chase them").tag(true)
+                    Text("Hold the field").tag(false)
+                }
+                .pickerStyle(.segmented)
+            }
+            Text(plan.pursue ? "Cut down the fleeing (horsemen catch more), but archers covering the retreat can sting the pursuers."
+                             : "Let them go: no one is lost chasing, but they live to fight again.")
+                .font(.caption2).foregroundStyle(.secondary)
             Text("Stratagem").font(.caption.bold())
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

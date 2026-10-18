@@ -131,6 +131,71 @@ def coins(rng):
     return fade(out)
 
 
+def thump(rng, freq=60, length=0.5, decay=0.18):
+    """One stroke of a big drum."""
+    out = []
+    phase = 0.0
+    for i in range(int(RATE * length)):
+        t = i / RATE
+        f = freq + 60 * math.exp(-t * 22)
+        phase += 2 * math.pi * f / RATE
+        out.append(math.sin(phase) * math.exp(-t / decay) + (rng.random() * 2 - 1) * 0.3 * math.exp(-t / 0.02))
+    return out
+
+
+def wardrums(rng):
+    """Two bars of war drums, made to loop while the armies draw up: BOOM . boom boom | BOOM . boom ."""
+    beat = 0.32
+    length = beat * 8
+    out = [0.0] * int(RATE * length)
+    for k, (accent, freq) in enumerate([(1, 55), (0, 0), (0.55, 70), (0.6, 70), (1, 55), (0, 0), (0.55, 70), (0.3, 90)]):
+        if accent == 0:
+            continue
+        start = int(RATE * (beat * k + rng.random() * 0.008))
+        for i, v in enumerate(thump(rng, freq, 0.55)):
+            # Wrap around so the loop point is seamless.
+            out[(start + i) % len(out)] += v * accent
+    return out
+
+
+def roar(rng):
+    """An army's battle cry: many voices (noise through vowel-like resonances), swelling then trailing."""
+    length = 1.6
+    out = []
+    lows = [0.0, 0.0, 0.0]
+    cutoffs = [0.02, 0.06, 0.14]
+    for i in range(int(RATE * length)):
+        t = i / RATE
+        n = rng.random() * 2 - 1
+        s = 0.0
+        for k in range(3):
+            lows[k] += cutoffs[k] * (n - lows[k])
+            s += lows[k] * (1.0, 0.7, 0.35)[k]
+        # Voices: a low buzz around 120–180 Hz, wavering.
+        voice = sum(math.sin(2 * math.pi * f * t + k) for k, f in enumerate([118, 131, 147, 166, 182])) * 0.08
+        env = min(1, t / 0.25) * (1 - max(0, t - 0.7) / (length - 0.7)) ** 1.5
+        out.append((s * 3 + voice) * env)
+    return fade(out, 20)
+
+
+def gallop(rng):
+    """Horses at the gallop, fading away: da-da-dum, da-da-dum."""
+    out = [0.0] * int(RATE * 1.6)
+    t0 = 0.0
+    k = 0
+    while t0 < 1.4:
+        for dt in (0.0, 0.07, 0.15):
+            start = int(RATE * (t0 + dt + rng.random() * 0.01))
+            for i in range(int(RATE * 0.06)):
+                t = i / RATE
+                v = (math.sin(2 * math.pi * 160 * t) * 0.6 + (rng.random() * 2 - 1) * 0.5) * math.exp(-t / 0.012)
+                if start + i < len(out):
+                    out[start + i] += v * (1 - t0 / 1.6)
+        t0 += 0.3
+        k += 1
+    return fade(out)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     rng = random.Random(1200)
@@ -144,6 +209,9 @@ def main():
     write("click", click(rng), gain=0.35)
     write("drum", drum(rng), gain=0.7)
     write("coins", coins(rng), gain=0.4)
+    write("wardrums", wardrums(rng), gain=0.6)
+    write("roar", roar(rng), gain=0.6)
+    write("gallop", gallop(rng), gain=0.5)
     print("wrote", sorted(os.listdir(OUT)))
 
 

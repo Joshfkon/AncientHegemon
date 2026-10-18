@@ -32,6 +32,8 @@ public struct Engine: Sendable {
             return try move(from, to, units, general, &state)
         case let .setFormation(territory, formation):
             return try setFormation(territory, formation, &state)
+        case let .parley(territory, kind):
+            return try parley(territory, kind, &state)
         case let .disband(territory, units):
             return try disband(territory, units, &state)
         case let .setBattlePlan(territory, plan):
@@ -198,6 +200,7 @@ public struct Engine: Sendable {
 
     private func endTurn(_ state: inout GameState) -> [GameEvent] {
         state.moved = [:]
+        state.parleyed = []
         state.generalsMoved = []
         for i in state.fleets.indices { state.fleets[i].movedShips = 0 }
         state.civs[state.activePlayer]!.resourceUsedThisTurn = [:]

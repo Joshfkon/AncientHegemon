@@ -137,6 +137,8 @@ public struct Army: Codable, Sendable, Equatable {
     public var formation: FormationID?
     public var depth: LineDepth?
     public var stratagem: Stratagem?
+    /// Holds the field rather than chasing a broken enemy (nil or false: pursue).
+    public var holdBack: Bool?
 
     public init(owner: CivilizationID, units: UnitCounts, formation: FormationID? = nil) {
         self.owner = owner
@@ -145,7 +147,7 @@ public struct Army: Codable, Sendable, Equatable {
     }
 
     public var plan: BattlePlan {
-        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem)
+        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem, pursue: !(holdBack ?? false))
     }
 }
 
@@ -201,6 +203,8 @@ public struct GameState: Codable, Sendable, Equatable {
     public var rebellions: Int
     /// Trade routes broken by the collapse, with the last round they stay broken.
     public var disruptedRoutes: [CivPair: Int]
+    /// Tribes already approached this turn.
+    public var parleyed: Set<TerritoryID> = []
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

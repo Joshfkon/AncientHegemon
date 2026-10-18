@@ -146,10 +146,12 @@ extension Engine {
         let war = level(.warfare, of: civ, in: state)
         percent[.infantry] = war >= 1 ? e.drillPercent : 0
         percent[.archers] = war >= 2 ? e.bowsPercent : 0
-        return BattleArmy(civ: civ, units: units, formation: plan.formation ?? rules.battle.defaultFormation,
+        var army = BattleArmy(civ: civ, units: units, formation: plan.formation ?? rules.battle.defaultFormation,
                           general: general, bronzePercent: bronzePercent(civ, state),
                           unitPercent: percent, morale: war >= 3 ? e.tacticsMorale : 0,
                           depth: plan.depth, stratagem: plan.stratagem)
+        army.pursue = plan.pursue
+        return army
     }
 
     /// Experience from a land battle: fighting teaches warfare, cavalry teaches horsemanship.

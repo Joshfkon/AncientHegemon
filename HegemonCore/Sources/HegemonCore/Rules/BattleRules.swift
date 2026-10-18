@@ -92,6 +92,10 @@ public struct BattleRules: Codable, Sendable, Equatable {
     public let formations: [Formation]
     public let defaultFormation: FormationID
     public let plans: BattlePlanRules
+    /// Extra share of the routed cut down when the pursuers have cavalry.
+    public let pursuitCavalryPercent: Int
+    /// Fleeing archers cost the pursuers one unit per this many.
+    public let rearguardArchersPerLoss: Int
     public let levy: LevyRules
 
     public func formation(_ id: FormationID) -> Formation? {

@@ -1096,3 +1096,38 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
 - **End of game**: a full-screen Victory or Defeat with the victory type, standings, and the
   borders replayed round by round (the session records who held what each round).
 - **Sounds**: a click on selection, a drum on End turn, coins when spending.
+
+### The battlefield, the chase, and tribes (Josh: "choose the battle plan after you move to the battle map… are we winning? If they flee, do we chase?… if I tap a country held by no one… diplomacy")
+
+- **Plan on the field.** Ordering an attack picks troops and the general, then "To the
+  battlefield" opens the 5×5 board with both armies deployed exactly as they would stand
+  (`BattleSimulator.deployment`, which rolls nothing). Changing formation, line or stratagem
+  moves the blocks. War drums play while the armies draw up; "Charge!" roars, sets the plan and
+  fights, and the battle plays out on the same board. Landings still fight in the army's
+  standing plan (there is no army ashore to plan with).
+- **Are we winning?** A tug-of-war bar compares the two sides' strength each round (men still in
+  the line, weighted by morale; broken blocks count for little) with the officers' word for it,
+  and a caption narrates each round ("The lines crash together!", "Their cavalry break and run!",
+  losses on each side). At the end the bar swings to the winner.
+- **The chase.** A new choice in every battle plan: *chase them* or *hold the field*. Chasing
+  cuts down 25% of the beaten survivors (40% if the winner still has cavalry); archers covering
+  the retreat fell one pursuer per 3 archers (cavalry first). Holding lets them go with no risk.
+  Before this the rout always happened. The replay shows the beaten running off the board,
+  horsemen riding after them, and says what the chase cost. Defenders can set it too, in the
+  territory's defensive plan.
+- **Tribes.** Unclaimed land held by natives, next to the player's land, has a Diplomacy card:
+  - **Gifts**: 3 gold + 2 per warrior, with a chance described in words. The chance is
+    40% + 8% per own troop next door beyond their warriors, ± half of legitimacy above 50,
+    +10% with Writing, clamped to 10–85%.
+  - **Demand submission**: free, but it works only with 3× their warriors at the border. A
+    refusal costs 3 legitimacy and adds a warrior.
+  - **Attack.**
+  - Either way, a tribe that comes over becomes your land and half its warriors join as
+    infantry. One parley per tribe per turn.
+  - Tribes don't trade or sign treaties; that's for civilizations, on the Rivals tab.
+  - The AI doesn't parley yet.
+- **Balance check**: 40 games on each of two seed sets, against a baseline with the new pursuit
+  rules switched off (`--set battle.pursuitCavalryPercent=0 --set battle.rearguardArchersPerLoss=1000`).
+  Win shares moved within noise: Greece 2/7% → 0/12%, Egypt 37/30% → 42/15%, Italia 27/27% →
+  30/32%, Mesopotamia 32/35% → 27/40%. Game length (44–47 rounds) and defences held were
+  unchanged. The AI always chases.

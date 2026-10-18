@@ -133,6 +133,15 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     anything left to chance); pulsing idle armies, a next-army button and an end-turn reminder;
     the planned attack drawn with its odds; a Threats layer; tap-to-explain gold, grain and
     legitimacy; one-time tips and a "How to play" codex; war/peace outlines and a peace-offer card.
+  - **The battlefield, the chase and tribes** (DESIGN.md, "The battlefield, the chase, and
+    tribes"; rules version 9): attacks are planned on the 5×5 board with both armies deployed,
+    then "Charge!" plays the battle on the same board with a who's-winning bar, round narration
+    and the rout. Battle plans gain chase-or-hold. Unclaimed tribal land next to yours can be won
+    over with gifts or a demand (`Command.parley`). Recruiting shows a "Raised this turn" badge,
+    a toast and a "+1" on the map. New sounds: war drums, battle roar and hoofbeats. Debug launch
+    argument `-demoBattle YES` opens the battlefield against a neighbouring tribe. 185 tests.
+    Open: in the Simulator a tap's effect sometimes shows only after the next touch (not seen on
+    a device yet); natives win most even fights in the desert; the AI doesn't parley.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

@@ -41,18 +41,7 @@ public struct BattleSimulator: Sendable {
             day[side] = 100 + Int(rng.next() % UInt64(2 * b.dayFortunePercent + 1)) - b.dayFortunePercent
         }
 
-        var blocks = deploy(setup.attacker, side: .attacker, firstID: 0)
-        blocks += deploy(setup.defender, side: .defender, firstID: blocks.count)
-        // A flanking march: the wings start a rank further forward, where the square is free.
-        for side in [BattleSide.attacker, .defender] where army(side, setup).stratagem == .flankingMarch {
-            let forward = side == .attacker ? 1 : -1
-            for i in blocks.indices where blocks[i].side == side && blocks[i].onWing {
-                let ahead = GridPoint(blocks[i].position.col, blocks[i].position.row + forward)
-                if !impassable.contains(ahead), !blocks.contains(where: { $0.position == ahead }) {
-                    blocks[i].position = ahead
-                }
-            }
-        }
+        var blocks = deployBoth(setup, impassable)
         let plans = b.plans
         let startHp: [BattleSide: Int] = [
             .attacker: blocks.filter { $0.side == .attacker }.reduce(0) { $0 + $1.maxHp },
@@ -188,10 +177,34 @@ public struct BattleSimulator: Sendable {
             if block.levy { levyLeft += units(block) } else { survivors[block.side]![block.type] += units(block) }
         }
         let loser: BattleSide = winner == .attacker ? .defender : .attacker
-        for type in UnitType.allCases {
-            survivors[loser]![type] -= survivors[loser]![type] * b.pursuitPercent / 100
+        // The rout. A winner who gives chase cuts down a share of the fleeing (more with cavalry
+        // to run them down); archers covering the retreat sting the pursuers. Holding the field
+        // lets the beaten army go.
+        var pursuit: Pursuit?
+        if army(winner, setup).pursue {
+            let cavalry = survivors[winner]!.cavalry > 0
+            let percent = b.pursuitPercent + (cavalry ? b.pursuitCavalryPercent : 0)
+            var routed = 0
+            for type in UnitType.allCases {
+                let lost = survivors[loser]![type] * percent / 100
+                survivors[loser]![type] -= lost
+                routed += lost
+            }
+            if loser == .defender {
+                let lost = levyLeft * percent / 100
+                levyLeft -= lost
+                routed += lost
+            }
+            var stung = survivors[loser]!.archers / max(1, b.rearguardArchersPerLoss)
+            var pursuersLost = 0
+            for type in [UnitType.cavalry, .infantry, .archers] where stung > 0 {
+                let n = min(stung, survivors[winner]![type])
+                survivors[winner]![type] -= n
+                stung -= n
+                pursuersLost += n
+            }
+            pursuit = Pursuit(routed: routed, pursuersLost: pursuersLost)
         }
-        if loser == .defender { levyLeft -= levyLeft * b.pursuitPercent / 100 }
 
         let attackerKilled = generalDies(setup.attacker.general, won: winner == .attacker, &rng)
         let defenderKilled = generalDies(setup.defender.general, won: winner == .defender, &rng)
@@ -199,10 +212,33 @@ public struct BattleSimulator: Sendable {
                             rounds: round, attackerSurvivors: survivors[.attacker]!,
                             defenderSurvivors: survivors[.defender]!,
                             attackerGeneralKilled: attackerKilled, defenderGeneralKilled: defenderKilled,
-                            defenderLevySurvivors: levyLeft)
+                            defenderLevySurvivors: levyLeft, pursuit: pursuit)
     }
 
     // MARK: Deployment
+
+    /// How the two armies would stand before the first blow: frame 0 of the battle, without
+    /// fighting it. Deployment rolls nothing, so this is exactly what `resolve` starts from.
+    public func deployment(_ setup: BattleSetup) -> BattleFrame {
+        let impassable = Set(rules.battle.terrain[setup.terrain]!.impassable)
+        return BattleFrame(round: 0, blocks: deployBoth(setup, impassable).map(snapshot), strikes: [])
+    }
+
+    private func deployBoth(_ setup: BattleSetup, _ impassable: Set<GridPoint>) -> [Block] {
+        var blocks = deploy(setup.attacker, side: .attacker, firstID: 0)
+        blocks += deploy(setup.defender, side: .defender, firstID: blocks.count)
+        // A flanking march: the wings start a rank further forward, where the square is free.
+        for side in [BattleSide.attacker, .defender] where army(side, setup).stratagem == .flankingMarch {
+            let forward = side == .attacker ? 1 : -1
+            for i in blocks.indices where blocks[i].side == side && blocks[i].onWing {
+                let ahead = GridPoint(blocks[i].position.col, blocks[i].position.row + forward)
+                if !impassable.contains(ahead), !blocks.contains(where: { $0.position == ahead }) {
+                    blocks[i].position = ahead
+                }
+            }
+        }
+        return blocks
+    }
 
     /// Splits an army into at most `maxBlocks` single-type blocks and places them by formation.
     private func deploy(_ army: BattleArmy, side: BattleSide, firstID: Int) -> [Block] {

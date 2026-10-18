@@ -8,7 +8,7 @@ final class SoundBoard {
     static let shared = SoundBoard()
 
     enum Cue: String, CaseIterable {
-        case horn, clash, arrows, victory, defeat, click, drum, coins
+        case horn, clash, arrows, victory, defeat, click, drum, coins, wardrums, roar, gallop
     }
 
     /// Stored under this key in UserDefaults (read by `@AppStorage` in the replay).
@@ -29,7 +29,27 @@ final class SoundBoard {
         guard UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true,
               let player = players[cue] else { return }
         player.volume = max(0.1, min(1, volume))
+        player.numberOfLoops = 0
         player.currentTime = 0
         player.play()
+    }
+
+    /// Plays a cue over and over until `stop` (the war drums while the armies draw up).
+    func loop(_ cue: Cue, volume: Float = 1) {
+        guard UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true,
+              let player = players[cue], !player.isPlaying else { return }
+        player.volume = max(0.1, min(1, volume))
+        player.numberOfLoops = -1
+        player.currentTime = 0
+        player.play()
+    }
+
+    /// Fades a cue out.
+    func stop(_ cue: Cue, fade: TimeInterval = 0.6) {
+        guard let player = players[cue], player.isPlaying else { return }
+        player.setVolume(0, fadeDuration: fade)
+        DispatchQueue.main.asyncAfter(deadline: .now() + fade) {
+            player.stop()
+        }
     }
 }

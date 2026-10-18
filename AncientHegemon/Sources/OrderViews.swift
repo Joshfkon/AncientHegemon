@@ -35,7 +35,6 @@ struct OrderComposer: View {
     @State private var units = UnitCounts.zero
     @State private var withGeneral = false
     @State private var plan = BattlePlan()
-    @State private var showPlan = false
     /// Chance of victory with each formation, recomputed when the force or plan changes.
     @State private var oddsByFormation: [FormationID: Double] = [:]
 
@@ -101,16 +100,8 @@ struct OrderComposer: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if isBattle, case .march = order {
-                        DisclosureGroup(isExpanded: $showPlan) {
-                            BattlePlanEditor(engine: engine, civ: human, state: state, units: units,
-                                             general: withGeneral ? general : nil, plan: $plan, odds: oddsByFormation)
-                                .padding(.top, 6)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Battle plan").font(.subheadline.bold())
-                                Text(planSummary).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
+                        Label("You'll choose your battle plan on the field.", systemImage: "flag.2.crossed")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 .padding(.trailing, 4)
@@ -167,7 +158,7 @@ struct OrderComposer: View {
 
     private var confirmLabel: String {
         switch order {
-        case .march: isBattle ? "Attack" : "March"
+        case .march: isBattle ? "To the battlefield" : "March"
         case .embark: "Board"
         case .land: isBattle ? "Land and attack" : "Land"
         }
@@ -194,13 +185,6 @@ struct OrderComposer: View {
                 .font(.caption)
             }
         }
-    }
-
-    /// "Phalanx · Deep line · Straight fight".
-    private var planSummary: String {
-        let f = engine.rules.battle.formation(plan.formation ?? engine.rules.battle.defaultFormation)?.name ?? ""
-        return [f, plan.depth == .deep ? "deep line" : "wide line", BattlePlanEditor.name(plan.stratagem).lowercased()]
-            .joined(separator: " · ")
     }
 
     /// Marching everyone out leaves the land to its levy.
@@ -232,52 +216,10 @@ struct OrderComposer: View {
     }
 
     private var scouting: [String] {
-        guard let to = destination, let d = engine.defenders(of: to, against: human, state) else { return [] }
-        let defender = d.army
-        var lines: [String] = []
-        // Militia count for half: they're many but they're farmers.
-        let ours = Double(max(1, units.total)), theirs = Double(max(1, defender.units.total)) + Double(d.levy) / 2
-        let ratio = ours / theirs
-        let numbers = switch ratio {
-        case ..<0.5: "They greatly outnumber us."
-        case 0.5..<0.8: "They outnumber us."
-        case 0.8...1.25: "Their numbers are roughly the same as ours."
-        case 1.25..<2: "We outnumber them."
-        default: "We greatly outnumber them."
-        }
-        lines.append(numbers)
-        if ratio < 1.6 { lines.append("Defenders hold the edge in an even fight.") }
-        // How the two armies compare as they would actually fight.
-        let leader = withGeneral ? general : nil
-        let ourArmy = engine.battleArmy(human, units, plan: plan, general: leader, state)
-        if let theirArmy = engine.defendingArmy(of: to, against: human, state) {
-            if theirArmy.bronzePercent >= ourArmy.bronzePercent + 30 { lines.append("Their troops are better armed with bronze.") }
-            if ourArmy.bronzePercent >= theirArmy.bronzePercent + 30 { lines.append("Our bronze gives us the edge.") }
-            let ourDrill = ourArmy.unitPercent.values.reduce(0, +) + ourArmy.morale
-            let theirDrill = theirArmy.unitPercent.values.reduce(0, +) + theirArmy.morale
-            if theirDrill > ourDrill + 10 { lines.append("Their soldiers are better trained.") }
-            if ourDrill > theirDrill + 10 { lines.append("Our soldiers are better trained.") }
-            if theirArmy.units.archers > 0, units.cavalry == 0 { lines.append("Their archers will thin our ranks, and we have no cavalry.") }
-            if theirArmy.general != nil, leader == nil { lines.append("A general leads them; none leads us.") }
-            if leader != nil, theirArmy.general == nil { lines.append("Our general leads; they have none.") }
-        }
-        if d.levy > 0 {
-            lines.append(defender.units.total == 0 ? "No soldiers, but the people will take up arms." : "The people will take up arms beside them.")
-        }
-        let walls = engine.fortification(at: to, state)
-        if walls > 0 { lines.append("They are behind walls.") }
-        let terrain = engine.map.territory(to)!.terrain
-        if (engine.rules.battle.terrain[terrain]?.defensePercent ?? 0) > 0 {
-            lines.append(terrain == .forest || terrain == .desert ? "The \(terrain.rawValue) favours the defender."
-                                                                  : "The \(terrain.rawValue) favour the defender.")
-        }
-        switch order {
-        case let .march(from, _):
-            if let crossing = engine.map.crossing(between: from, and: to) { lines.append("We must cross a \(crossing.rawValue).") }
-        case .land: lines.append("We must fight our way ashore.")
-        case .embark: break
-        }
-        return lines
+        guard let to = destination else { return [] }
+        let from: TerritoryID? = if case let .march(f, _) = order { f } else { nil }
+        return Scouts.report(engine: engine, state: state, civ: human, units: units, plan: plan,
+                             general: withGeneral ? general : nil, to: to, from: from)
     }
 
     private func setDefaults() {
@@ -309,8 +251,12 @@ struct OrderComposer: View {
     private func send() {
         switch order {
         case let .march(from, to):
-            if isBattle, state.armies[from]?.plan != plan {
-                session.order(.setBattlePlan(territory: from, plan: plan))
+            if isBattle {
+                // The plan is made on the battlefield, with both armies in view.
+                Feedback.select()
+                session.muster = Muster(from: from, to: to, units: units, general: withGeneral)
+                done(.territory(to))
+                return
             }
             if session.order(.move(from: from, to: to, units: units, general: withGeneral)) {
                 done(.territory(to))
@@ -350,7 +296,19 @@ struct TerritoryPanel: View {
             if mine, session.isHumanTurn, let human {
                 actions(human)
             }
+            if state.owner(of: territory) == nil, session.isHumanTurn, let human {
+                TribeTalks(session: session, territory: territory, civ: human)
+            }
         }
+    }
+
+    /// Troops the player has raised here since their turn began (the map's "+1" marks).
+    private func raisedThisTurn(_ human: CivilizationID) -> UnitCounts {
+        var units = UnitCounts.zero
+        for mark in session.marks {
+            if case let .raised(t, civ, unit, count) = mark, t == territory, civ == human { units[unit] += count }
+        }
+        return units
     }
 
     @ViewBuilder private func actions(_ human: CivilizationID) -> some View {
@@ -370,7 +328,25 @@ struct TerritoryPanel: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         if home {
-            Text("Recruit").font(.subheadline.bold())
+            HStack {
+                Text("Recruit").font(.subheadline.bold())
+                Spacer()
+                let raised = raisedThisTurn(human)
+                if raised.total > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Raised this turn:")
+                        UnitRow(units: raised, size: 12)
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(Color.green.opacity(0.15)))
+                    .id(raised.total)
+                    .transition(.scale(scale: 1.6).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(duration: 0.35, bounce: 0.5), value: raisedThisTurn(human).total)
             Text("Each soldier costs gold and one of this land's people (👥 \(state.population(of: territory)) here). Cavalry also need a horse: each horse you have lets you raise one cavalry a turn.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -552,6 +528,91 @@ struct FleetPanel: View {
                                                       : "These ships have sailed this turn.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+/// Unclaimed land: talk to the tribe living there. Gifts may win them over (they swear to you,
+/// and some of their warriors take service); a demand works only with an overwhelming army next
+/// door; or march in and fight.
+struct TribeTalks: View {
+    let session: GameSession
+    let territory: TerritoryID
+    let civ: CivilizationID
+
+    private var engine: Engine { session.engine }
+    private var state: GameState { session.state }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Diplomacy").font(.subheadline.bold())
+            let warriors = state.armies[territory].flatMap { $0.owner == nativesID ? $0.units.total : nil } ?? 0
+            if warriors == 0 {
+                note("Nobody lives here to treat with. March a single unit in to claim it.")
+            } else if engine.tribe(at: territory, for: civ, in: state) == nil {
+                note("A tribe of \(warriors) warriors holds this land. Your land must border theirs before you can send envoys.")
+            } else if state.parleyed.contains(territory) {
+                note("Your envoys have spoken with them this turn. Try again next turn, or march in.")
+            } else {
+                talks(warriors)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder private func talks(_ warriors: Int) -> some View {
+        let cost = engine.giftCost(at: territory, in: state)
+        let chance = engine.giftChance(at: territory, for: civ, in: state)
+        let gold = state.civs[civ]?.gold ?? 0
+        let next = engine.troopsNextTo(territory, for: civ, in: state)
+        let bows = engine.demandWorks(at: territory, for: civ, in: state)
+        let join = warriors * engine.rules.tribes.warriorsJoinPercent / 100
+        note("A tribe of \(warriors) warriors. Tribes don't trade or sign treaties, but they can be brought under your rule: they become your land, and \(join == 0 ? "their warriors go home" : "\(join) of their warriors join your army").")
+        Button {
+            if session.order(.parley(territory: territory, .gifts)) { SoundBoard.shared.play(.coins, volume: 0.6) }
+        } label: {
+            option("gift.fill", "Win them over with gifts",
+                   (gold < cost ? "\(cost) gold (you have \(gold))" : "\(cost) gold") + " · \(Self.likelihood(chance)). More of your troops next door makes them keener.")
+        }
+        .disabled(gold < cost)
+        Button {
+            session.order(.parley(territory: territory, .demand))
+        } label: {
+            option("crown.fill", "Demand they submit",
+                   bows ? "With \(next) troops at their border, they will bow." :
+                   "Free, but they bow only to \(engine.rules.tribes.demandRatio)× their numbers at the border (you have \(next)). Refused, it costs you standing and stiffens them.")
+        }
+        option("flag.2.crossed.fill", "Or take it by force",
+               "Select one of your armies next door and tap this land to attack.")
+            .foregroundStyle(.secondary)
+    }
+
+    private func option(_ icon: String, _ title: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon).frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.callout.bold())
+                Text(detail).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+    }
+
+    /// Words, not numbers, like the scouts.
+    static func likelihood(_ p: Int) -> String {
+        switch p {
+        case 75...: "they will very likely accept"
+        case 55..<75: "they will probably accept"
+        case 40..<55: "they may accept"
+        case 25..<40: "they will probably refuse"
+        default: "they will very likely refuse"
         }
     }
 }

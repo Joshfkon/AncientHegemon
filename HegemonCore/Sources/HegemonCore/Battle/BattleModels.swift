@@ -40,6 +40,9 @@ public struct BattleArmy: Codable, Sendable, Equatable {
     public var stratagem: Stratagem?
     /// Militia raised from the population of the land being defended.
     public var levy: Int
+    /// If the enemy breaks, chase them down (more of them fall, but archers covering the
+    /// retreat can sting the pursuers) or hold the field.
+    public var pursue: Bool = true
 
     public init(civ: CivilizationID, units: UnitCounts, formation: FormationID,
                 general: General? = nil, bronzePercent: Int = 0,
@@ -64,11 +67,13 @@ public struct BattlePlan: Codable, Sendable, Hashable {
     public var formation: FormationID?
     public var depth: LineDepth
     public var stratagem: Stratagem?
+    public var pursue: Bool
 
-    public init(formation: FormationID? = nil, depth: LineDepth = .deep, stratagem: Stratagem? = nil) {
+    public init(formation: FormationID? = nil, depth: LineDepth = .deep, stratagem: Stratagem? = nil, pursue: Bool = true) {
         self.formation = formation
         self.depth = depth
         self.stratagem = stratagem
+        self.pursue = pursue
     }
 }
 
@@ -137,9 +142,17 @@ public struct BattleReport: Codable, Sendable, Equatable {
     public let defenderGeneralKilled: Bool
     /// Militia who came home; the rest of the levy fell.
     public let defenderLevySurvivors: Int
+    /// The winner chased the broken enemy: how many of the beaten side fell in the rout, and how
+    /// many pursuers the rearguard's archers cut down. Nil when the winner held the field.
+    public let pursuit: Pursuit?
 
     public var attackerLosses: UnitCounts { setup.attacker.units - attackerSurvivors }
     public var defenderLosses: UnitCounts { setup.defender.units - defenderSurvivors }
+}
+
+public struct Pursuit: Codable, Sendable, Equatable {
+    public let routed: Int
+    public let pursuersLost: Int
 }
 
 public struct NavalReport: Codable, Sendable, Equatable {

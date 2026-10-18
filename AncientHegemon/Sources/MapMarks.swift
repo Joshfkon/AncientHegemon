@@ -9,6 +9,8 @@ enum MapMark: Hashable {
     case battle(at: TerritoryID, winner: CivilizationID, loser: CivilizationID)
     case captured(TerritoryID, by: CivilizationID)
     case event(TerritoryID, EventKind)
+    /// New troops raised: a brief "+1" that floats up and fades.
+    case raised(TerritoryID, civ: CivilizationID, unit: UnitType, count: Int)
 
     /// Marks for one turn's events, in the order they happened.
     static func from(_ events: [GameEvent], before: GameState, after: GameState) -> [MapMark] {
@@ -27,8 +29,10 @@ enum MapMark: Hashable {
                 let won = report.winner == .attacker
                 marks.append(.battle(at: t, winner: won ? report.setup.attacker.civ : report.setup.defender.civ,
                                      loser: won ? report.setup.defender.civ : report.setup.attacker.civ))
-            case let .captured(civ, t, _):
+            case let .captured(civ, t, _), let .tribeJoined(civ, t, _, _):
                 marks.append(.captured(t, by: civ))
+            case let .recruited(civ, t, unit, count):
+                marks.append(.raised(t, civ: civ, unit: unit, count: count))
             case let .event(r):
                 if let t = r.territory, [.famine, .flood, .plague, .barbarians, .revolt, .seaPeoples, .drought, .earthquake].contains(r.kind) {
                     target = t

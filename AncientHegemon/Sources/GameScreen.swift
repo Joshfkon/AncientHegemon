@@ -96,14 +96,20 @@ struct GameScreen: View {
             }
         }
         .animation(.spring(duration: 0.3), value: panelOpen)
-        .sheet(item: $session.replay) { entry in
+        .fullScreenCover(item: $session.muster) { muster in
+            BattlefieldView(session: session, muster: muster)
+        }
+        // Battles fought from the battlefield play there; this is for the rest (landings, defences).
+        .sheet(item: Binding(get: { session.muster == nil ? session.replay : nil },
+                             set: { session.replay = $0 })) { entry in
             NavigationStack {
-                BattleReplayView(entry: entry, state: state, map: engine.map, autoplay: true, perspective: session.human)
-                    .id(entry.id)
-                    .toolbar { Button("Done") { session.replay = nil } }
+                BattleReplayView(entry: entry, state: state, map: engine.map, autoplay: true, perspective: session.human) {
+                    session.replay = nil
+                }
+                .id(entry.id)
             }
         }
-        .sheet(isPresented: .constant(session.crisis != nil && session.replay == nil)) {
+        .sheet(isPresented: .constant(session.crisis != nil && session.replay == nil && session.muster == nil)) {
             CrisisView(session: session).interactiveDismissDisabled()
         }
         .sheet(isPresented: $showKnowledge) {
@@ -156,6 +162,12 @@ struct GameScreen: View {
                                    Moment(kind: .disaster(.earthquake, seat))]
                 session.demoFlash(seat)
             }
+            // Launch with -demoBattle YES to draw the capital's army up against a neighbouring tribe.
+            if UserDefaults.standard.bool(forKey: "demoBattle"), let human = session.human,
+               let seat = engine.seat(of: human, in: state), let army = state.armies[seat],
+               let target = engine.map.landNeighbors(of: seat).first(where: { engine.defenders(of: $0, against: human, state) != nil }) {
+                session.muster = Muster(from: seat, to: target, units: army.units, general: state.general(of: human, at: seat) != nil)
+            }
             #endif
             // Start close in on the player's own land.
             if let human = session.human, let seat = engine.seat(of: human, in: state) {
@@ -173,7 +185,7 @@ struct GameScreen: View {
             let place: TerritoryID? = switch mark {
             case let .march(_, _, to, _), let .landing(_, _, to, _): to
             case let .battle(at, _, _): at
-            case let .captured(t, _), let .event(t, _): t
+            case let .captured(t, _), let .event(t, _), let .raised(t, _, _, _): t
             }
             if let place { mapCenter = MapCenter(territory: place, id: (mapCenter?.id ?? 0) + 1) }
         }
@@ -206,6 +218,20 @@ struct GameScreen: View {
                 if !panelOpen { layerPicker }
                 Spacer(minLength: 8)
                 toolbar
+            }
+            if let toast = session.toast {
+                Label(toast.text, systemImage: toast.bad ? "xmark.circle.fill" : "checkmark.circle.fill")
+                    .font(.callout.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background((toast.bad ? Color(red: 0.6, green: 0.15, blue: 0.12) : Color(red: 0.15, green: 0.5, blue: 0.3)).opacity(0.95), in: Capsule())
+                    .shadow(radius: 4)
+                    .id(toast.id)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .task(id: toast.id) {
+                        do { try await Task.sleep(for: .seconds(2.6)) } catch { return }
+                        withAnimation { if session.toast?.id == toast.id { session.toast = nil } }
+                    }
             }
             if let message = session.message {
                 Text(message)
@@ -264,6 +290,7 @@ struct GameScreen: View {
         }
         .padding(10)
         .animation(.easeInOut(duration: 0.25), value: tip)
+        .animation(.spring(duration: 0.3), value: session.toast?.id)
         .animation(.easeInOut(duration: 0.25), value: session.showReport)
         .animation(.easeInOut(duration: 0.25), value: quickLook)
     }

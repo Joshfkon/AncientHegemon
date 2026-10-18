@@ -262,7 +262,7 @@ struct MapView: View {
     /// Marks young enough to still be moving.
     private var animatingMarks: Bool {
         guard let last = markTimes.last else { return false }
-        return Date.now.timeIntervalSince(last) < 1.2
+        return Date.now.timeIntervalSince(last) < 2.3
     }
 
     private func draw(_ context: inout GraphicsContext, _ t: BoardTransform, now: Date = .now) {
@@ -618,6 +618,21 @@ extension MapView {
                 flag.closeSubpath()
                 context.fill(flag, with: .color(Palette.color(civ, state)))
                 context.stroke(flag, with: .color(.black.opacity(0.7)), lineWidth: 0.8)
+            case let .raised(id, civ, unit, count):
+                // "+1 ⛑" rising from the token for a moment.
+                guard age < 2.2, let c = token(id, t) else { continue }
+                let k = age / 2.2
+                let p = CGPoint(x: c.x, y: c.y - (12 + 26 * k) * t.detail)
+                let plate = CGRect(x: p.x - 18 * t.detail, y: p.y - 8 * t.detail, width: 36 * t.detail, height: 16 * t.detail)
+                context.opacity = 1 - k * k
+                context.fill(Path(roundedRect: plate, cornerRadius: 8 * t.detail), with: .color(Palette.color(civ, state)))
+                context.stroke(Path(roundedRect: plate, cornerRadius: 8 * t.detail), with: .color(.white), lineWidth: 1.2)
+                context.draw(Text("+\(count)").font(.system(size: 10 * t.detail, weight: .black)).foregroundStyle(.white),
+                             at: CGPoint(x: plate.minX + 11 * t.detail, y: p.y))
+                context.fill(UnitShape(type: unit).path(in: CGRect(x: plate.maxX - 15 * t.detail, y: plate.minY + 2.5 * t.detail,
+                                                                     width: 11 * t.detail, height: 11 * t.detail)),
+                             with: .color(.white))
+                context.opacity = 1
             case let .event(id, kind):
                 guard let c = token(id, t) else { continue }
                 context.draw(Text(MapMark.glyph(kind)).font(.system(size: 9 * t.detail)),

@@ -44,6 +44,8 @@ final class GameSession {
     var message: String?
     /// A battle the player fought, waiting to be watched.
     var replay: BattleEntry?
+    /// An attack drawn up on the battlefield, waiting for the player's plan and the charge.
+    var muster: Muster?
     /// Spectating: AI rounds keep playing until paused.
     var playing = false {
         didSet { if playing { startPlaying() } }
@@ -66,6 +68,8 @@ final class GameSession {
     var skipping = false
     /// The odds of the attack being planned, for the arrow on the map.
     var plannedOdds: Double?
+    /// A short confirmation of the player's last order ("Raised 1 infantry in Egypt").
+    var toast: (text: String, id: Int, bad: Bool)?
     /// Big moments waiting to be shown, one at a time.
     var moments: [Moment] = []
     /// Territories that just changed hands, with when, for a colour sweep on the map.
@@ -199,6 +203,23 @@ final class GameSession {
             case .recruit, .buildShips, .build, .appointGeneral, .honorGeneral: SoundBoard.shared.play(.coins, volume: 0.6)
             default: break
             }
+            if let text = Self.confirmation(command, engine: engine) {
+                toast = (text, (toast?.id ?? 0) + 1, false)
+                Feedback.select()
+            }
+            // The tribe's answer.
+            for event in events {
+                switch event {
+                case let .tribeJoined(_, t, _, warriors):
+                    let name = engine.map.territory(t)?.name ?? t
+                    toast = ("\(name) is yours" + (warriors > 0 ? " · \(warriors) warriors join" : ""), (toast?.id ?? 0) + 1, false)
+                    Feedback.outcome(true)
+                case let .tribeRefused(_, t, _):
+                    toast = ("\(engine.map.territory(t)?.name ?? t) refuses", (toast?.id ?? 0) + 1, true)
+                    Feedback.outcome(false)
+                default: break
+                }
+            }
             if case .endTurn = command { Task { await runAITurns() } }
             return true
         } catch {
@@ -287,6 +308,20 @@ final class GameSession {
         }
     }
 
+    /// What an order did, in words, for the confirmation toast.
+    static func confirmation(_ command: Command, engine: Engine) -> String? {
+        func place(_ t: String) -> String { engine.map.territory(t)?.name ?? engine.map.sea(t)?.name ?? t }
+        switch command {
+        case let .recruit(t, unit, count): return "Raised \(count) \(unit.rawValue) in \(place(t))"
+        case let .buildShips(_, sea, count): return "\(count) ship\(count == 1 ? "" : "s") built in the \(place(sea))"
+        case let .build(t, project): return "Work begins on \(projectName(project).lowercased()) in \(place(t))"
+        case let .appointGeneral(t): return "A general takes command in \(place(t))"
+        case let .disband(t, units): return "Disbanded \(units.total) in \(place(t))"
+        case let .setTaxRate(r): return "Taxes set to \(r)%"
+        default: return nil
+        }
+    }
+
     /// The engine's refusals, in words.
     static func describe(_ error: Error, engine: Engine) -> String {
         func place(_ t: String) -> String { engine.map.territory(t)?.name ?? engine.map.sea(t)?.name ?? t }
@@ -314,6 +349,8 @@ final class GameSession {
         case .invalidTaxRate: return "Taxes go from 0 to 100% in steps of 10."
         case .projectUnavailable(let t, let p): return "Can't build \(projectName(p).lowercased()) in \(place(t))."
         case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."
+        case .noTribe(let t): return "There is no tribe in \(place(t)) you can treat with: your land must border theirs."
+        case .alreadyParleyed(let t): return "Your envoys have already spoken with \(place(t)) this turn."
         default: return "That can't be done (\(e))."
         }
     }
@@ -335,6 +372,9 @@ final class GameSession {
                 flashes[t] = .now
                 if civ == me { new.append(Moment(kind: .captured(t))) }
                 else if from == me { new.append(Moment(kind: .lost(t))) }
+            case let .tribeJoined(civ, t, _, _) where civ == me:
+                flashes[t] = .now
+                new.append(Moment(kind: .captured(t)))
             case let .discovery(civ, field, level) where civ == me:
                 new.append(Moment(kind: .discovery(field, level)))
             case let .peaceMade(pair) where pair.a == me || pair.b == me:
@@ -464,6 +504,11 @@ final class GameSession {
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
             case let .disbanded(civ, t, units, rejoined) where civ == human:
                 add(civ, "Disbanded \(units.total) troops in \(place(t))" + (rejoined > 0 ? "; \(rejoined) went home to farm" : ""), at: t)
+            case let .tribeJoined(civ, t, parley, warriors) where civ == human:
+                add(civ, "\(place(t)) \(parley == .gifts ? "accepts your gifts" : "bows to your demand") and swears loyalty"
+                    + (warriors > 0 ? "; \(warriors) warriors join you" : ""), at: t)
+            case let .tribeRefused(civ, t, parley) where civ == human:
+                add(civ, "\(place(t)) " + (parley == .gifts ? "takes your gifts but will not bow" : "refuses your demand and sharpens its spears"), at: t)
             case let .recruited(civ, t, unit, count) where civ == human:
                 add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))", at: t)
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")

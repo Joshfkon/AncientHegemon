@@ -195,6 +195,28 @@ extension Engine {
                            depth: LineDepth = .deep, stratagem: Stratagem? = nil,
                            general: General? = nil, amphibious: Bool = false,
                            samples: Int = 12, in state: GameState) -> Double? {
+        let plan = BattlePlan(formation: formation, depth: depth, stratagem: stratagem)
+        guard let setup = attackSetup(civ, units: units, into: to, from: origin, plan: plan, general: general,
+                                      amphibious: amphibious, in: state) else { return nil }
+        var salt: UInt64 = 0xCBF2_9CE4_8422_2325  // FNV-1a: stable across launches, unlike hashValue
+        for byte in (to + (origin ?? "sea")).utf8 { salt = (salt ^ UInt64(byte)) &* 0x100_0000_01B3 }
+        var rng = SeededRNG(seed: state.seed ^ (UInt64(state.turn) &* 0x2545_F491_4F6C_DD1D) ^ salt)
+        let sim = BattleSimulator(rules: rules)
+        var wins = 0
+        for _ in 0..<samples {
+            var trial = setup
+            trial.seed = rng.next()
+            if sim.resolve(trial).winner == .attacker { wins += 1 }
+        }
+        return Double(wins) / Double(samples)
+    }
+
+    /// The battle an attack would bring on, as it would be fought (seed 0: nothing is rolled).
+    /// Nil if nobody would defend.
+    public func attackSetup(_ civ: CivilizationID, units: UnitCounts, into to: TerritoryID,
+                            from origin: TerritoryID? = nil, plan: BattlePlan = BattlePlan(),
+                            general: General? = nil, amphibious: Bool = false,
+                            in state: GameState) -> BattleSetup? {
         guard let defending = defendingArmy(of: to, against: civ, state), !units.isEmpty else { return nil }
         let approach: Approach
         if amphibious {
@@ -206,21 +228,9 @@ extension Engine {
             case nil: .overland
             }
         }
-        var salt: UInt64 = 0xCBF2_9CE4_8422_2325  // FNV-1a: stable across launches, unlike hashValue
-        for byte in (to + (origin ?? "sea")).utf8 { salt = (salt ^ UInt64(byte)) &* 0x100_0000_01B3 }
-        var rng = SeededRNG(seed: state.seed ^ (UInt64(state.turn) &* 0x2545_F491_4F6C_DD1D) ^ salt)
-        let sim = BattleSimulator(rules: rules)
-        var wins = 0
-        for _ in 0..<samples {
-            let report = sim.resolve(BattleSetup(
-                attacker: battleArmy(civ, units, plan: BattlePlan(formation: formation, depth: depth, stratagem: stratagem),
-                                     general: general, state),
-                defender: defending,
-                terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next(),
-                fortification: fortification(at: to, state)))
-            if report.winner == .attacker { wins += 1 }
-        }
-        return Double(wins) / Double(samples)
+        return BattleSetup(attacker: battleArmy(civ, units, plan: plan, general: general, state),
+                           defender: defending, terrain: map.territory(to)!.terrain, approach: approach,
+                           seed: 0, fortification: fortification(at: to, state))
     }
 
     /// Bad omens forbid starting a fight: entering another civ's land or any foreign army.

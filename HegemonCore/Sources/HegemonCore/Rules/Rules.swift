@@ -177,6 +177,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let projectEffects: ProjectEffects
     public let knowledge: KnowledgeRules
     public let collapse: CollapseRules
+    public let tribes: TribeRules
     public let supply: SupplyRules
     public let trade: TradeRules
     public let ships: ShipRules
