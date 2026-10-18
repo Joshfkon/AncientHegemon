@@ -115,6 +115,8 @@ struct MapView: View {
     var trailingInset: CGFloat = 0
     /// Bring a territory into the visible part of the map.
     var center: MapCenter?
+    /// Territories to spotlight (e.g. where a resource comes from): the rest is dimmed.
+    var spotlight: Set<TerritoryID> = []
     @State private var viewSize: CGSize = .zero
     private let art = BoardArt.shared
 
@@ -326,6 +328,17 @@ struct MapView: View {
         case .armies, .resources: break
         }
         drawMarks(&context, t)
+        if !spotlight.isEmpty {
+            for territory in map.territories {
+                guard let shape = art.territories[territory.id] else { continue }
+                let path = t.path(shape.polygon)
+                if spotlight.contains(territory.id) {
+                    context.stroke(path, with: .color(.yellow), style: StrokeStyle(lineWidth: 3, lineJoin: .round))
+                } else {
+                    context.fill(path, with: .color(.black.opacity(0.35)))
+                }
+            }
+        }
 
         // Names in the board's hand lettering, then armies and fleets.
         for territory in map.territories {

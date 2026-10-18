@@ -261,7 +261,8 @@ final class GameSession {
         switch e {
         case .insufficientGold(let needed, let available): return "Not enough gold: \(needed) needed, \(available) in the treasury."
         case .insufficientPopulation(let t): return "\(place(t)) has too few people left to raise troops."
-        case .resourceLimit(let r): return "Not enough \(r.rawValue) this turn."
+        case .resourceLimit(let r):
+            return "No \(r.rawValue) to spare this turn. Tap Resources (under your gold) to see where to get more."
         case .notAdjacent(let a, let b): return "\(place(a)) and \(place(b)) don't border each other."
         case .insufficientUnits(let t): return "Not enough troops ready in \(place(t)) (each unit moves once a turn)."
         case .atPeace(let t): return "You are at peace with the owner of \(place(t)). Declare war first."

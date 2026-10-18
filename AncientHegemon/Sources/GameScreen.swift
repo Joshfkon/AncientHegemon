@@ -11,6 +11,11 @@ enum PendingOrder: Hashable {
 /// The game: the board fills the screen, with the player's status and controls floating over it.
 /// The panel slides in from the right when there's something to do there (a selection, an order,
 /// the empire or the chronicle) and gets out of the way otherwise.
+extension Notification.Name {
+    /// Open the resources sheet at a resource (the notification's object).
+    static let showResource = Notification.Name("showResource")
+}
+
 struct GameScreen: View {
     @Bindable var session: GameSession
     @State private var selected: MapPick?
@@ -29,6 +34,11 @@ struct GameScreen: View {
     @State private var seenLog = 0
     @State private var idleIndex = 0
     @State private var mapCenter: MapCenter?
+    /// The resources sheet, opened at a given resource.
+    @State private var resourcesAt: Resource?
+    @State private var showResources = false
+    /// A resource whose sources are spotlit on the map.
+    @State private var spotlit: Resource?
 
     enum PanelTab: String, CaseIterable {
         case orders = "Orders", empire = "Realm", diplomacy = "Rivals", log = "Chronicle"
@@ -46,7 +56,8 @@ struct GameScreen: View {
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
                     marks: session.marks, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
-                    trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter)
+                    trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter,
+                    spotlight: spotlightTerritories)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
                 .ignoresSafeArea()
             overlays
@@ -86,6 +97,23 @@ struct GameScreen: View {
                         .toolbar { Button("Done") { showKnowledge = false } }
                 }
             }
+        }
+        .sheet(isPresented: $showResources) {
+            NavigationStack {
+                ResourcesView(session: session, show: { r in
+                    showResources = false
+                    spotlit = r
+                    layer = .resources
+                    if let first = session.human.flatMap({ engine.sources(of: r, for: $0, in: state).first }) {
+                        mapCenter = MapCenter(territory: first.territory, onlyIfHidden: false, id: (mapCenter?.id ?? 0) + 1)
+                    }
+                }, focus: resourcesAt)
+                .toolbar { Button("Done") { showResources = false } }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showResource)) { note in
+            resourcesAt = note.object as? Resource
+            showResources = true
         }
         .sheet(isPresented: $showCodex) {
             NavigationStack {
@@ -347,6 +375,23 @@ struct GameScreen: View {
                     StatExplainer(topic: topic, session: session)
                         .presentationCompactAdaptation(.popover)
                 }
+                // The resources that limit what you can raise and build, at a glance.
+                Button {
+                    resourcesAt = nil
+                    showResources = true
+                } label: {
+                    HStack(spacing: 7) {
+                        ForEach([Resource.horses, .timber, .copper, .tin, .stone], id: \.self) { r in
+                            let n = econ.resources[r] ?? 0
+                            Text("\(MapView.glyph(r))\(n)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(n == 0 ? Color.secondary : Color.primary)
+                        }
+                        Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Resources")
                 if !econ.cutOff.isEmpty {
                     Label("\(econ.cutOff.count) cut off", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.red)
@@ -452,7 +497,31 @@ struct GameScreen: View {
         }
     }
 
+    private var spotlightTerritories: Set<TerritoryID> {
+        guard let r = spotlit else { return [] }
+        return Set(engine.map.territories.filter { engine.territoryYield(r, $0.id, state) > 0 }.map(\.id))
+    }
+
     @ViewBuilder private var legend: some View {
+        if let r = spotlit {
+            Button {
+                spotlit = nil
+            } label: {
+                HStack(spacing: 6) {
+                    Text("\(MapView.glyph(r)) Where \(r.rawValue) comes from")
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .font(.callout.bold())
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(.yellow.opacity(0.9), in: Capsule())
+                .foregroundStyle(.black)
+            }
+        } else {
+            layerLegend
+        }
+    }
+
+    @ViewBuilder private var layerLegend: some View {
         let text: String? = switch layer {
         case .armies: nil
         case .threats: "Red: more hostile troops can reach it next turn than defend it · orange: threatened but held · ⚔︎ attackers vs garrison"

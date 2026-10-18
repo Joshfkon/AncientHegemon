@@ -372,8 +372,14 @@ struct TerritoryPanel: View {
             Text("Recruit").font(.subheadline.bold())
             HStack {
                 ForEach(UnitType.allCases, id: \.self) { type in
+                    let allowance = engine.recruitAllowance(type, for: human, in: state)
+                    let blocked = (allowance?.left ?? 1) == 0
                     Button {
-                        session.order(.recruit(territory: territory, unit: type, count: 1))
+                        if blocked, let r = engine.rules.stats(type).requires {
+                            NotificationCenter.default.post(name: .showResource, object: r)
+                        } else {
+                            session.order(.recruit(territory: territory, unit: type, count: 1))
+                        }
                     } label: {
                         VStack(spacing: 0) {
                             HStack(spacing: 3) {
@@ -381,10 +387,26 @@ struct TerritoryPanel: View {
                                 Text("+ \(type.rawValue.capitalized)").font(.caption.bold())
                             }
                             Text("\(engine.rules.stats(type).cost) gold").font(.caption2)
+                            if let allowance, let r = engine.rules.stats(type).requires {
+                                Text("\(MapView.glyph(r)) \(allowance.left) left")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(blocked ? .orange : .secondary)
+                            }
                         }
+                        .opacity(blocked ? 0.6 : 1)
                     }
                     .buttonStyle(.bordered)
                 }
+            }
+            if let a = engine.recruitAllowance(.cavalry, for: human, in: state), a.perTurn == 0 {
+                Button {
+                    NotificationCenter.default.post(name: .showResource, object: Resource.horses)
+                } label: {
+                    Label("No horses: see where to get them", systemImage: "info.circle")
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
             }
             if army != nil, state.general(of: human, at: territory) == nil {
                 Button("Appoint a general (\(engine.rules.government.appointCost) gold)") {
