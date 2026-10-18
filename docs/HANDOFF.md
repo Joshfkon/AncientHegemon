@@ -45,6 +45,11 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     far; no human player, no painted-board art, no SpriteKit yet. Landscape layout; shows the
     victory banner and final standings. Build with `-configuration Release` for the Simulator,
     or rounds crawl (debug-built engine).
+  - **Map art traced from Josh's board photo**: `tools/board_shapes.py` (hand-traced outlines in
+    the photo's pixel space, with an adjacency check against `map.json`); the preview app now
+    paints the board. Two painting-vs-rules questions are open (see the DESIGN.md appendix).
+    Josh's second photo shows the board with its resource tokens; reconciling `map.json`'s
+    resource values against those tokens is still to do.
   - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
     In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
     (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).
@@ -169,8 +174,8 @@ Each milestone ends with passing tests and a push.
 7. **iOS app**: Xcode project, SwiftUI shell, SpriteKit map with territory hit-areas, battle
    playback view, HUD with the 6 resources. Run in the Simulator, then on Josh's iPhone.
 
-The painted board should become the map art. A high-resolution photo or scan is needed; ask
-Josh for it before step 7. Until then use a placeholder.
+The painted board is the map art: outlines traced from Josh's photo (see above). A better photo
+or scan in the repo would let the painting itself be the background layer.
 
 ## Working with Josh
 

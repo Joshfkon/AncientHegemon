@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		45672360191504BA6F4B6C43 /* map_shapes.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E7B5FD5E53683B4C70351A3 /* map_shapes.json */; };
 		4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
 		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
@@ -19,6 +20,7 @@
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
 		3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleViews.swift; sourceTree = "<group>"; };
 		7DEFB823D986E1A428DCF40F /* MapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLayout.swift; sourceTree = "<group>"; };
+		7E7B5FD5E53683B4C70351A3 /* map_shapes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = map_shapes.json; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0154D70203F3EB68C8F8532 /* HegemonCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HegemonCore; path = ../HegemonCore; sourceTree = SOURCE_ROOT; };
 		E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AncientHegemonApp.swift; sourceTree = "<group>"; };
@@ -41,6 +43,7 @@
 			isa = PBXGroup;
 			children = (
 				732CB08F6BDCAAA40B857620 /* Packages */,
+				F437369A8B03AE5D329AEE2C /* Resources */,
 				BFA8AFED8A6372F6F5B96C27 /* Sources */,
 				7BD20A532AA72D17F2858F8E /* Products */,
 			);
@@ -74,6 +77,14 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		F437369A8B03AE5D329AEE2C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7E7B5FD5E53683B4C70351A3 /* map_shapes.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -82,6 +93,7 @@
 			buildConfigurationList = 0871924E092DD5BF9C1A11F4 /* Build configuration list for PBXNativeTarget "AncientHegemon" */;
 			buildPhases = (
 				7C2AEEF6E020A2DC16CD6C9F /* Sources */,
+				297903CD97CD464D226C9A1D /* Resources */,
 				A144F32226E1F43E77413F8E /* Frameworks */,
 			);
 			buildRules = (
@@ -131,6 +143,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		297903CD97CD464D226C9A1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				45672360191504BA6F4B6C43 /* map_shapes.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7C2AEEF6E020A2DC16CD6C9F /* Sources */ = {

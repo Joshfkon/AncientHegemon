@@ -570,3 +570,14 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     the fallen, last to fall first.
 - **Landscape on the phone** (Josh, replacing "portrait-first"): the map is wider than tall, so
   the game is landscape-only, with the map on the left and the panels on the right.
+- **Map art from the painted board** (step 7): territory outlines are traced by hand from Josh's
+  photo of the board (both halves side by side, 2000×924 px) in `tools/board_shapes.py`, which
+  writes `AncientHegemon/Resources/map_shapes.json` (outlines, lettering positions and angles,
+  rivers, mountain peaks, fleet anchors) and checks that the territories drawn as touching are
+  exactly the land links in `map.json`. The app paints them in the board's palette with owner
+  tints. If the photo itself is added to the repo, the outlines line up with it in the same
+  pixel space and it can serve as the background layer.
+  - **Open: painting vs rules.** The tracing found two places where the painting and `map.json`
+    disagree: Venedi touches Macedonia along the river on the painting but they aren't linked in
+    the rules, and the rules link Venedi to Scythe though Dacia lies between them on the
+    painting. The rules are unchanged until Josh decides.

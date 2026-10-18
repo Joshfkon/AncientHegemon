@@ -11,7 +11,10 @@ targets:
   AncientHegemon:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources:
+      - Sources
+      - path: Resources
+        buildPhase: resources
     dependencies:
       - package: HegemonCore
         product: HegemonCore
