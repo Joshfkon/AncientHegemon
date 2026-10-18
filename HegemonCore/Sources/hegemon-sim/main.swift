@@ -182,6 +182,22 @@ for civ in civs {
           + pad("\(pct(sum(\.navalBattlesWon), fights)) of \(fights)", 17))
 }
 
+// Knowledge and investment: what each empire learned by round 20, and what it built.
+let fields = KnowledgeField.allCases
+print("")
+print("knowledge at round 20 (average level 0-3), projects per game")
+print("civ          " + fields.map { pad(String($0.rawValue.prefix(8)), 9) }.joined() + "    built     lost")
+for civ in civs {
+    let rs = records.compactMap { $0.civs[civ] }
+    let known = rs.compactMap(\.knowledgeAt20)
+    let n = Double(max(1, rs.count))
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + fields.map { f in pad(known.isEmpty ? "-" : String(format: "%.1f",
+              Double(known.map { $0[f] ?? 0 }.reduce(0, +)) / Double(known.count)), 9) }.joined()
+          + pad(String(format: "%.1f", Double(rs.map(\.projectsBuilt).reduce(0, +)) / n), 9)
+          + pad(String(format: "%.1f", Double(rs.map(\.projectsDestroyed).reduce(0, +)) / n), 9))
+}
+
 var formations: [FormationID: FormationRecord] = [:]
 for r in records {
     for (f, rec) in r.formations {

@@ -636,7 +636,8 @@ Decisions (his answers, with the details filled in):
 
 - **Points a turn** = 10 × max(1, population/10 + income/5), in tenths of a point so small shares
   still count. They split across fields in proportion to **experience**; leftovers go to the
-  most practiced field. Levels are reached at 12, 36 and 80 points.
+  most practiced field. Levels are reached at 8, 24 and 56 points (lowered from 12/36/80 so most
+  civs reach level 1 in a few fields by round 20).
 - **Experience each harvest**: Agriculture production/8; Metallurgy bronze + 2 × iron ore;
   Horsemanship 2 × horses; Seafaring ships + 2 × sea routes; Construction stone; Administration
   routes + territories/6 + income/10. **Events add more**: every land battle gives Warfare
@@ -674,3 +675,15 @@ Decisions (his answers, with the details filled in):
   units, with weight 1 (2 with Steel). Iron in store doesn't wear.
 - First sims (40 games): the collapse fires at sensible rates, but half the games are already
   decided by round 25, before it peaks. Pacing it against domination is phase 4's job.
+
+### AI and balance after the redesign (phase 4)
+
+- The AI treats every coast as a front once collapse pressure reaches 25 (armies hold coasts instead
+  of all marching to the land border), and walls its most populous coast before building mines.
+- The sim reports average knowledge levels at round 20 and projects built and lost per game.
+- 40 games after phase 4: average length about 40 rounds (34 before the collapse); endings 17
+  decisive domination, 2 major domination, 11 major legacy, 10 minor legacy. Wins: Mesopotamia 52%,
+  Greece 17%, Egypt 17%, Italia 12%. About 20 projects built and 3–4 lost per civ per game. By round
+  20 Mesopotamia leads in horsemanship (1.7) and metallurgy; everyone has some seafaring.
+- **Still open**: Mesopotamia's early lead (it wins about half, as before the redesign), and
+  defenders still rarely hold (about 25%).

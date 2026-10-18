@@ -422,7 +422,11 @@ public struct AIPlayer: Sendable {
     /// Marches idle units out of safe interior territories toward the nearest border.
     func fortify(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let owned = Set(state.territories(of: civ))
-        let frontier = owned.filter { t in map.landNeighbors(of: t).contains { !owned.contains($0) } }
+        // Once the Sea Peoples are about, every coast is a front too.
+        let coastsExposed = engine.collapsePressure(state) >= 25
+        let frontier = owned.filter { t in
+            map.landNeighbors(of: t).contains { !owned.contains($0) } || (coastsExposed && map.territory(t)!.isCoastal)
+        }
         var distance: [TerritoryID: Int] = [:]
         var queue = frontier.sorted()
         for t in queue { distance[t] = 0 }

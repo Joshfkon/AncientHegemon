@@ -32,6 +32,12 @@ extension AIPlayer {
         if let capital = engine.seat(of: civ, in: state), threat(to: capital, for: civ, state) > 0 {
             plan.append((.walls, cheapest(.walls, [capital])))
         }
+        // As the collapse deepens, wall the richest coast against raiders from the sea.
+        if engine.collapsePressure(state) >= 25 {
+            let coasts = home.filter { map.territory($0)!.isCoastal && !(state.land[$0]?.improvements.contains(.walls) ?? true) }
+                .sorted { (state.population(of: $0), $1) > (state.population(of: $1), $0) }
+            plan.append((.walls, cheapest(.walls, Array(coasts.prefix(1)))))
+        }
         // Mines on scarce ore: tin and copper make bronze; iron and gold pay.
         let ore: [Resource] = [.tin, .copper, .iron, .gold, .stone]
         plan.append((.mine, cheapest(.mine, home.sorted { a, b in

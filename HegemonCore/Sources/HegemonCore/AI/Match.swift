@@ -22,6 +22,10 @@ public struct CivRecord: Sendable, Equatable {
     public var regencies = 0
     public var coups = 0
     public var events: [EventKind: Int] = [:]
+    public var projectsBuilt = 0
+    public var projectsDestroyed = 0
+    /// Knowledge levels at the start of round 20, if the civ was alive then.
+    public var knowledgeAt20: [KnowledgeField: Int]?
 
     /// Lost at least half of a realm that once held 4+ territories.
     public var collapsed: Bool { peakTerritories >= 4 && finalTerritories * 2 <= peakTerritories }
@@ -97,6 +101,13 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
         }
         if state.activePlayerIndex == 0 {
             onRound?(state)
+            if state.turn == 20 {
+                for c in state.players where civs[c] != nil && !state.civs[c]!.eliminated {
+                    civs[c]!.knowledgeAt20 = Dictionary(uniqueKeysWithValues: KnowledgeField.allCases.map {
+                        ($0, engine.level($0, of: c, in: state))
+                    })
+                }
+            }
             let alive = state.players.filter { !state.civs[$0]!.eliminated }
             let sizes = alive.map { ($0, state.territories(of: $0).count) }
             let top = sizes.map(\.1).max() ?? 0
@@ -120,6 +131,13 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 if outcome == .coup { civs[c]?.coups += 1 }
             case let .event(report):
                 civs[report.civ]?.events[report.kind, default: 0] += 1
+            case let .projectCompleted(c, _, _):
+                civs[c]?.projectsBuilt += 1
+            case let .projectDestroyed(t, _):
+                if let c = state.owner(of: t) ?? turn.events.lazy.compactMap({ e -> CivilizationID? in
+                    if case let .event(r) = e, r.territory == t { r.civ } else { nil } }).first {
+                    civs[c]?.projectsDestroyed += 1
+                }
             case let .shipsBuilt(c, _, count):
                 civs[c]?.shipsBuilt += count
             case let .landed(c, _, _, _):

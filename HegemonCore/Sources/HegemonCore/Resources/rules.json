@@ -91,7 +91,7 @@
     "experienceDecayPercent": 10,
     "contactDiffusionPercent": 2,
     "tradeDiffusionPercent": 5,
-    "levels": [120, 360, 800],
+    "levels": [80, 240, 560],
     "fields": {
       "agriculture": [
         "Irrigation",
