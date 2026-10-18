@@ -12,6 +12,8 @@
 		2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFEA270691335D57E5FC99 /* GameScreen.swift */; };
 		357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */; };
 		3F4DDE666430DE97564563A8 /* defeat.wav in Resources */ = {isa = PBXBuildFile; fileRef = 8174C96AEEC6F7CD3E672281 /* defeat.wav */; };
+		4189AA9CA92DB2DDFA1C25AB /* MapMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 095BFA7DCC2670D90123446F /* MapMarks.swift */; };
+		448AE0E2B8D9C06A0E52879F /* Guidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185BAB29A57542F88154144A /* Guidance.swift */; };
 		45672360191504BA6F4B6C43 /* map_shapes.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E7B5FD5E53683B4C70351A3 /* map_shapes.json */; };
 		4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */; };
 		50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */; };
@@ -32,7 +34,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		095BFA7DCC2670D90123446F /* MapMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarks.swift; sourceTree = "<group>"; };
 		13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlePlan.swift; sourceTree = "<group>"; };
+		185BAB29A57542F88154144A /* Guidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Guidance.swift; sourceTree = "<group>"; };
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
 		3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleViews.swift; sourceTree = "<group>"; };
 		56A2A90E394E1F771A7B0376 /* clash.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clash.wav; sourceTree = "<group>"; };
@@ -116,8 +120,10 @@
 				CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */,
 				A9FFEA270691335D57E5FC99 /* GameScreen.swift */,
 				FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */,
+				185BAB29A57542F88154144A /* Guidance.swift */,
 				94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */,
 				7DEFB823D986E1A428DCF40F /* MapLayout.swift */,
+				095BFA7DCC2670D90123446F /* MapMarks.swift */,
 				90545C84FE5971D4416409AA /* OrderViews.swift */,
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
@@ -226,8 +232,10 @@
 				BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */,
 				2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */,
 				4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */,
+				448AE0E2B8D9C06A0E52879F /* Guidance.swift in Sources */,
 				357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */,
 				70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */,
+				4189AA9CA92DB2DDFA1C25AB /* MapMarks.swift in Sources */,
 				D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */,
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,

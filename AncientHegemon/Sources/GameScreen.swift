@@ -18,7 +18,13 @@ struct GameScreen: View {
     @State private var tab = PanelTab.orders
     @State private var panelOpen = false
     @State private var showKnowledge = false
+    @State private var showCodex = false
     @State private var layer = MapLayer.armies
+    @State private var quickLook: TerritoryID?
+    @State private var explain: StatTopic?
+    @State private var tip: Tip?
+    @State private var laterOffers: Set<CivilizationID> = []
+    @State private var idleIndex = 0
 
     enum PanelTab: String, CaseIterable {
         case orders = "Orders", empire = "Empire", log = "Chronicle"
@@ -31,11 +37,23 @@ struct GameScreen: View {
     var body: some View {
         ZStack {
             MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
-                    selected: selected, targets: targets, onTap: tapped)
+                    selected: selected, targets: targets, onTap: tapped,
+                    onLongPress: { pick in
+                        if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
+                    },
+                    marks: session.marks, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [])
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
                 .ignoresSafeArea()
             overlays
                 .padding(.trailing, panelOpen ? Self.panelWidth : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if session.showReport, session.isHumanTurn {
+                TurnReportCard(session: session) { t in
+                    selected = .territory(t)
+                    session.showReport = false
+                }
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
             if panelOpen {
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -63,7 +81,23 @@ struct GameScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showCodex) {
+            NavigationStack {
+                CodexView().toolbar { Button("Done") { showCodex = false } }
+            }
+        }
         .onChange(of: session.state.turn) { _, _ in pending = nil }
+        .onAppear { offer(.map) }
+        .onChange(of: session.showReport) { _, shown in if shown { offer(.rivals) } }
+        .onChange(of: pending) { _, p in
+            if case let .march(_, to)? = p, state.armies[to].map({ $0.owner != session.human }) ?? false { offer(.battle) }
+            if p == nil { session.plannedOdds = nil }
+        }
+        .onChange(of: selected) { _, pick in
+            if case .territory(let t)? = pick, state.armies[t]?.owner == session.human, session.human != nil { offer(.orders) }
+        }
+        .onChange(of: engine.collapsePressure(state) > 0) { _, on in if on { offer(.collapse) } }
+        .onChange(of: knowledgeLevels) { old, new in if new > old { offer(.knowledge) } }
         .onChange(of: state.victory != nil) { _, over in
             if over { tab = .orders; panelOpen = true }
         }
@@ -89,15 +123,124 @@ struct GameScreen: View {
                     .onTapGesture { session.message = nil }
                     .transition(.opacity)
             }
-            Spacer()
+            if let from = peaceOffer {
+                PeaceOfferCard(from: from, session: session) { laterOffers.insert(from) }
+            }
+            Spacer(minLength: 0)
             HStack(alignment: .bottom) {
+                if let quickLook {
+                    QuickLookCard(id: quickLook, session: session) { self.quickLook = nil }
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
                 Spacer()
-                legend
+                if let tip, !session.showReport {
+                    TipBanner(tip: tip) {
+                        tip.markSeen()
+                        self.tip = nil
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    legend
+                }
                 Spacer()
-                turnButton
+                VStack(alignment: .trailing, spacing: 6) {
+                    if let nudge, session.isHumanTurn {
+                        Text(nudge)
+                            .font(.caption)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    HStack(spacing: 8) {
+                        if session.isHumanTurn {
+                            if session.canUndo {
+                                circleButton("arrow.uturn.backward", "Undo") {
+                                    pending = nil
+                                    session.undo()
+                                }
+                            }
+                            if !idleArmies.isEmpty {
+                                circleButton("figure.walk", "Next army that can move") { nextIdle() }
+                            }
+                        }
+                        turnButton
+                    }
+                }
             }
         }
         .padding(10)
+        .animation(.easeInOut(duration: 0.25), value: tip)
+        .animation(.easeInOut(duration: 0.25), value: session.showReport)
+        .animation(.easeInOut(duration: 0.25), value: quickLook)
+    }
+
+    private func circleButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.headline)
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .accessibilityLabel(label)
+    }
+
+    // MARK: Guidance
+
+    private func offer(_ t: Tip) {
+        guard session.human != nil, t.isNew, tip == nil else { return }
+        tip = t
+    }
+
+    /// Total knowledge levels, to notice a discovery.
+    private var knowledgeLevels: Int {
+        guard let human = session.human else { return 0 }
+        return KnowledgeField.allCases.reduce(0) { $0 + engine.level($1, of: human, in: state) }
+    }
+
+    private var peaceOffer: CivilizationID? {
+        guard let human = session.human, session.isHumanTurn else { return nil }
+        return state.peaceOffers.filter { $0.to == human && !laterOffers.contains($0.from) }.map(\.from).sorted().first
+    }
+
+    /// The player's armies that still have troops ready to move and somewhere new to go: next to
+    /// land that isn't theirs, or on a coast where their own ships wait.
+    private var idleArmies: [TerritoryID] {
+        guard let human = session.human, session.isHumanTurn else { return [] }
+        return state.armies(of: human).filter { t, units in
+            let ready = units - (state.moved[t] ?? .zero)
+            guard ready.total > 0 else { return false }
+            let frontier = engine.map.landNeighbors(of: t).contains { n in
+                guard let owner = state.owner(of: n) else { return true }
+                return owner != human && !state.atPeace(human, owner)
+            }
+            return frontier
+        }.map(\.territory).sorted()
+    }
+
+    private func nextIdle() {
+        let list = idleArmies
+        guard !list.isEmpty else { return }
+        idleIndex = (idleIndex + 1) % list.count
+        pending = nil
+        selected = .territory(list[idleIndex])
+        tab = .orders
+        panelOpen = true
+    }
+
+    /// A gentle reminder before ending the turn: armies that could act, gold piling up.
+    private var nudge: String? {
+        guard let human = session.human, let cs = state.civs[human] else { return nil }
+        var parts: [String] = []
+        let idle = idleArmies.count
+        if idle > 0 { parts.append("\(idle) arm\(idle == 1 ? "y" : "ies") can still move") }
+        if cs.gold >= 3 * engine.rules.stats(.infantry).cost + 10 { parts.append("\(cs.gold) gold unspent") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// The attack being composed, as an arrow on the map with its odds.
+    private var planned: (from: TerritoryID, to: TerritoryID, label: String?)? {
+        guard case let .march(from, to)? = pending else { return nil }
+        let label = session.plannedOdds.map { "\(Int(($0 * 100).rounded()))%" }
+        return (from, to, label)
     }
 
     private var layerPicker: some View {
@@ -127,9 +270,14 @@ struct GameScreen: View {
             }
             if let human = session.human, let cs = state.civs[human], let econ = session.economy {
                 HStack(spacing: 12) {
-                    stat("Gold", "\(cs.gold)", change: econ.income, color: .orange)
-                    stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
-                    stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple)
+                    Button { explain = .gold } label: { stat("Gold", "\(cs.gold)", change: econ.income, color: .orange) }
+                    Button { explain = .grain } label: { stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green) }
+                    Button { explain = .legitimacy } label: { stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple) }
+                }
+                .buttonStyle(.plain)
+                .popover(item: $explain) { topic in
+                    StatExplainer(topic: topic, session: session)
+                        .presentationCompactAdaptation(.popover)
                 }
                 if !econ.cutOff.isEmpty {
                     Label("\(econ.cutOff.count) cut off", systemImage: "exclamationmark.triangle.fill")
@@ -149,6 +297,8 @@ struct GameScreen: View {
             }
             toolButton("Chronicle", "scroll.fill") { open(.log) }
             Menu {
+                Button("How to play", systemImage: "book") { showCodex = true }
+                Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
                 Button("New game", role: .destructive) { session.quit() }
             } label: {
                 Image(systemName: "ellipsis").frame(width: 34, height: 34)
@@ -173,6 +323,9 @@ struct GameScreen: View {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text("Rivals move…").font(.callout)
+                    if !session.skipping {
+                        Button("Skip") { session.skipping = true }.font(.callout.bold())
+                    }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -185,6 +338,8 @@ struct GameScreen: View {
                 } label: {
                     Label("End turn", systemImage: "hourglass")
                         .font(.headline)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 6).padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
@@ -210,6 +365,7 @@ struct GameScreen: View {
     @ViewBuilder private var legend: some View {
         let text: String? = switch layer {
         case .armies: nil
+        case .threats: "Red: more hostile troops can reach it next turn than defend it · orange: threatened but held · ⚔︎ attackers vs garrison"
         case .supply: "Supply lines from your capital ♛ · orange/red: distance costs extra grain · red land: cut off"
         case .trade: "Trade routes between empires at peace · ▸ goods each partner receives · dots: sea straits, colored by holder"
         case .resources: "🌾 grain · Cu copper · Sn tin · Fe iron · 🐎 horses · 🪵 timber · 🪨 stone · 🪙 gold · 🍷 wine · 💎 luxuries"

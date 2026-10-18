@@ -142,7 +142,7 @@ extension Engine {
     }
 
     /// Damage reduction walls give a territory's defenders.
-    func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
+    public func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
         guard state.land[territory]?.improvements.contains(.walls) == true else { return 0 }
         let builders = level(.construction, of: state.owner(of: territory), in: state) >= 2
         return rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0)

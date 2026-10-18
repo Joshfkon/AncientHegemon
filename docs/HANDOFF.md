@@ -126,6 +126,13 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     screen, unit icons, battle replays with animation, sound (tools/make_sounds.py) and haptics,
     and battle plans (formation, line depth, stratagem) unlocked by knowledge or the leading
     general (DESIGN.md, "Battle plans unlocked by generals and knowledge"). Rules version 7.
+  - **Making turns readable** (Josh: "such a complex game, the interface needs to be intuitive"):
+    walls and cut-off badges and a zoomed-in info line (grain, people, buildings) on the map;
+    long-press quick look; rivals' moves drawn on the map as they happen (arrows, battles,
+    captures, disasters) plus a "Since your last turn" card; undo within a turn (cleared by
+    anything left to chance); pulsing idle armies, a next-army button and an end-turn reminder;
+    the planned attack drawn with its odds; a Threats layer; tap-to-explain gold, grain and
+    legitimacy; one-time tips and a "How to play" codex; war/peace outlines and a peace-offer card.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

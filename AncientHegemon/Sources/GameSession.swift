@@ -7,6 +7,8 @@ struct LogLine: Identifiable, Codable {
     let round: Int
     let civ: CivilizationID?
     let text: String
+    /// Where it happened, to jump the map there.
+    var territory: TerritoryID?
 }
 
 struct BattleEntry: Identifiable, Codable {
@@ -49,6 +51,20 @@ final class GameSession {
     private var nextID = 0
     /// A game that can be continued, offered on the picker.
     private(set) var saved: SavedGame?
+    /// What the rivals did since the player's last turn, marked on the map until it ends again.
+    private(set) var marks: [MapMark] = []
+    /// The chronicle lines since the player last ended a turn, shown as a summary card.
+    private(set) var report: [LogLine] = []
+    var showReport = false
+    /// Skip the step-by-step reveal of the rivals' moves.
+    var skipping = false
+    /// The odds of the attack being planned, for the arrow on the map.
+    var plannedOdds: Double?
+    /// States to step back to within the turn. Anything left to chance (a battle, an event)
+    /// clears it, so undo can't re-roll fate.
+    private var undoStack: [(state: GameState, log: [LogLine], battles: [BattleEntry], nextID: Int)] = []
+    var canUndo: Bool { isHumanTurn && !undoStack.isEmpty }
+    private var reportFrom = 0
 
     init() {
         let engine = try! Engine.bundled()
@@ -137,12 +153,26 @@ final class GameSession {
     func order(_ command: Command) -> Bool {
         guard isHumanTurn else { return false }
         let before = state
+        let snapshot = (state: state, log: log, battles: battles, nextID: nextID)
         do {
             var s = state
             let events = try engine.apply(command, to: &s)
             message = nil
+            if case .endTurn = command {
+                undoStack = []
+                marks = []
+                showReport = false
+                skipping = false
+                reportFrom = nextID
+            }
             record(events, round: before.turn, before: before, after: s)
             state = s
+            if case .endTurn = command {
+            } else if s.rng != before.rng || events.contains(where: { if case .battle = $0 { true } else { false } }) {
+                undoStack = []  // chance has spoken
+            } else {
+                undoStack.append(snapshot)
+            }
             autosave()
             if case .endTurn = command { Task { await runAITurns() } }
             return true
@@ -154,6 +184,17 @@ final class GameSession {
 
     func endTurn() { order(.endTurn) }
 
+    /// Steps back one order this turn.
+    func undo() {
+        guard canUndo, let last = undoStack.popLast() else { return }
+        state = last.state
+        log = last.log
+        battles = last.battles
+        nextID = last.nextID
+        message = nil
+        autosave()
+    }
+
     /// Plays AI turns until it is the person's turn again (or the game ends).
     private func runAITurns() async {
         guard !busy else { return }
@@ -161,8 +202,11 @@ final class GameSession {
         defer { busy = false }
         while !isOver, state.activePlayer != human {
             await playOneAITurn()
-            try? await Task.sleep(for: .seconds(pace))
+            if !skipping { try? await Task.sleep(for: .seconds(pace)) }
         }
+        // Back to the player: sum up what happened since they ended their turn.
+        report = log.filter { $0.id > reportFrom }.sorted { $0.id < $1.id }
+        showReport = human != nil && !report.isEmpty && !isOver
         autosave()
     }
 
@@ -177,6 +221,11 @@ final class GameSession {
         }.value
         record(events, round: start.turn, before: start, after: after)
         state = after
+        // Reveal this rival's moves one at a time, so they can be followed on the map.
+        for mark in MapMark.from(events, before: start, after: after) {
+            marks.append(mark)
+            if human != nil, !skipping { try? await Task.sleep(for: .milliseconds(220)) }
+        }
     }
 
     // MARK: Spectating
@@ -239,9 +288,9 @@ final class GameSession {
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name } ?? "?" }
-        func add(_ civ: CivilizationID?, _ text: String) {
+        func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
             nextID += 1
-            lines.append(LogLine(id: nextID, round: round, civ: civ, text: text))
+            lines.append(LogLine(id: nextID, round: round, civ: civ, text: text, territory: territory))
         }
 
         for event in events {
@@ -249,13 +298,13 @@ final class GameSession {
             case let .moved(_, _, to, _): target = to
             case let .landed(civ, _, t, units):
                 target = t
-                add(civ, "\(name(civ)) lands \(units.total) troops on \(place(t))")
+                add(civ, "\(name(civ)) lands \(units.total) troops on \(place(t))", at: t)
             case let .battle(report):
                 let a = report.setup.attacker, d = report.setup.defender
                 let won = report.winner == .attacker
                 add(won ? a.civ : d.civ,
                     "Battle of \(place(target)): \(name(a.civ)) (\(a.units.total)) \(won ? "beat" : "repulsed by") "
-                    + "\(name(d.civ)) (\(d.units.total)) in \(report.rounds) rounds")
+                    + "\(name(d.civ)) (\(d.units.total)) in \(report.rounds) rounds", at: target)
                 if let t = target {
                     nextID += 1
                     let entry = BattleEntry(id: nextID, round: round, territory: t, report: report)
@@ -264,7 +313,7 @@ final class GameSession {
                 }
             case let .captured(civ, t, from) where before.isPlayer(from) || after.isPlayer(civ) && from != nil:
                 let verb = after.isPlayer(civ) ? "takes" : "seize"
-                add(civ, "\(name(civ)) \(verb) \(place(t)) from \(name(from))")
+                add(civ, "\(name(civ)) \(verb) \(place(t)) from \(name(from))", at: t)
             case let .civilWar(civ, rebel, _, territories):
                 add(rebel, "CIVIL WAR in \(name(civ)): \(name(rebel)) seize \(territories.map { place($0) }.joined(separator: ", "))")
             case let .rulerDied(civ, ruler, age, cause):
@@ -295,13 +344,13 @@ final class GameSession {
                 case .tradeDisrupted: "Trade between \(name(r.civ)) and \(name(r.partner)) breaks down for \(r.amount) rounds"
                 }
                 if [.revolt, .barbarians, .seaPeoples].contains(r.kind) { target = r.territory }
-                add(r.civ, text)
+                add(r.civ, text, at: r.territory)
             case let .successionCrisis(civ, claimants):
                 add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")
             case let .peaceOffered(from, to):
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
             case let .recruited(civ, t, unit, count) where civ == human:
-                add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))")
+                add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))", at: t)
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")
             case let .warDeclared(by, on): add(by, "\(name(by)) declares war on \(name(on))")
             case let .navalBattle(sea, r):
@@ -317,9 +366,9 @@ final class GameSession {
             case let .projectStarted(civ, t, kind) where civ == human:
                 add(civ, "Work begins on \(projectName(kind).lowercased()) in \(place(t))")
             case let .projectCompleted(civ, t, kind) where civ == human:
-                add(civ, "\(projectName(kind)) finished in \(place(t))")
+                add(civ, "\(projectName(kind)) finished in \(place(t))", at: t)
             case let .projectDestroyed(t, kind) where before.owner(of: t) == human:
-                add(human, "\(projectName(kind)) in \(place(t)) destroyed")
+                add(human, "\(projectName(kind)) in \(place(t)) destroyed", at: t)
             case let .taxRateSet(civ, rate) where civ == human:
                 add(civ, "Taxes set to \(rate)%")
             case let .eliminated(civ): add(civ, "\(name(civ)) is destroyed")

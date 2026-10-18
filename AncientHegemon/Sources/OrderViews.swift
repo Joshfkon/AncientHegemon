@@ -118,6 +118,9 @@ struct OrderComposer: View {
             updateOdds()
         }
         .onChange(of: plan.depth) { _, _ in updateOdds() }
+        .onChange(of: plan.formation) { _, f in
+            session.plannedOdds = oddsByFormation[f ?? engine.rules.battle.defaultFormation]
+        }
         .onChange(of: plan.stratagem) { _, _ in updateOdds() }
     }
 
@@ -139,6 +142,7 @@ struct OrderComposer: View {
                                          general: leader, amphibious: amphibious, in: state) ?? 0
         }
         oddsByFormation = odds
+        session.plannedOdds = odds[chosen]
     }
 
     private var confirmLabel: String {
