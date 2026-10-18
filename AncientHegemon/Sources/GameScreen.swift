@@ -344,7 +344,8 @@ struct GameScreen: View {
             }
         }
         .pickerStyle(.segmented)
-        .frame(maxWidth: 320)
+        .frame(minWidth: 300, maxWidth: 340)
+        .layoutPriority(1)
         .padding(4)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
@@ -383,12 +384,16 @@ struct GameScreen: View {
                     HStack(spacing: 7) {
                         ForEach([Resource.horses, .timber, .copper, .tin, .stone], id: \.self) { r in
                             let n = econ.resources[r] ?? 0
-                            Text("\(MapView.glyph(r))\(n)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(n == 0 ? Color.secondary : Color.primary)
+                            HStack(spacing: 1) {
+                                Text(MapView.glyph(r)).font(.body)
+                                Text("\(n)").font(.subheadline.bold().monospacedDigit())
+                            }
+                            .foregroundStyle(n == 0 ? Color.red.opacity(0.8) : Color.primary)
                         }
-                        Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
                     }
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Resources")

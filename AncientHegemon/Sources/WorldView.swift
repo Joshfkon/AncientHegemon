@@ -361,7 +361,7 @@ struct MapView: View {
                 drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k)
             }
             if layer == .resources {
-                drawResources(&context, territory, at: t.point(shape.token))
+                drawResources(&context, territory, at: t.point(shape.token), scale: t.detail)
             } else if let army = state.armies[territory.id], army.units.total > 0 {
                 let c = t.point(shape.token)
                 let native = !state.isPlayer(army.owner)
@@ -701,7 +701,7 @@ extension MapView {
     }
 
     /// Grain and resources on each territory, as on the board's tokens, and what's been built.
-    fileprivate func drawResources(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint) {
+    fileprivate func drawResources(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint, scale: CGFloat) {
         var parts = [Text("🌾\(territory.grain)").foregroundStyle(.black)]
         let metals: [Resource: Color] = [.copper: Color(red: 0.7, green: 0.35, blue: 0.1), .tin: Color(white: 0.35),
                                          .iron: Color(red: 0.45, green: 0.2, blue: 0.2)]
@@ -710,17 +710,17 @@ extension MapView {
                 parts.append(Text(" \(Self.glyph(resource))\(n)").foregroundStyle(metals[resource] ?? .black))
             }
         }
-        let label = context.resolve(parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 6.5, weight: .bold)))
-        let measured = label.measure(in: CGSize(width: 200, height: 20))
-        let size = CGSize(width: measured.width + 4, height: measured.height + 1)
+        let label = context.resolve(parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 8.5 * scale, weight: .bold)))
+        let measured = label.measure(in: CGSize(width: 400, height: 60))
+        let size = CGSize(width: measured.width + 6 * scale, height: measured.height + 2 * scale)
         context.fill(Path(roundedRect: CGRect(x: c.x - size.width / 2, y: c.y - size.height / 2, width: size.width, height: size.height),
-                          cornerRadius: 3), with: .color(.white.opacity(0.75)))
+                          cornerRadius: 4 * scale), with: .color(.white.opacity(0.85)))
         context.draw(label, at: c)
         let land = state.land[territory.id]
         let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph)
             + (land?.construction == nil ? [] : ["🏗"])
         if !built.isEmpty {
-            context.draw(Text(built.joined()).font(.system(size: 7)), at: CGPoint(x: c.x, y: c.y + 11))
+            context.draw(Text(built.joined()).font(.system(size: 9 * scale)), at: CGPoint(x: c.x, y: c.y + size.height / 2 + 7 * scale))
         }
     }
 
