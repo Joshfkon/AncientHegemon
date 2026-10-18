@@ -23,14 +23,16 @@ extension Engine {
         }
     }
 
-    /// Calm rules, minus starting heartlands and native garrisons: every civ starts with just its
-    /// capital and everything else is empty. Scenario tests build their own geography on top.
+    /// Calm rules, minus native garrisons and per-civ starts: every civ starts with just its
+    /// capital and the standard army, and everything else is empty. Scenario tests build their own geography on top.
     static func bare() throws -> Engine {
         let calm = try calm()
         return try calm.modified { json in
             var start = json["start"] as! [String: Any]
             start["realms"] = [String: [String]]()
             start["natives"] = ["base": 0, "grainPerUnit": 1_000_000]
+            // Same start for everyone: no per-civ armies, granaries, fleets or knowledge.
+            for key in ["armies", "granaries", "fleets", "knowledge"] { start[key] = nil }
             json["start"] = start
         }
     }

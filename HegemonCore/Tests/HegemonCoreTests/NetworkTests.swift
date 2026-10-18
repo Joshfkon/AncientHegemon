@@ -92,7 +92,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 1, unitsLost: 7)))
         #expect(s.armies["dacia"]!.units.infantry == 2)
         // The home granary was untouched by Dacia's hunger.
-        #expect(s.civs["mesopotamia"]!.granary == 8)
+        #expect(s.civs["mesopotamia"]!.granary == 9)
     }
 
     @Test func recruitingNeedsHomeSupply() throws {
@@ -108,8 +108,8 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         own(&s, "mesopotamia", "dacia")  // Dacia: population 2, gold 2, cut off
         s.civs["mesopotamia"]!.gold = 0
         let events = try engine.apply(.endTurn, to: &s)
-        // Home population 5 after growth → 2 gold. Dacia's gold and people don't count.
-        #expect(events.contains { if case .harvest(_, _, _, _, _, 2) = $0 { true } else { false } })
+        // Home population 6 after growth → 3 gold. Dacia's gold and people don't count.
+        #expect(events.contains { if case .harvest(_, _, _, _, _, 3) = $0 { true } else { false } })
     }
 }
 
@@ -172,30 +172,34 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
     @Test func shortHarvestsBuyGrainFromPartners() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         s.peace.insert(CivPair("greece", "egypt"))
-        // Greece grows 2 grain; ten infantry there can't be fed from home.
+        // Greece grows 3 grain; ten infantry there can't be fed from home.
         s.armies["greece"] = Army(owner: "greece", units: UnitCounts(infantry: 10))
         s.civs["greece"]!.granary = 0
         s.civs["greece"]!.gold = 50
         let t = engine.rules.trade
+        let cap = t.grainPerRoute + t.grainPerCoast  // one route, one coast, no harbor
         let events = engine.harvest("greece", &s)
-        // One route: the most it can buy, at the going price; the rest still go hungry.
-        #expect(events.contains(.grainImported(civ: "greece", grain: t.grainPerRoute, gold: t.grainPerRoute * t.grainPrice)))
+        // The most it can buy, at the going price; the rest still go hungry.
+        #expect(events.contains(.grainImported(civ: "greece", grain: cap, gold: cap * t.grainPrice)))
         #expect(events.contains { if case .starvation = $0 { true } else { false } })
-        #expect(engine.economy(of: "greece", in: s).grainImportCap == t.grainPerRoute)
+        #expect(engine.economy(of: "greece", in: s).grainImportCap == cap)
     }
 
-    @Test func noGrainImportsWithoutTradeOrGold() throws {
+    @Test func withoutTradeOnlyTheCoastSellsAndOnlyForGold() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         s.armies["greece"] = Army(owner: "greece", units: UnitCounts(infantry: 10))
         s.civs["greece"]!.granary = 0
         s.civs["greece"]!.gold = 50
+        let t = engine.rules.trade
+        var atWar = s
+        let events = engine.harvest("greece", &atWar)
+        #expect(events.contains(.grainImported(civ: "greece", grain: t.grainPerCoast, gold: t.grainPerCoast * t.grainPrice)))
+        s.land["greece"]!.improvements.insert(.harbor)
+        #expect(engine.grainImportCap(of: "greece", in: s) == t.grainPerCoast + t.grainPerHarbor)
         var broke = s
         broke.peace.insert(CivPair("greece", "egypt"))
         broke.civs["greece"]!.gold = 0
-        for var state in [s, broke] {
-            let events = engine.harvest("greece", &state)
-            #expect(!events.contains { if case .grainImported = $0 { true } else { false } })
-        }
+        #expect(!engine.harvest("greece", &broke).contains { if case .grainImported = $0 { true } else { false } })
     }
 
     @Test func landlockedPartnersDontTrade() throws {
@@ -246,7 +250,8 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         s.peace.insert(CivPair("egypt", "greece"))
         #expect(engine.effectiveYield(of: .tin, for: "egypt", in: s) == 1)
         #expect(engine.effectiveYield(of: .copper, for: "greece", in: s) == 1)
-        #expect(engine.effectiveYield(of: .grain, for: "egypt", in: s) == 12)  // grain isn't shared
+        let own = engine.yield(of: .grain, in: engine.homeNetwork(of: "egypt", in: s), s)
+        #expect(engine.effectiveYield(of: .grain, for: "egypt", in: s) == own)  // grain isn't shared
     }
 
     @Test func tradedHorsesAllowCavalry() throws {

@@ -119,6 +119,10 @@ public struct TradeRules: Codable, Sendable, Equatable {
     /// up to this much per active route each turn, at `grainPrice` gold each.
     public let grainPerRoute: Int
     public let grainPrice: Int
+    /// Overseas merchants sell grain too, trade partners or not: this much a turn per coastal
+    /// territory in the home network, plus `grainPerHarbor` more where there's a harbor.
+    public let grainPerCoast: Int
+    public let grainPerHarbor: Int
 }
 
 public struct StartRules: Codable, Sendable, Equatable {
@@ -135,6 +139,21 @@ public struct StartRules: Codable, Sendable, Equatable {
     public let natives: NativeRules
     /// Territories each civilization holds at the start besides its capital (its heartland).
     public let realms: [CivilizationID: [TerritoryID]]
+    /// A civilization's own starting granary, in place of `granary`. It may exceed the usual cap:
+    /// a war chest of grain that is drawn down while the army outgrows the land, and is capped
+    /// at the first harvest with a surplus.
+    public let granaries: [CivilizationID: Int]?
+    /// A civilization's own starting army, in place of `army`.
+    public let armies: [CivilizationID: UnitCounts]?
+    /// Ships a civilization starts with, in a sea next to its capital.
+    public let fleets: [CivilizationID: StartingFleet]?
+    /// Knowledge points a civilization starts with, by field (a head start, e.g. Galleys).
+    public let knowledge: [CivilizationID: [KnowledgeField: Int]]?
+}
+
+public struct StartingFleet: Codable, Sendable, Equatable {
+    public let sea: SeaZoneID
+    public let ships: Int
 }
 
 /// Every territory no civilization starts in is held by local tribes: `base + grain / grainPerUnit`
@@ -143,6 +162,9 @@ public struct StartRules: Codable, Sendable, Equatable {
 public struct NativeRules: Codable, Sendable, Equatable {
     public let base: Int
     public let grainPerUnit: Int
+    /// `base` for islands (territories with no land border), if different: island peoples are
+    /// fewer and more scattered.
+    public let islandBase: Int?
 }
 
 /// Tunable game rules, loaded from `rules.json`.

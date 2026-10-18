@@ -50,9 +50,10 @@ extension AIPlayer {
         }
         func walled(_ t: TerritoryID) -> Bool { state.land[t]?.improvements.contains(.walls) ?? false }
         var plan: [(ProjectKind, TerritoryID?)] = []
-        // Food first: a farm on the richest land.
+        // Food first: a farm on the richest land, and on a hungry coast a harbor to buy grain.
         if econ.grainBalance < 2 {
             plan.append((.farm, cheapest(.farm, home.sorted { (map.territory($0)!.grain, $1) > (map.territory($1)!.grain, $0) })))
+            plan.append((.harbor, cheapest(.harbor, home.filter { map.territory($0)!.isCoastal })))
         }
         // A threatened capital gets walls.
         if let capital = engine.seat(of: civ, in: state), threat(to: capital, for: civ, state) > 0 {

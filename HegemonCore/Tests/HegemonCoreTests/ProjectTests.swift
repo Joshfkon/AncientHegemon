@@ -59,7 +59,8 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         for _ in 0..<cost.turns { try engine.apply(.endTurn, to: &s) }
         #expect(s.land["egypt"]!.improvements.contains(.farm))
         // Egypt is a river valley: its farm adds the larger bonus.
-        #expect(engine.territoryYield(.grain, "egypt", s) == 10 + engine.rules.projectEffects.farmRiverValleyGrain)
+        #expect(engine.territoryYield(.grain, "egypt", s)
+                == engine.map.territory("egypt")!.grain + engine.rules.projectEffects.farmRiverValleyGrain)
     }
 
     @Test func projectsNeedStock() throws {
@@ -130,6 +131,10 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 
     @Test func stockpilesFillAndCap() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece"])
+        for t in ["macedonia", "thrace"] {
+            s.land[t]!.owner = "greece"
+            s.armies[t] = nil
+        }
         // Greece + Macedonia + Thrace: stone 1 + 1, timber 2.
         try engine.apply(.endTurn, to: &s)
         #expect(s.civs["greece"]!.stock[.stone] == 2)

@@ -10,10 +10,10 @@ import Testing
 
     @Test func recruitCostsGoldAndPopulation() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
-        // Mesopotamia: grain 8, population 4, gold 6, 2 infantry.
+        // Mesopotamia: grain 9, population 5, gold 6, 2 infantry.
         try engine.apply(.recruit(territory: "mesopotamia", unit: .infantry, count: 2), to: &s)
         #expect(s.civs["mesopotamia"]!.gold == 2)
-        #expect(s.population(of: "mesopotamia") == 2)
+        #expect(s.population(of: "mesopotamia") == 3)
         #expect(s.armies["mesopotamia"]!.units == UnitCounts(infantry: 4))
         #expect(throws: GameError.insufficientGold(needed: 2, available: 0)) {
             var s2 = s
@@ -24,9 +24,9 @@ import Testing
 
     @Test func recruitKeepsMinimumPopulation() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece"])
-        // Greece: grain 2, population 1.
+        // Greece: grain 3, population 2.
         #expect(throws: GameError.insufficientPopulation("greece")) {
-            try engine.apply(.recruit(territory: "greece", unit: .infantry, count: 1), to: &s)
+            try engine.apply(.recruit(territory: "greece", unit: .infantry, count: 2), to: &s)
         }
     }
 
@@ -146,25 +146,26 @@ import Testing
 
     @Test func surplusGrowsPopulationAndFillsGranary() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
-        // Production 8; eaten ceil(4/2)=2 by people + 2 by infantry = 4; surplus 4.
-        // One person grows (cap 1/territory/turn), 3 go to the granary (6+3=9, capped at 8).
-        // Income: population 5 / 2 = 2.
+        // Production 9; eaten ceil(5/2)=3 by people + 2 by infantry = 5; surplus 4.
+        // One person grows (cap 1/territory/turn), 3 go to the granary (6+3=9, cap 9).
+        // Income: population 6 / 2 = 3.
         let events = try engine.apply(.endTurn, to: &s)
-        #expect(events.contains(.harvest(civ: "mesopotamia", production: 8, consumption: 4,
-                                         grown: 1, granary: 8, income: 2)))
-        #expect(s.population(of: "mesopotamia") == 5)
-        #expect(s.civs["mesopotamia"]!.gold == 8)
+        #expect(events.contains(.harvest(civ: "mesopotamia", production: 9, consumption: 5,
+                                         grown: 1, granary: 9, income: 3)))
+        #expect(s.population(of: "mesopotamia") == 6)
+        #expect(s.civs["mesopotamia"]!.gold == 9)
     }
 
     @Test func populationStopsAtCap() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         for _ in 0..<20 { try engine.apply(.endTurn, to: &s) }
-        #expect(s.population(of: "mesopotamia") == 8)
+        #expect(s.population(of: "mesopotamia") == 9)
     }
 
     @Test func deficitDrawsOnGranaryFirst() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece"])
-        // Production 2; eaten 1 + 2 infantry = 3. Granary 6 covers the 1 short.
+        s.armies["greece"]!.units.infantry = 3
+        // Production 3; eaten 1 + 3 infantry = 4. Granary 6 covers the 1 short.
         let events = try engine.apply(.endTurn, to: &s)
         #expect(s.civs["greece"]!.granary == 5)
         #expect(!events.contains { if case .starvation = $0 { true } else { false } })
@@ -173,13 +174,14 @@ import Testing
     @Test func starvationTakesPopulationThenUnits() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         s.civs["mesopotamia"]!.granary = 0
+        s.civs["mesopotamia"]!.gold = 0  // nothing to buy grain with
         s.armies["mesopotamia"]!.units.infantry = 10
-        // Production 8; eaten ceil(4/2)=2 + 10 = 12. Population falls to the floor of 1
-        // (eaten 1 + 10 = 11), then 3 infantry desert (1 + 7 = 8).
+        // Production 9; eaten ceil(5/2)=3 + 10 = 13. Population falls to the floor of 1
+        // (eaten 1 + 10 = 11), then 2 infantry desert (1 + 8 = 9).
         let events = try engine.apply(.endTurn, to: &s)
-        #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 3, unitsLost: 3)))
+        #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 4, unitsLost: 2)))
         #expect(s.population(of: "mesopotamia") == 1)
-        #expect(s.armies["mesopotamia"]!.units.infantry == 7)
+        #expect(s.armies["mesopotamia"]!.units.infantry == 8)
         #expect(s.civs["mesopotamia"]!.granary == 0)
     }
 

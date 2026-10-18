@@ -107,7 +107,16 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
       (the New Kingdom's Levant) and Mesopotamia's capital grain goes 9 → 8. 40 games on two seed
       sets: Mesopotamia 32%, Egypt, Greece and Italia 20–25% each; 38–43 rounds, 10–16
       dominations; defences held 24–52%. Rules version 5, map version 2. 160 tests.
-  - **Known open issues**: Egypt still collapses in about 70% of games (strong early, falls to the
+  - **Capital-only starts** (Josh's decision; DESIGN.md, "Capital-only starts"; rules version
+    6, map version 3): every civ starts with its capital alone, natives kept. Greece and Italia
+    get sea-power starts (5 infantry, a 20-grain war chest, a ship; Greece also Galleys and
+    capital grain 3). Egypt's grain 10 → 8; Mesopotamia back to 9; Egypt's Syria start
+    reverted. Island natives are lighter; every coast can buy 1 grain a turn overseas (3 with a
+    harbor); the AI values wine, luxuries, stone and iron. 40 games on two seed sets:
+    Mesopotamia 37–40%, Egypt 27–32%, Italia 22–27%, **Greece 5–7%** (target 10%+; it peaks
+    at 4–6 territories and then falls to the Sea Peoples); about 42 rounds, all decided.
+  - **Known open issues**: Greece wins only 5–7% under capital-only starts (next lever: Sea
+    Peoples pressure on all-coast realms); Egypt still collapses in about 70% of games (strong early, falls to the
     migrations); Greece still banks gold in long peaceful games (nothing left to buy);
     archers attacking infantry are roughly even now; no trade victories from the AI; the Trade
     layer's goods labels get crowded on big empires.

@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -162,7 +162,9 @@
     "chokepointToll": 1,
     "shareDivisor": 2,
     "grainPerRoute": 2,
-    "grainPrice": 3
+    "grainPrice": 3,
+    "grainPerCoast": 1,
+    "grainPerHarbor": 2
   },
   "start": {
     "gold": 6,
@@ -193,24 +195,29 @@
     },
     "natives": {
       "base": 2,
-      "grainPerUnit": 3
+      "grainPerUnit": 3,
+      "islandBase": 1
     },
     "realms": {
-      "greece": [
-        "macedonia",
-        "thrace"
-      ],
-      "egypt": [
-        "libya",
-        "petraea",
-        "syria"
-      ],
-      "italia": [
-        "sicilia"
-      ],
-      "mesopotamia": [
-        "persia"
-      ]
+      "greece": [],
+      "egypt": [],
+      "italia": [],
+      "mesopotamia": []
+    },
+    "armies": {
+      "greece": { "infantry": 5, "archers": 0, "cavalry": 0 },
+      "italia": { "infantry": 5, "archers": 0, "cavalry": 0 }
+    },
+    "granaries": {
+      "greece": 20,
+      "italia": 20
+    },
+    "fleets": {
+      "greece": { "sea": "aegean", "ships": 1 },
+      "italia": { "sea": "tyrrhenian", "ships": 1 }
+    },
+    "knowledge": {
+      "greece": { "seafaring": 80 }
     }
   },
   "ships": {

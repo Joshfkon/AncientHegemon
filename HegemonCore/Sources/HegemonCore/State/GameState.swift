@@ -213,6 +213,7 @@ public struct GameState: Codable, Sendable, Equatable {
         var rng = SeededRNG(seed: seed)
         var armies: [TerritoryID: Army] = [:]
         var generals: [GeneralID: General] = [:]
+        var startingFleets: [Fleet] = []
         for id in ids {
             guard let civ = map.civilization(id) else {
                 throw MapError.invalid("unknown civilization '\(id)'")
@@ -222,7 +223,7 @@ public struct GameState: Codable, Sendable, Equatable {
                 guard land[t] != nil else { throw MapError.unknownTerritory(t, context: "start realm of '\(civ.id)'") }
                 land[t]!.owner = civ.id
             }
-            var cs = CivState(gold: rules.start.gold, granary: rules.start.granary)
+            var cs = CivState(gold: rules.start.gold, granary: rules.start.granaries?[civ.id] ?? rules.start.granary)
             let g = rules.government
             cs.government = civ.government
             cs.legitimacy = g.startLegitimacy
@@ -233,9 +234,17 @@ public struct GameState: Codable, Sendable, Equatable {
                 cs.heir = Heir(name: Self.pickName(rules.names[civ.id]?.rulers, &rng),
                                age: max(0, cs.ruler.age - Self.roll(g.heirAgeGap, &rng)))
             }
+            for (field, points) in rules.start.knowledge?[civ.id] ?? [:] { cs.knowledge[field] = points }
             civs[civ.id] = cs
-            if !rules.start.army.isEmpty {
-                armies[civ.capital] = Army(owner: civ.id, units: rules.start.army)
+            let army = rules.start.armies?[civ.id] ?? rules.start.army
+            if !army.isEmpty {
+                armies[civ.capital] = Army(owner: civ.id, units: army)
+            }
+            if let fleet = rules.start.fleets?[civ.id] {
+                guard map.seas(bordering: civ.capital).contains(fleet.sea) else {
+                    throw MapError.invalid("starting fleet of '\(civ.id)' must be in a sea next to its capital")
+                }
+                startingFleets.append(Fleet(sea: fleet.sea, owner: civ.id, ships: fleet.ships))
             }
             if let g = rules.start.generals[civ.id] {
                 let gid = "\(civ.id)-1"
@@ -246,7 +255,8 @@ public struct GameState: Codable, Sendable, Equatable {
 
         let natives = rules.start.natives
         for t in map.territories where land[t.id]!.owner == nil {
-            let count = natives.base + t.grain / max(1, natives.grainPerUnit)
+            let island = map.landNeighbors(of: t.id).isEmpty
+            let count = (island ? natives.islandBase ?? natives.base : natives.base) + t.grain / max(1, natives.grainPerUnit)
             if count > 0 { armies[t.id] = Army(owner: nativesID, units: UnitCounts(infantry: count)) }
         }
 
@@ -265,7 +275,7 @@ public struct GameState: Codable, Sendable, Equatable {
         self.armies = armies
         self.moved = [:]
         self.generals = generals
-        self.fleets = []
+        self.fleets = startingFleets
         self.generalsMoved = []
         self.peace = []
         self.harvestPercent = [:]

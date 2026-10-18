@@ -34,7 +34,7 @@ import Testing
     let map = try! GameMap.bundled()
     let rules = try! Rules.bundled()
 
-    @Test func civsStartWithCapitalAndHeartland() throws {
+    @Test func civsStartWithTheirCapitalAndOwnStart() throws {
         let state = try GameState(map: map, rules: rules, seed: 1)
         #expect(state.turn == 1)
         #expect(state.players.count == 4)
@@ -42,7 +42,12 @@ import Testing
             let realm = [civ.capital] + (rules.start.realms[civ.id] ?? [])
             #expect(state.owner(of: civ.capital) == civ.id)
             #expect(state.territories(of: civ.id) == realm.sorted())
-            #expect(state.armies[civ.capital]?.units == rules.start.army)
+            #expect(state.armies[civ.capital]?.units == rules.start.armies?[civ.id] ?? rules.start.army)
+            #expect(state.civs[civ.id]?.granary == rules.start.granaries?[civ.id] ?? rules.start.granary)
+            #expect(state.fleets(of: civ.id).first?.ships == rules.start.fleets?[civ.id]?.ships)
+            for (field, points) in rules.start.knowledge?[civ.id] ?? [:] {
+                #expect(state.civs[civ.id]?.knowledge[field] == points)
+            }
             #expect(state.civs[civ.id]?.gold == rules.start.gold)
             #expect(state.general(of: civ.id, at: civ.capital)?.name == rules.start.generals[civ.id]?.name)
         }
@@ -53,7 +58,8 @@ import Testing
         let n = rules.start.natives
         for t in map.territories where state.owner(of: t.id) == nil {
             #expect(state.armies[t.id]?.owner == nativesID)
-            #expect(state.armies[t.id]?.units.infantry == n.base + t.grain / n.grainPerUnit)
+            let base = map.landNeighbors(of: t.id).isEmpty ? n.islandBase ?? n.base : n.base
+            #expect(state.armies[t.id]?.units.infantry == base + t.grain / n.grainPerUnit)
         }
         #expect(!state.players.contains(nativesID))
     }

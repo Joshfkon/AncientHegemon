@@ -105,7 +105,10 @@ extension Engine {
 
     /// Most grain a civilization can buy from its trade partners this turn.
     public func grainImportCap(of civ: CivilizationID, in state: GameState, routes: [TradeRoute]? = nil) -> Int {
-        (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.count * rules.trade.grainPerRoute
+        let coasts = homeNetwork(of: civ, in: state).filter { map.territory($0)!.isCoastal }
+        let harbors = coasts.filter { state.land[$0]?.improvements.contains(.harbor) ?? false }
+        return (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.count * rules.trade.grainPerRoute
+            + coasts.count * rules.trade.grainPerCoast + harbors.count * rules.trade.grainPerHarbor
     }
 
     func populationCap(of territory: TerritoryID) -> Int {

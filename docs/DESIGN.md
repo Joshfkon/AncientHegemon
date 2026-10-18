@@ -496,9 +496,10 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     infantry that defend but never move or act (raised from 1 + grain ÷ 3 after the naval-AI
     runs: Mesopotamia's win rate fell from 77% to 47% and games lengthened from 14 to 21 rounds). Without them, whoever had the most empty
     neighbors snowballed (Mesopotamia held 24 territories by turn 10).
-  - **Starting heartlands** (replacing capital-only starts): Greece + Macedonia + Thrace,
-    Egypt + Libya + Petraea, Italia + Sicilia, Mesopotamia + Persia. Greece's 2-grain capital
-    alone could never grow or recruit.
+  - **Capital-only starts** (Josh, after the balance pass; replaces the starting heartlands of
+    Greece + Macedonia + Thrace, Egypt + Libya + Petraea, Italia + Sicilia, Mesopotamia +
+    Persia). Every civ starts with its capital alone; native garrisons stay. The sea powers get
+    their own starts so they can grow: see "Capital-only starts" at the end of this document.
   - **Supply-route upkeep** (DESIGN §6 "each step of route length costs grain"): units eat 1
     extra grain per 3 steps from the seat (sea crossings count 2).
   - **No harvest on turn 1**, so later seats don't start with a free harvest.
@@ -855,6 +856,9 @@ dominations, 30 legacy, 1 trade; defences held 28–54%, against civs 7–10%.
 
 ### Mesopotamia and Egypt (balance pass, part 3)
 
+*Superseded by "Capital-only starts" below: Egypt no longer starts with Syria, and
+Mesopotamia's capital is back to 9 grain.*
+
 After the defence changes Mesopotamia won 62–65% and Egypt 5–7%. Josh's aim: Mesopotamia can still
 be the strongest (about 30–40%), the others 15–30%, without slowing games or weakening defence.
 Rules version 5 and map version 2, so saves from before this change are ignored.
@@ -908,3 +912,73 @@ unchanged (1–16%).
 **Still open**: Egypt still collapses in about 70% of games (it rises early and falls to the
 migrations), so its wins come from early dominations more than from lasting. Greece still banks
 gold in long peaceful games.
+
+### Capital-only starts (Josh)
+
+**Decision**: every civilization starts with one territory, its capital. `start.realms` is
+empty for all; native garrisons stay. Rules version 6, map version 3, so older saves are ignored.
+
+With no other change (40 games, seeds 1–40 / 101–140), Greece won 2% / 0% and never held more
+than about 2 territories. Its 2-grain capital fed two soldiers and nothing more. Italia won
+10% / 15% and collapsed in two-thirds of games; Egypt and Mesopotamia shared the rest.
+
+**What made the Mycenaeans a power was the sea**, not farmland: ships and rowers, trade (wine
+and oil out, tin and grain in), raids, and the Aegean islands. Italia's road out is the sea too:
+its only land neighbor is the Alps, and Sicily is a crossing away. So the two sea powers get
+starts that let a small, poor homeland put a real force to sea.
+
+**Per-civ starts** (new optional `start` fields, all in `rules.json`):
+
+- **Greece**: 5 infantry (`start.armies`), a war chest of 20 grain (`start.granaries`; it may
+  exceed the usual cap and is drawn down while the army outgrows the land), 1 ship in the
+  Aegean (`start.fleets`), and Galleys known (seafaring at level 1, `start.knowledge`), inherited
+  from the Minoans. Capital grain 2 → 3, standing in for Messenia and the Kopais basin.
+- **Italia**: 5 infantry, 20 grain, 1 ship in the Tyrrhenian.
+- **Egypt**: capital grain 10 → 8. Alone on the Nile with five weak desert neighbors, Egypt
+  became the runaway civ once the others lost their heartlands.
+- **Mesopotamia**: capital grain back to 9 (the 9 → 8 cut was for the heartland map).
+- Egypt's Syria start is reverted (it was a heartland).
+- Everyone else starts with the standard 2 infantry and 6 grain.
+
+**Rule changes**:
+
+- **Island natives are lighter**: territories with no land border (Crete, Cyprus, Sardinia,
+  Hibernia, the Sitones) hold 1 + grain ÷ 3 natives instead of 2 + grain ÷ 3
+  (`start.natives.islandBase`). Island peoples were fewer and scattered. At 0 the free islands
+  helped Italia more than Greece, so 1 it is.
+- **Overseas grain**: every coastal territory in the home network can buy 1 grain a turn from
+  overseas merchants (`trade.grainPerCoast`), plus 2 more with a harbor (`trade.grainPerHarbor`),
+  on top of the 2 per trade route. Without it, grain imports only began once a civ had trade
+  partners, which is too late for a grain-poor coast. The AI builds a harbor on a hungry coast.
+- **The AI values wine, luxuries, stone and iron** when weighing land (it counted only grain,
+  metals, horses, timber and gold), so Crete and the islands are worth an expedition.
+
+**Tried and dropped**: 2 ships for Greece at the start (crews eat grain, so Greece starved; with
+a bigger war chest it helped Greece a little and Mesopotamia more); Greece as opportunist or
+conqueror instead of merchant (5–7% either way); island natives at 0; capital grain 4 for Greece
+(beyond Josh's cap; Greece peaks at 6–7 territories but still wins 5–7%).
+
+**Before and after** (40 games; seeds 1–40 / 101–140; "before" is capital-only with no fixes)
+
+```
+                         before                                    after
+civ          wins       peak land   def held        wins       peak land   def held
+greece        2% /  0%  1.8 / 1.6   37% / 39%        5% /  7%  4.4 / 5.5   57% / 51%
+egypt        42% / 35%   15 / 14    33% / 32%       32% / 27%   11 / 11    38% / 32%
+italia       10% / 15%  7.9 / 9.0   29% / 34%       22% / 27%   12 / 14    41% / 36%
+mesopotamia  40% / 47%   14 / 15    33% / 29%       40% / 37%   15 / 15    41% / 36%
+
+length       44 / 42 rounds  →  43 / 42 rounds; every game decided by round 50
+endings      8 / 12 dominations, 32 / 28 legacy  →  10 / 10 dominations, 30 / 30 legacy
+```
+
+**Where it lands against Josh's targets**: Mesopotamia 37–40% (target 25–40%) ✓; Egypt and
+Italia 22–32% ✓; games about 42 rounds, all decided by 50 ✓; defences held 32–57% (about where
+they were) ✓. **Greece misses**: it wins 5–7% (target 10%+), and peaks at 4.4–5.5 territories
+(target over 5). Greece now grows, to 4–6 territories at its peak, but it collapses in 27–40%
+of games: it is all coastline, and the Sea Peoples fall hardest on coasts.
+
+**Next lever for Greece** (not yet tried): the collapse. Sea Peoples weight is 6 per coastal
+territory, so an all-coast Greece draws the most raids. Options are a lower per-coast weight,
+or walls counting against Sea Peoples landings; both would also help Italia and Egypt's Delta.
+

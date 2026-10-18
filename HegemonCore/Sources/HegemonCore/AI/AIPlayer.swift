@@ -323,6 +323,7 @@ public struct AIPlayer: Sendable {
         let copper = engine.effectiveYield(of: .copper, for: civ, in: state)
         let weights: [Resource: Double] = [
             .tin: tin == 0 ? 4 : 1.5, .copper: copper == 0 ? 3 : 1, .horses: 1.5, .timber: 1, .gold: 2,
+            .wine: 1, .luxuries: 1, .stone: 0.5, .iron: 1,
         ]
         var v = Double(territory.grain) * 0.8
         for (resource, amount) in territory.resources.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {

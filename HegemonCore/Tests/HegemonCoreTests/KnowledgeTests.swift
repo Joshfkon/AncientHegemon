@@ -49,6 +49,7 @@ import Testing
 
     @Test func knowledgeSharpensArmiesAndShips() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece"])
+        s.civs["greece"]!.knowledge = [:]  // Greece starts knowing Galleys
         let plain = engine.battleArmy("greece", UnitCounts(infantry: 1, cavalry: 1), formation: nil, general: nil, s)
         #expect(plain.unitPercent[.cavalry] == 0)
         #expect(engine.shipCapacity("greece", s) == engine.rules.ships.capacity)
