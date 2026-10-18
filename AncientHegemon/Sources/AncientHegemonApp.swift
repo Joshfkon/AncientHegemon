@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct AncientHegemonApp: App {
     @State private var session = GameSession()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -12,6 +13,9 @@ struct AncientHegemonApp: App {
             } else {
                 CivPickerView(session: session)
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { session.autosave() }
         }
     }
 }

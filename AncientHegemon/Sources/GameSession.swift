@@ -2,14 +2,14 @@ import Foundation
 import HegemonCore
 import Observation
 
-struct LogLine: Identifiable {
+struct LogLine: Identifiable, Codable {
     let id: Int
     let round: Int
     let civ: CivilizationID?
     let text: String
 }
 
-struct BattleEntry: Identifiable {
+struct BattleEntry: Identifiable, Codable {
     let id: Int
     let round: Int
     let territory: TerritoryID
@@ -47,6 +47,8 @@ final class GameSession {
     /// Seconds between AI turns, so their moves can be followed on the map.
     var pace = 0.35
     private var nextID = 0
+    /// A game that can be continued, offered on the picker.
+    private(set) var saved: SavedGame?
 
     init() {
         let engine = try! Engine.bundled()
@@ -54,6 +56,7 @@ final class GameSession {
         self.engine = engine
         self.seed = seed
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
+        saved = SaveStore.load(for: engine)
     }
 
     private static func order(_ engine: Engine, _ seed: UInt64) -> [CivilizationID] {
@@ -73,7 +76,43 @@ final class GameSession {
         message = nil
         replay = nil
         started = true
-        if civ != nil { Task { await runAITurns() } }
+        SaveStore.delete()
+        saved = nil
+        if civ != nil {
+            autosave()
+            Task { await runAITurns() }
+        }
+    }
+
+    /// Picks up the saved game where it left off.
+    func resume() {
+        guard let game = saved else { return }
+        playing = false
+        seed = game.seed
+        human = game.human
+        state = game.state
+        log = game.log
+        battles = game.battles
+        nextID = (game.log.map(\.id) + game.battles.map(\.id)).max() ?? 0
+        message = nil
+        replay = nil
+        started = true
+        // If the app closed while the rivals were moving, let them finish.
+        if state.activePlayer != human { Task { await runAITurns() } }
+    }
+
+    /// Saves the player's game (spectating isn't saved); a finished game clears the save.
+    func autosave() {
+        guard let human, started else { return }
+        if isOver {
+            SaveStore.delete()
+            saved = nil
+            return
+        }
+        let game = SavedGame(human: human, seed: seed, state: state, log: Array(log.prefix(150)),
+                             battles: Array(battles.prefix(30)), savedAt: .now)
+        SaveStore.save(game)
+        saved = game
     }
 
     private func refreshEconomy() {
@@ -81,6 +120,7 @@ final class GameSession {
     }
 
     func quit() {
+        autosave()
         playing = false
         started = false
         human = nil
@@ -103,6 +143,7 @@ final class GameSession {
             message = nil
             record(events, round: before.turn, before: before, after: s)
             state = s
+            autosave()
             if case .endTurn = command { Task { await runAITurns() } }
             return true
         } catch {
@@ -122,6 +163,7 @@ final class GameSession {
             await playOneAITurn()
             try? await Task.sleep(for: .seconds(pace))
         }
+        autosave()
     }
 
     private func playOneAITurn() async {

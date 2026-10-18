@@ -292,7 +292,8 @@ struct CivPickerView: View {
         let preview = session.state
         VStack(spacing: 14) {
             Text("ANCIENT HEGEMON").font(.custom("ChalkboardSE-Bold", size: 30))
-            Text("Choose your civilization").font(.headline).foregroundStyle(.secondary)
+            Text(session.saved == nil ? "Choose your civilization" : "Or start anew as")
+                .font(.headline).foregroundStyle(.secondary)
             HStack(spacing: 12) {
                 ForEach(engine.map.civilizations) { civ in
                     Button { session.start(as: civ.id) } label: {
@@ -315,6 +316,19 @@ struct CivPickerView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            if let game = session.saved {
+                Button { session.resume() } label: {
+                    VStack(spacing: 2) {
+                        Text("Continue as \(Palette.name(game.human, game.state)) · round \(game.state.turn)")
+                            .font(.headline)
+                        Text("Saved \(game.savedAt.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                    }
+                    .padding(.horizontal, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                Text("Starting a new game replaces the saved one.").font(.caption2).foregroundStyle(.secondary)
             }
             Button("Watch the empires play each other") { session.start(as: nil) }
                 .buttonStyle(.bordered)

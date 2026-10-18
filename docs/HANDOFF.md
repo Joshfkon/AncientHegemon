@@ -54,11 +54,17 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
   - **Playable** (step 7, in progress): pick a civ and play it against the AI on the traced
     board; orders on the map with battle odds, recruiting, formations, generals, ships,
     diplomacy, succession-crisis decisions, battle replays. Engine: `CivState.isHuman`,
-    `.resolveCrisis`, `Engine.attackOdds`. 126 tests. Not yet: save/resume, a tutorial, sound,
+    `.resolveCrisis`, `Engine.attackOdds`. 126 tests. Not yet: a tutorial, sound,
     SpriteKit animation of moves, iPhone device testing. Ship orders, the crisis sheet and
     generals' honors haven't been exercised by hand in the Simulator yet.
   - **Logistics visible**: `Engine.economy` (EconomyReport), `supplyRoute`, `supplyStrain`,
     `TradeRoute.path`; app header, Supply/Trade/Resources map layers, Economy section. 128 tests.
+  - **Save and resume**: one autosave slot (`AncientHegemon/Sources/SaveStore.swift`, Application
+    Support/AncientHegemon/autosave.json) holding the GameState, the player's civ, the chronicle
+    and recent battles. Saved after every order, after the rivals' turns and when the app leaves
+    the foreground; the picker offers "Continue"; finished games and new games clear it; saves from
+    another map/rules version are ignored. Verified by killing the app mid-game and resuming.
+    129 tests (long-game round-trip).
   - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
     In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
     (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).

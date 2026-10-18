@@ -132,3 +132,25 @@ import Testing
         #expect(sea.contains { if case .sea = $0 { true } else { false } })
     }
 }
+
+@Suite struct SaveGameTests {
+    @Test func longGamesRoundTripExactly() throws {
+        let engine = try Engine.bundled()
+        // Long enough for civil wars, rebels, events, fleets and peace treaties to appear.
+        for seed in [3, 11] {
+            let record = try playAIMatch(engine: engine, seed: UInt64(seed), personalities: [:], maxTurns: 30)
+            var state = record.finalState
+            state.civs[state.players[0]]!.isHuman = true
+            let data = try JSONEncoder().encode(state)
+            let restored = try JSONDecoder().decode(GameState.self, from: data)
+            #expect(restored == state)
+            // And play continues identically from the restored game.
+            if state.winner == nil {
+                var a = state, b = restored
+                _ = AIPlayer(engine: engine, personality: .turtle).playTurn(&a)
+                _ = AIPlayer(engine: engine, personality: .turtle).playTurn(&b)
+                #expect(a == b)
+            }
+        }
+    }
+}
