@@ -99,7 +99,7 @@ extension Engine {
 
         state.fleets[i].cargo -= units
         let events: [GameEvent] = [.landed(civ: civ, sea: sea, territory: territory, units: units)]
-        return events + advance(civ, units, general: nil, formation: nil, into: territory,
+        return events + advance(civ, units, general: nil, plan: BattlePlan(), into: territory,
                                 from: .sea(sea), approach: .amphibious, &state)
     }
 

@@ -203,6 +203,15 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 formations[a.formation, default: FormationRecord()].attackWins += attackerWon ? 1 : 0
                 formations[d.formation, default: FormationRecord()].defences += 1
                 formations[d.formation, default: FormationRecord()].defenceWins += attackerWon ? 0 : 1
+                // Stratagems and wide lines are tallied alongside, under "plan:" keys.
+                for key in [a.stratagem.map { "plan:\($0.rawValue)" }, a.depth == .wide ? "plan:wide line" : nil].compactMap({ $0 }) {
+                    formations[key, default: FormationRecord()].attacks += 1
+                    formations[key, default: FormationRecord()].attackWins += attackerWon ? 1 : 0
+                }
+                for key in [d.stratagem.map { "plan:\($0.rawValue)" }, d.depth == .wide ? "plan:wide line" : nil].compactMap({ $0 }) {
+                    formations[key, default: FormationRecord()].defences += 1
+                    formations[key, default: FormationRecord()].defenceWins += attackerWon ? 0 : 1
+                }
             default:
                 break
             }

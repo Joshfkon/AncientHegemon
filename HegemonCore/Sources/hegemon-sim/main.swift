@@ -299,6 +299,12 @@ for f in engine.rules.battle.formations.map(\.id) {
           + pad("\(r.attacks) (\(pct(r.attackWins, r.attacks)))", 14)
           + pad("\(r.defences) (\(pct(r.defenceWins, r.defences)))", 18))
 }
+for key in formations.keys.filter({ $0.hasPrefix("plan:") }).sorted() {
+    let r = formations[key]!
+    print(String(key.dropFirst(5)).padding(toLength: 18, withPad: " ", startingAt: 0)
+          + pad("\(r.attacks) (\(pct(r.attackWins, r.attacks)))", 14)
+          + pad("\(r.defences) (\(pct(r.defenceWins, r.defences)))", 18))
+}
 
 var odds = OddsTally()
 for r in records {

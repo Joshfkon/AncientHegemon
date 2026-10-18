@@ -77,9 +77,10 @@ extension AIPlayer {
             map.seas(bordering: t).compactMap { s in dist[s].map { (t, s, $0) } }
         }.filter { !engine.blockaded($0.1, for: [civ], in: state) }
         guard let (yard, sea, _) = yards.min(by: { ($0.2, $0.0, $0.1) < ($1.2, $1.0, $1.1) }) else { return }
-        // Keep enough gold for at least one recruit.
+        // Keep enough gold for at least one recruit, and only build crews the harvest can feed.
         let spare = state.civs[civ]!.gold - rules.stats(.infantry).cost
-        let count = min(want - have, spare / rules.ships.cost)
+        let fed = max(0, engine.economy(of: civ, in: state).grainBalance) / max(1, rules.ships.upkeep)
+        let count = min(want - have, spare / rules.ships.cost, fed)
         if count > 0 {
             _ = attempt(.buildShips(territory: yard, sea: sea, count: count), &state, &turn)
         }
@@ -87,16 +88,28 @@ extension AIPlayer {
 
     /// Loads spare troops, sails toward the campaign target and lands when the odds are good.
     func sail(_ civ: CivilizationID, toward campaign: SeaCampaign, _ state: inout GameState, _ turn: inout AITurn) {
+        // Whether any home coast has troops to spare, before this turn's boarding takes them.
+        let reinforcements = !portSeas(civ, state).isEmpty
         for sea in state.fleets(of: civ).map(\.sea) {
             embark(civ, at: sea, upTo: campaign.force, &state, &turn)
             if land(civ, from: sea, campaign, &state, &turn) { continue }
             guard let fleet = state.fleet(of: civ, in: sea), fleet.cargo.total > 0 || fleet.ships > 0 else { continue }
             let ready = fleet.ships - fleet.movedShips
             guard ready > 0, fleet.cargo.total <= ready * engine.shipCapacity(civ, state) else { continue }
-            // Too weak to land: go back to a port with spare troops instead of idling at sea.
+            // Too weak to land: go back to a port with spare troops instead of idling at sea. If
+            // there are none to add, bring the troops home rather than let them starve aboard.
             let ports = portSeas(civ, state)
-            let goal = fleet.cargo.total < campaign.force && !ports.contains(sea) && !ports.isEmpty
-                ? ports : campaign.landingSeas
+            let weak = fleet.cargo.total > 0 && fleet.cargo.total < campaign.force
+            let homeCoasts = engine.homeNetwork(of: civ, in: state).filter { map.territory($0)!.seas.contains(sea) }
+            if weak, !reinforcements, fleet.movedShips == 0, let coast = homeCoasts.sorted().first,
+               state.armies[coast].map({ $0.owner == civ }) ?? true,
+               !(turn.events.contains { if case let .embarked(_, _, s, _) = $0 { s == sea } else { false } }) {
+                if issue(.land(sea: sea, territory: coast, units: fleet.cargo), &state, &turn) { continue }
+            }
+            let homeSeas = Set(engine.homeNetwork(of: civ, in: state).flatMap { map.seas(bordering: $0) })
+            let goal = weak && !ports.contains(sea) && !ports.isEmpty ? ports
+                : weak && ports.isEmpty && !homeSeas.isEmpty ? homeSeas
+                : campaign.landingSeas
             let dist = seaDistances(to: goal, ships: ready, civ, state)
             guard let here = dist[sea], here > 0,
                   let next = map.seaNeighbors(of: sea).filter({
@@ -161,7 +174,7 @@ extension AIPlayer {
         let wins = seeds(state, "land" + sea + to).filter { seed in
             sim.resolve(BattleSetup(
                 attacker: engine.battleArmy(civ, units, formation: nil, general: nil, state),
-                defender: engine.battleArmy(defender.owner, defender.units, formation: defender.formation,
+                defender: engine.battleArmy(defender.owner, defender.units, plan: defender.plan,
                                             general: state.general(of: defender.owner, at: to), state),
                 terrain: map.territory(to)!.terrain, approach: .amphibious, seed: seed,
                 fortification: engine.fortification(at: to, state))).winner == .attacker

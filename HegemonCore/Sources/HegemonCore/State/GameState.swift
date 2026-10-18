@@ -135,11 +135,17 @@ public struct Army: Codable, Sendable, Equatable {
     public var units: UnitCounts
     /// The formation this army fights in, attacking or defending. Nil means the rules' default.
     public var formation: FormationID?
+    public var depth: LineDepth?
+    public var stratagem: Stratagem?
 
     public init(owner: CivilizationID, units: UnitCounts, formation: FormationID? = nil) {
         self.owner = owner
         self.units = units
         self.formation = formation
+    }
+
+    public var plan: BattlePlan {
+        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem)
     }
 }
 

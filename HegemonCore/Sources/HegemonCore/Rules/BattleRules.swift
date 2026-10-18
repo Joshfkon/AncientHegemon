@@ -91,10 +91,48 @@ public struct BattleRules: Codable, Sendable, Equatable {
     public let fallbackSlots: [GridPoint]
     public let formations: [Formation]
     public let defaultFormation: FormationID
+    public let plans: BattlePlanRules
 
     public func formation(_ id: FormationID) -> Formation? {
         formations.first { $0.id == id }
     }
+}
+
+/// How an army lines up: the formation as drawn, or every block in the front rank.
+public enum LineDepth: String, Codable, Sendable, CaseIterable {
+    case deep, wide
+}
+
+/// A battle trick on top of the formation.
+public enum Stratagem: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {
+    /// Nobody advances unless struck; extra morale.
+    case standFast
+    /// The cavalry falls back at first; enemy blocks that pursue are caught disordered.
+    case feignedRetreat
+    /// Infantry locks shields: less hurt by arrows, but slow.
+    case shieldWall
+    /// The wings start a rank further forward, on the enemy's flanks.
+    case flankingMarch
+}
+
+/// What unlocks a formation or stratagem: a level of knowledge in a field, or a general with
+/// the trait leading the army. Either is enough; with neither set, it is always available.
+public struct PlanRequirement: Codable, Sendable, Equatable {
+    public let field: KnowledgeField?
+    public let level: Int?
+    public let trait: GeneralTrait?
+}
+
+public struct BattlePlanRules: Codable, Sendable, Equatable {
+    public let formationRequires: [FormationID: PlanRequirement]
+    public let stratagemRequires: [Stratagem: PlanRequirement]
+    public let standFastMorale: Int
+    /// Extra damage pursuers take while disordered, in percent.
+    public let feignedRetreatPercent: Int
+    /// Rounds during which advancing enemies are drawn into disorder.
+    public let feignedRetreatRounds: Int
+    /// Less arrow damage for infantry in a shield wall, in percent.
+    public let shieldWallArrowPercent: Int
 }
 
 public struct NavalRules: Codable, Sendable, Equatable {

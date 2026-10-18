@@ -132,6 +132,13 @@ extension Engine {
     /// A civilization's army as it fights: its knowledge sharpens units and steadies morale.
     public func battleArmy(_ civ: CivilizationID, _ units: UnitCounts, formation: FormationID?, general: General?,
                            _ state: GameState) -> BattleArmy {
+        battleArmy(civ, units, plan: BattlePlan(formation: formation), general: general, state)
+    }
+
+    /// The army as it fights with a plan, after dropping anything it can't actually use.
+    public func battleArmy(_ civ: CivilizationID, _ units: UnitCounts, plan: BattlePlan, general: General?,
+                           _ state: GameState) -> BattleArmy {
+        let plan = effectivePlan(plan, civ, units, general: general, state)
         let e = rules.knowledge.effects
         var percent: [UnitType: Int] = [:]
         let horse = level(.horsemanship, of: civ, in: state)
@@ -139,9 +146,10 @@ extension Engine {
         let war = level(.warfare, of: civ, in: state)
         percent[.infantry] = war >= 1 ? e.drillPercent : 0
         percent[.archers] = war >= 2 ? e.bowsPercent : 0
-        return BattleArmy(civ: civ, units: units, formation: formation ?? rules.battle.defaultFormation,
+        return BattleArmy(civ: civ, units: units, formation: plan.formation ?? rules.battle.defaultFormation,
                           general: general, bronzePercent: bronzePercent(civ, state),
-                          unitPercent: percent, morale: war >= 3 ? e.tacticsMorale : 0)
+                          unitPercent: percent, morale: war >= 3 ? e.tacticsMorale : 0,
+                          depth: plan.depth, stratagem: plan.stratagem)
     }
 
     /// Experience from a land battle: fighting teaches warfare, cavalry teaches horsemanship.

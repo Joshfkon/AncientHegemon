@@ -122,6 +122,10 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     layer's goods labels get crowded on big empires.
   - **Greece is the hard civ by design** (Josh): about 5–7% of sim wins, mostly lost to the Sea
     Peoples. Don't balance it up.
+  - **UI pass and battle plans**: full-screen zoomable map with a slide-in panel, a knowledge tree
+    screen, unit icons, battle replays with animation, sound (tools/make_sounds.py) and haptics,
+    and battle plans (formation, line depth, stratagem) unlocked by knowledge or the leading
+    general (DESIGN.md, "Battle plans unlocked by generals and knowledge"). Rules version 7.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

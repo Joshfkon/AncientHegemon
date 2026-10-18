@@ -36,10 +36,13 @@ public struct BattleArmy: Codable, Sendable, Equatable {
     public var unitPercent: [UnitType: Int]
     /// Extra starting morale from the civilization's knowledge.
     public var morale: Int
+    public var depth: LineDepth
+    public var stratagem: Stratagem?
 
     public init(civ: CivilizationID, units: UnitCounts, formation: FormationID,
                 general: General? = nil, bronzePercent: Int = 0,
-                unitPercent: [UnitType: Int] = [:], morale: Int = 0) {
+                unitPercent: [UnitType: Int] = [:], morale: Int = 0,
+                depth: LineDepth = .deep, stratagem: Stratagem? = nil) {
         self.civ = civ
         self.units = units
         self.formation = formation
@@ -47,6 +50,22 @@ public struct BattleArmy: Codable, Sendable, Equatable {
         self.bronzePercent = bronzePercent
         self.unitPercent = unitPercent
         self.morale = morale
+        self.depth = depth
+        self.stratagem = stratagem
+    }
+}
+
+/// An army's standing orders for battle: formation, line depth and stratagem.
+public struct BattlePlan: Codable, Sendable, Hashable {
+    /// Nil means the rules' default formation.
+    public var formation: FormationID?
+    public var depth: LineDepth
+    public var stratagem: Stratagem?
+
+    public init(formation: FormationID? = nil, depth: LineDepth = .deep, stratagem: Stratagem? = nil) {
+        self.formation = formation
+        self.depth = depth
+        self.stratagem = stratagem
     }
 }
 

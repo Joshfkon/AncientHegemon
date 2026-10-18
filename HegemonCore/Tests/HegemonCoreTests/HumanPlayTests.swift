@@ -115,7 +115,9 @@ import Testing
             #expect(report.grainProduced == production)
             #expect(report.grainProduced - report.grainBalance == consumption)
             #expect(report.income == income)
-            #expect(s.civs[civ]!.gold == gold + income)
+            // Grain bought from abroad in a lean harvest is paid for out of the same treasury.
+            let imports = events.reduce(0) { if case let .grainImported(_, _, cost) = $1 { $0 + cost } else { $0 } }
+            #expect(s.civs[civ]!.gold == gold + income - imports)
         }
     }
 

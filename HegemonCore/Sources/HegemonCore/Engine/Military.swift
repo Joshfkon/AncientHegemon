@@ -7,7 +7,7 @@ enum Origin {
 extension Engine {
     /// Units (and optionally a general) entering `to`, by land or from the sea. Fights the army
     /// there if it belongs to an enemy, then occupies and captures the territory if they won.
-    func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, formation: FormationID?,
+    func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
                  into to: TerritoryID, from origin: Origin, approach: Approach,
                  _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
@@ -15,7 +15,7 @@ extension Engine {
         var general = general
 
         if let defender = state.armies[to]?.owner, defender != civ {
-            let result = fight(civ, units, general: general, formation: formation, at: to,
+            let result = fight(civ, units, general: general, plan: plan, at: to,
                                approach: approach, &state)
             events += result.events
             units = result.survivors
@@ -59,14 +59,14 @@ extension Engine {
 
     /// Resolves a land battle for `to` and applies its results to the defender and the generals.
     /// The attacker's survivors are returned for the caller to place.
-    func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, formation: FormationID?,
+    func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
                        at to: TerritoryID, approach: Approach, _ state: inout GameState)
         -> (won: Bool, survivors: UnitCounts, events: [GameEvent]) {
         let defender = state.armies[to]!
         let defenderGeneral = state.general(of: defender.owner, at: to)
         let setup = BattleSetup(
-            attacker: battleArmy(civ, units, formation: formation, general: general, state),
-            defender: battleArmy(defender.owner, defender.units, formation: defender.formation,
+            attacker: battleArmy(civ, units, plan: plan, general: general, state),
+            defender: battleArmy(defender.owner, defender.units, plan: defender.plan,
                                  general: defenderGeneral, state),
             terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next(),
             fortification: fortification(at: to, state))
@@ -152,6 +152,7 @@ extension Engine {
     /// derived from the state (the game's RNG is untouched). For the UI to show before attacking.
     public func attackOdds(_ civ: CivilizationID, units: UnitCounts, into to: TerritoryID,
                            from origin: TerritoryID? = nil, formation: FormationID? = nil,
+                           depth: LineDepth = .deep, stratagem: Stratagem? = nil,
                            general: General? = nil, amphibious: Bool = false,
                            samples: Int = 12, in state: GameState) -> Double? {
         guard let defender = state.armies[to], defender.owner != civ, !units.isEmpty else { return nil }
@@ -172,8 +173,9 @@ extension Engine {
         var wins = 0
         for _ in 0..<samples {
             let report = sim.resolve(BattleSetup(
-                attacker: battleArmy(civ, units, formation: formation, general: general, state),
-                defender: battleArmy(defender.owner, defender.units, formation: defender.formation,
+                attacker: battleArmy(civ, units, plan: BattlePlan(formation: formation, depth: depth, stratagem: stratagem),
+                                     general: general, state),
+                defender: battleArmy(defender.owner, defender.units, plan: defender.plan,
                                      general: state.general(of: defender.owner, at: to), state),
                 terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next(),
                 fortification: fortification(at: to, state)))

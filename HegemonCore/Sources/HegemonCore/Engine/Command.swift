@@ -8,6 +8,8 @@ public enum Command: Codable, Sendable, Equatable {
     case move(from: TerritoryID, to: TerritoryID, units: UnitCounts, general: Bool = false)
     /// Choose the formation an army fights in, attacking or defending.
     case setFormation(territory: TerritoryID, formation: FormationID)
+    /// Formation, line depth and stratagem together.
+    case setBattlePlan(territory: TerritoryID, plan: BattlePlan)
     /// Build ships at a coastal territory in the home network, into one of its seas.
     case buildShips(territory: TerritoryID, sea: SeaZoneID, count: Int)
     /// Sail ships (and the cargo they carry) to an adjacent sea. Ships sail once per turn.
@@ -54,6 +56,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
     case formationSet(civ: CivilizationID, territory: TerritoryID, formation: FormationID)
+    case battlePlanSet(civ: CivilizationID, territory: TerritoryID, plan: BattlePlan)
     case battle(BattleReport)
     case navalBattle(sea: SeaZoneID, report: NavalReport)
     case retreated(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
@@ -165,6 +168,8 @@ public enum GameError: Error, Equatable, Sendable {
     case crisisPending
     case noCrisis
     case invalidTaxRate
+    /// The formation or stratagem isn't unlocked for this army.
+    case planLocked
     /// Already built, or something is being built there.
     case projectUnavailable(TerritoryID, ProjectKind)
     case insufficientStock(Resource, needed: Int, available: Int)

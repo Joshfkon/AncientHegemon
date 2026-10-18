@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -490,7 +490,24 @@
         }
       }
     ],
-    "defaultFormation": "phalanx"
+    "defaultFormation": "phalanx",
+    "plans": {
+      "formationRequires": {
+        "hammer_and_anvil": { "field": "horsemanship", "level": 1, "trait": "cavalryCommander" },
+        "wedge": { "field": "warfare", "level": 1, "trait": "reckless" },
+        "refused_flank": { "field": "warfare", "level": 2, "trait": "tactician" }
+      },
+      "stratagemRequires": {
+        "standFast": {},
+        "feignedRetreat": { "field": "horsemanship", "level": 2, "trait": "cavalryCommander" },
+        "shieldWall": { "field": "warfare", "level": 1 },
+        "flankingMarch": { "field": "warfare", "level": 3, "trait": "tactician" }
+      },
+      "standFastMorale": 10,
+      "feignedRetreatPercent": 30,
+      "feignedRetreatRounds": 2,
+      "shieldWallArrowPercent": 25
+    }
   },
   "naval": {
     "attackPerShip": 4,

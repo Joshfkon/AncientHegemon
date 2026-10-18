@@ -250,9 +250,9 @@ public struct AIPlayer: Sendable {
                       a.score != b.score ? a.score < b.score : (a.from, a.to) > (b.from, b.to)
                   }), best.score > 0 else { return }
             if best.battle {
-                let formation = bestFormation(civ, from: best.from, to: best.to, units: best.units, state)
-                if state.armies[best.from]?.formation != formation {
-                    issue(.setFormation(territory: best.from, formation: formation), &state, &turn)
+                let plan = bestPlan(civ, from: best.from, to: best.to, units: best.units, state)
+                if state.armies[best.from]?.plan != plan {
+                    issue(.setBattlePlan(territory: best.from, plan: plan), &state, &turn)
                 }
             }
             let general = state.general(of: civ, at: best.from).map { !state.generalsMoved.contains($0.id) } ?? false
@@ -284,8 +284,10 @@ public struct AIPlayer: Sendable {
                 if let defender = state.armies[to], defender.owner != civ {
                     let units = take(spare, from: ready)
                     let key = "\(from)>\(to)>\(units.infantry),\(units.archers),\(units.cavalry)"
+                    // Judge the attack in the army's formation, without any defensive stratagem
+                    // it was holding with; the plan is chosen properly once the attack is picked.
                     let pWin = cache[key] ?? estimate(civ, from: from, to: to, units: units,
-                                                      formation: state.armies[from]!.formation, state)
+                                                      plan: BattlePlan(formation: state.armies[from]!.formation), state)
                     cache[key] = pWin
                     let value = self.value(of: to, for: civ, state) * personality.aggression
                         * (1 + personality.opportunism * weakness(defender.owner, state))
@@ -349,7 +351,7 @@ public struct AIPlayer: Sendable {
     // MARK: Battle estimates
 
     func battleSetup(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
-                             formation: FormationID?, seed: UInt64, _ state: GameState) -> BattleSetup {
+                             plan: BattlePlan, seed: UInt64, _ state: GameState) -> BattleSetup {
         let defender = state.armies[to]!
         let general = state.general(of: civ, at: from).flatMap { state.generalsMoved.contains($0.id) ? nil : $0 }
         let approach: Approach = switch map.crossing(between: from, and: to) {
@@ -358,8 +360,8 @@ public struct AIPlayer: Sendable {
         case nil: .overland
         }
         return BattleSetup(
-            attacker: engine.battleArmy(civ, units, formation: formation, general: general, state),
-            defender: engine.battleArmy(defender.owner, defender.units, formation: defender.formation,
+            attacker: engine.battleArmy(civ, units, plan: plan, general: general, state),
+            defender: engine.battleArmy(defender.owner, defender.units, plan: defender.plan,
                                         general: state.general(of: defender.owner, at: to), state),
             terrain: map.territory(to)!.terrain, approach: approach, seed: seed,
             fortification: engine.fortification(at: to, state))
@@ -375,22 +377,40 @@ public struct AIPlayer: Sendable {
     }
 
     func estimate(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
-                          formation: FormationID?, _ state: GameState) -> Double {
+                          plan: BattlePlan, _ state: GameState) -> Double {
         let sim = BattleSimulator(rules: rules)
         let wins = seeds(state, from + to).filter { seed in
-            sim.resolve(battleSetup(civ, from: from, to: to, units: units, formation: formation,
+            sim.resolve(battleSetup(civ, from: from, to: to, units: units, plan: plan,
                                     seed: seed, state)).winner == .attacker
         }.count
         return Double(wins) / Double(samples)
     }
 
-    func bestFormation(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
-                               _ state: GameState) -> FormationID {
-        rules.battle.formations.map(\.id).max { a, b in
-            let pa = estimate(civ, from: from, to: to, units: units, formation: a, state)
-            let pb = estimate(civ, from: from, to: to, units: units, formation: b, state)
-            return pa != pb ? pa < pb : a > b
-        }!
+    /// The best unlocked formation, then whichever unlocked stratagem or line depth improves on
+    /// it (attacking stratagems only; standing fast is for defenders).
+    func bestPlan(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
+                  _ state: GameState) -> BattlePlan {
+        let general = state.general(of: civ, at: from).flatMap { state.generalsMoved.contains($0.id) ? nil : $0 }
+        func odds(_ plan: BattlePlan) -> Double { estimate(civ, from: from, to: to, units: units, plan: plan, state) }
+        let formations = rules.battle.formations.map(\.id).filter {
+            engine.formationAvailable($0, civ, general: general, in: state)
+        }
+        var best = BattlePlan(formation: rules.battle.defaultFormation)
+        var bestOdds = -1.0
+        for f in formations {
+            let p = odds(BattlePlan(formation: f))
+            if p > bestOdds { (best, bestOdds) = (BattlePlan(formation: f), p) }
+        }
+        var variants: [BattlePlan] = [BattlePlan(formation: best.formation, depth: .wide)]
+        for s in [Stratagem.feignedRetreat, .flankingMarch, .shieldWall]
+        where engine.stratagemAvailable(s, civ, general: general, in: state) && (s != .feignedRetreat || units.cavalry > 0) {
+            variants.append(BattlePlan(formation: best.formation, stratagem: s))
+        }
+        for plan in variants {
+            let p = odds(plan)
+            if p > bestOdds { (best, bestOdds) = (plan, p) }
+        }
+        return best
     }
 
     /// For each army facing an enemy stack, the formation that defends best against the
@@ -403,24 +423,36 @@ public struct AIPlayer: Sendable {
                 return (n, a)
             }
             guard let (from, enemy) = foes.max(by: { $0.1.units.total < $1.1.units.total }) else { continue }
-            var bestID = rules.battle.defaultFormation
-            var bestHolds = -1
-            for formation in rules.battle.formations.map(\.id) {
-                let holds = seeds(state, "def" + t + formation).filter { seed in
+            let general = state.general(of: civ, at: t)
+            func holds(_ plan: BattlePlan) -> Int {
+                seeds(state, "def" + t + (plan.formation ?? "") + plan.depth.rawValue + (plan.stratagem?.rawValue ?? "")).filter { seed in
                     var setup = BattleSetup(
-                        attacker: engine.battleArmy(enemy.owner, enemy.units, formation: enemy.formation,
-                                                    general: nil, state),
-                        defender: engine.battleArmy(civ, units, formation: formation,
-                                                    general: state.general(of: civ, at: t), state),
+                        attacker: engine.battleArmy(enemy.owner, enemy.units, plan: enemy.plan, general: nil, state),
+                        defender: engine.battleArmy(civ, units, plan: plan, general: general, state),
                         terrain: map.territory(t)!.terrain, seed: seed,
                         fortification: engine.fortification(at: t, state))
                     if map.crossing(between: from, and: t) == .river { setup.approach = .river }
                     return sim.resolve(setup).winner == .defender
                 }.count
-                if holds > bestHolds { (bestID, bestHolds) = (formation, holds) }
             }
-            if state.armies[t]?.formation != bestID {
-                issue(.setFormation(territory: t, formation: bestID), &state, &turn)
+            var best = BattlePlan(formation: rules.battle.defaultFormation)
+            var bestHolds = -1
+            for formation in rules.battle.formations.map(\.id)
+            where engine.formationAvailable(formation, civ, general: general, in: state) {
+                let h = holds(BattlePlan(formation: formation))
+                if h > bestHolds { (best, bestHolds) = (BattlePlan(formation: formation), h) }
+            }
+            // Then the defensive tricks: a wide line, standing fast, a shield wall.
+            var variants = [BattlePlan(formation: best.formation, depth: .wide)]
+            for s in [Stratagem.standFast, .shieldWall] where engine.stratagemAvailable(s, civ, general: general, in: state) {
+                variants.append(BattlePlan(formation: best.formation, stratagem: s))
+            }
+            for plan in variants {
+                let h = holds(plan)
+                if h > bestHolds { (best, bestHolds) = (plan, h) }
+            }
+            if state.armies[t]?.plan != best {
+                issue(.setBattlePlan(territory: t, plan: best), &state, &turn)
             }
         }
     }

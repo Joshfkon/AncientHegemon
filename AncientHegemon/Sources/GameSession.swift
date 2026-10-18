@@ -224,6 +224,7 @@ final class GameSession {
         case .noGeneral: return "No general is ready to march from there."
         case .notCoastal(let t, let s): return "\(place(t)) has no coast on \(place(s))."
         case .insufficientShips: return "Not enough ships ready to sail."
+        case .planLocked: return "Your army hasn't learned that yet."
         case .invalidTaxRate: return "Taxes go from 0 to 100% in steps of 10."
         case .projectUnavailable(let t, let p): return "Can't build \(projectName(p).lowercased()) in \(place(t))."
         case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."

@@ -32,6 +32,8 @@ public struct Engine: Sendable {
             return try move(from, to, units, general, &state)
         case let .setFormation(territory, formation):
             return try setFormation(territory, formation, &state)
+        case let .setBattlePlan(territory, plan):
+            return try setBattlePlan(territory, plan, &state)
         case let .buildShips(territory, sea, count):
             return try buildShips(territory, sea, count, &state)
         case let .moveFleet(from, to, ships, cargo):
@@ -128,7 +130,7 @@ public struct Engine: Sendable {
         case nil: .overland
         }
         let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
-        return events + advance(civ, units, general: general, formation: army.formation, into: to,
+        return events + advance(civ, units, general: general, plan: army.plan, into: to,
                                 from: .territory(from), approach: approach, &state)
     }
 
@@ -138,6 +140,9 @@ public struct Engine: Sendable {
         guard rules.battle.formation(formation) != nil else { throw GameError.unknownFormation(formation) }
         guard let army = state.armies[territory], army.owner == civ else {
             throw GameError.insufficientUnits(territory)
+        }
+        guard formationAvailable(formation, civ, general: state.general(of: civ, at: territory), in: state) else {
+            throw GameError.planLocked
         }
         state.armies[territory]!.formation = formation
         return [.formationSet(civ: civ, territory: territory, formation: formation)]

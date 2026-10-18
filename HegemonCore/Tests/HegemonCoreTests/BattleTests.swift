@@ -238,6 +238,9 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 
     @Test func formationsAreChosenPerArmy() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
+        // Wedge and refused flank are unlocked by warfare.
+        s.civs["mesopotamia"]!.knowledge[.warfare] = engine.rules.knowledge.levels[1]
+        s.civs["greece"]!.knowledge[.warfare] = engine.rules.knowledge.levels[1]
         try engine.apply(.setFormation(territory: "mesopotamia", formation: "wedge"), to: &s)
         #expect(s.armies["mesopotamia"]!.formation == "wedge")
         #expect(throws: GameError.unknownFormation("tortoise")) {

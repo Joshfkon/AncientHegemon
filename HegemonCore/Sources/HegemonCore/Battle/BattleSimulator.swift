@@ -21,6 +21,10 @@ public struct BattleSimulator: Sendable {
         var charged = false
         /// A holding block that has been struck stops holding and engages.
         var provoked = false
+        /// Drawn forward by a feigned retreat and caught out of order: takes extra damage.
+        var disordered = false
+        /// Stands on a wing of its formation (outer columns), for a flanking march.
+        var onWing = false
     }
 
     // MARK: Land battle
@@ -38,6 +42,17 @@ public struct BattleSimulator: Sendable {
 
         var blocks = deploy(setup.attacker, side: .attacker, firstID: 0)
         blocks += deploy(setup.defender, side: .defender, firstID: blocks.count)
+        // A flanking march: the wings start a rank further forward, where the square is free.
+        for side in [BattleSide.attacker, .defender] where army(side, setup).stratagem == .flankingMarch {
+            let forward = side == .attacker ? 1 : -1
+            for i in blocks.indices where blocks[i].side == side && blocks[i].onWing {
+                let ahead = GridPoint(blocks[i].position.col, blocks[i].position.row + forward)
+                if !impassable.contains(ahead), !blocks.contains(where: { $0.position == ahead }) {
+                    blocks[i].position = ahead
+                }
+            }
+        }
+        let plans = b.plans
         let startHp: [BattleSide: Int] = [
             .attacker: blocks.filter { $0.side == .attacker }.reduce(0) { $0 + $1.maxHp },
             .defender: blocks.filter { $0.side == .defender }.reduce(0) { $0 + $1.maxHp },
@@ -54,16 +69,44 @@ public struct BattleSimulator: Sendable {
 
             // Movement interleaves the sides, and who moves first alternates each round,
             // so neither side gets a systematic head start.
+            let before = blocks.map(\.position)
             for i in moveOrder(blocks, attackerFirst: round % 2 == 1) where blocks[i].status == .fighting {
                 let army = blocks[i].side == .attacker ? setup.attacker : setup.defender
                 let formation = b.formation(army.formation) ?? b.formation(b.defaultFormation)!
-                let advances = formation.advance[blocks[i].type] ?? true || blocks[i].provoked
+                var advances = formation.advance[blocks[i].type] ?? true || blocks[i].provoked
                     || (blocks[i].side == .attacker && round > b.attackerHoldRounds)
+                switch army.stratagem {
+                case .standFast?:
+                    advances = blocks[i].provoked
+                case .shieldWall? where blocks[i].type == .infantry && round % 2 == 1:
+                    continue  // locked shields: the infantry moves every other round
+                case .feignedRetreat? where round == 1:
+                    // The cavalry turns and rides back; everyone else waits for the pursuit.
+                    if blocks[i].type == .cavalry {
+                        let back = GridPoint(blocks[i].position.col,
+                                             blocks[i].position.row + (blocks[i].side == .attacker ? -1 : 1))
+                        if (0..<Self.size).contains(back.row), !impassable.contains(back),
+                           !blocks.contains(where: { $0.status == .fighting && $0.position == back }) {
+                            blocks[i].position = back
+                        }
+                    }
+                    if !blocks[i].provoked { continue }
+                default:
+                    break
+                }
                 for _ in 0..<b.speed[blocks[i].type]! {
                     if !enemies(of: i, blocks, within: 1).isEmpty { break }
                     if blocks[i].type == .archers, !enemies(of: i, blocks, within: range).isEmpty { break }
                     guard advances, let step = step(for: i, blocks, impassable) else { break }
                     blocks[i].position = step
+                }
+            }
+
+            // Against a feigned retreat, whoever pursues in the opening rounds falls into disorder.
+            for side in [BattleSide.attacker, .defender] where army(side, setup).stratagem == .feignedRetreat {
+                for i in blocks.indices where blocks[i].side != side && blocks[i].status == .fighting {
+                    if round <= plans.feignedRetreatRounds, blocks[i].position != before[i] { blocks[i].disordered = true }
+                    if round > plans.feignedRetreatRounds + 1 { blocks[i].disordered = false }
                 }
             }
 
@@ -174,20 +217,26 @@ public struct BattleSimulator: Sendable {
         let formation = b.formation(army.formation) ?? b.formation(b.defaultFormation)!
         let morale = 100 + army.morale + (army.general.map { g in
             rules.generals.presentMorale + (rules.generals.traits[g.trait]?.moralePercent ?? 0)
-        } ?? 0)
+        } ?? 0) + (army.stratagem == .standFast ? b.plans.standFastMorale : 0)
         var taken = Set<GridPoint>()
         var blocks: [Block] = []
         let order = formation.order + UnitType.allCases.filter { !formation.order.contains($0) }
         for type in order where blockCount[type] != nil {
             let n = blockCount[type]!
-            let preferred = (formation.slots[type] ?? []) + b.fallbackSlots
+            var preferred = (formation.slots[type] ?? []) + b.fallbackSlots
+            if army.depth == .wide {
+                // Everyone in the front rank, center outward, before anyone stands behind.
+                let front = (formation.slots[type] ?? []).map { GridPoint($0.col, 0) }
+                preferred = front + [2, 1, 3, 0, 4].map { GridPoint($0, 0) } + preferred
+            }
             for k in 0..<n {
                 let count = army.units[type] / n + (k < army.units[type] % n ? 1 : 0)
                 let slot = preferred.first { !taken.contains($0) }!
                 taken.insert(slot)
                 let hp = count * b.hpPerUnit
                 blocks.append(Block(id: firstID + blocks.count, side: side, type: type,
-                                    position: boardPoint(slot, side), hp: hp, maxHp: hp, morale: morale))
+                                    position: boardPoint(slot, side), hp: hp, maxHp: hp, morale: morale,
+                                    onWing: slot.col == 0 || slot.col == Self.size - 1))
             }
         }
         return blocks
@@ -247,6 +296,10 @@ public struct BattleSimulator: Sendable {
 
     // MARK: Damage
 
+    private func army(_ side: BattleSide, _ setup: BattleSetup) -> BattleArmy {
+        side == .attacker ? setup.attacker : setup.defender
+    }
+
     private func units(_ block: Block) -> Int {
         (block.hp + rules.battle.hpPerUnit - 1) / rules.battle.hpPerUnit
     }
@@ -271,6 +324,10 @@ public struct BattleSimulator: Sendable {
         }
         if attacker.side == .attacker, setup.approach != .overland {
             percents.append(100 - (b.crossingPenaltyPercent[setup.approach.rawValue] ?? 0))
+        }
+        if target.disordered, army.stratagem == .feignedRetreat { percents.append(100 + b.plans.feignedRetreatPercent) }
+        if ranged, target.type == .infantry, targetArmy.stratagem == .shieldWall {
+            percents.append(100 - b.plans.shieldWallArrowPercent)
         }
         var defense = targetArmy.general.flatMap { rules.generals.traits[$0.trait]?.defensePercent } ?? 0
         if target.side == .defender { defense += b.homeGroundPercent + terrain.defensePercent + setup.fortification }

@@ -34,8 +34,8 @@ struct OrderComposer: View {
 
     @State private var units = UnitCounts.zero
     @State private var withGeneral = false
-    @State private var formation = ""
-    /// Chance of victory with each formation, recomputed when the force changes.
+    @State private var plan = BattlePlan()
+    /// Chance of victory with each formation, recomputed when the force or plan changes.
     @State private var oddsByFormation: [FormationID: Double] = [:]
 
     private var engine: Engine { session.engine }
@@ -90,7 +90,8 @@ struct OrderComposer: View {
             }
             if isBattle, case .march = order {
                 Text("Battle plan").font(.subheadline.bold())
-                FormationPicker(engine: engine, units: units, selection: $formation, odds: oddsByFormation)
+                BattlePlanEditor(engine: engine, civ: human, state: state, units: units,
+                                 general: withGeneral ? general : nil, plan: $plan, odds: oddsByFormation)
             }
             if isBattle, destination != nil {
                 odds
@@ -109,7 +110,15 @@ struct OrderComposer: View {
             updateOdds()
         }
         .onChange(of: units) { _, _ in updateOdds() }
-        .onChange(of: withGeneral) { _, _ in updateOdds() }
+        .onChange(of: withGeneral) { _, _ in
+            // Options the general brought leave with them.
+            let leader = withGeneral ? general : nil
+            if let f = plan.formation, !engine.formationAvailable(f, human, general: leader, in: state) { plan.formation = nil }
+            if let st = plan.stratagem, !engine.stratagemAvailable(st, human, general: leader, in: state) { plan.stratagem = nil }
+            updateOdds()
+        }
+        .onChange(of: plan.depth) { _, _ in updateOdds() }
+        .onChange(of: plan.stratagem) { _, _ in updateOdds() }
     }
 
     /// Odds for every formation (landings fight in the army's standing formation).
@@ -117,11 +126,17 @@ struct OrderComposer: View {
         guard isBattle, let to = destination else { oddsByFormation = [:]; return }
         let from: TerritoryID? = if case let .march(f, _) = order { f } else { nil }
         let amphibious = { if case .land = order { true } else { false } }()
-        let ids = from == nil ? [formation] : engine.rules.battle.formations.map(\.id)
+        let chosen = plan.formation ?? engine.rules.battle.defaultFormation
+        let leader = withGeneral ? general : nil
+        let ids = from == nil ? [chosen] : engine.rules.battle.formations.map(\.id).filter {
+            engine.formationAvailable($0, human, general: leader, in: state)
+        }
         var odds: [FormationID: Double] = [:]
         for id in ids {
             odds[id] = engine.attackOdds(human, units: units, into: to, from: from, formation: id,
-                                         general: withGeneral ? general : nil, amphibious: amphibious, in: state) ?? 0
+                                         depth: from == nil ? .deep : plan.depth,
+                                         stratagem: from == nil ? nil : plan.stratagem,
+                                         general: leader, amphibious: amphibious, in: state) ?? 0
         }
         oddsByFormation = odds
     }
@@ -157,7 +172,7 @@ struct OrderComposer: View {
     }
 
     private var odds: some View {
-        let p = oddsByFormation[formation] ?? oddsByFormation.values.first ?? 0
+        let p = oddsByFormation[plan.formation ?? engine.rules.battle.defaultFormation] ?? oddsByFormation.values.first ?? 0
         let percent = Int((p * 100).rounded())
         return HStack {
             Text("Chance of victory").font(.callout)
@@ -168,8 +183,11 @@ struct OrderComposer: View {
     }
 
     private func setDefaults() {
-        formation = (state.armies[{ if case let .march(f, _) = order { f } else { "" } }()]?.formation)
-            ?? engine.rules.battle.defaultFormation
+        if case let .march(from, _) = order, let army = state.armies[from] {
+            plan = army.plan
+            // A defensive stratagem is no way to attack.
+            if plan.stratagem == .standFast { plan.stratagem = nil }
+        }
         withGeneral = isBattle && general != nil
         switch order {
         case .embark(_, let sea):
@@ -193,8 +211,8 @@ struct OrderComposer: View {
     private func send() {
         switch order {
         case let .march(from, to):
-            if isBattle, state.armies[from]?.formation ?? engine.rules.battle.defaultFormation != formation {
-                session.order(.setFormation(territory: from, formation: formation))
+            if isBattle, state.armies[from]?.plan != plan {
+                session.order(.setBattlePlan(territory: from, plan: plan))
             }
             if session.order(.move(from: from, to: to, units: units, general: withGeneral)) {
                 done(.territory(to))
@@ -251,9 +269,10 @@ struct TerritoryPanel: View {
                                  : "These troops have moved this turn.")
                 .font(.caption).foregroundStyle(.secondary)
             Text("Defensive plan").font(.subheadline.bold())
-            FormationPicker(engine: engine, units: army.units, selection: Binding(
-                get: { army.formation ?? engine.rules.battle.defaultFormation },
-                set: { session.order(.setFormation(territory: territory, formation: $0)) }))
+            BattlePlanEditor(engine: engine, civ: human, state: state, units: army.units,
+                             general: state.general(of: human, at: territory), plan: Binding(
+                get: { army.plan },
+                set: { session.order(.setBattlePlan(territory: territory, plan: $0)) }))
         }
         if home {
             Text("Recruit").font(.subheadline.bold())

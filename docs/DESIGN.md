@@ -990,3 +990,47 @@ is all coastline. Josh accepted this as it stands: "That's just real life. It's 
 balanced. It'll just be harder to win as them." The Mycenaean palaces did burn around 1200 BC.
 No further fixes for Greece: walls against Sea Peoples landings and lighter coastal raids were
 both considered and set aside. The 10%-minimum target doesn't apply to Greece.
+
+### Battle plans unlocked by generals and knowledge (Josh, after the UI pass)
+
+Josh: options for formation and strategy, "a smaller army will have less depth optionally,
+cavalry on the wings, feigned retreat… more options depending on generals and/or experience on
+the war tech tree." Decided: gate the existing formations too.
+
+- A **battle plan** is a formation, a line depth and an optional stratagem, kept on the army
+  (`Army.plan`, set with `.setBattlePlan`). Attacks use the attacking army's plan, defences the
+  garrison's.
+- **Unlocks** (`battle.plans` in rules.json): knowledge counts for every army; a general's trait
+  counts only when that general leads the army. Either is enough.
+
+| Option | Unlocked by |
+|---|---|
+| Phalanx, Skirmish screen | always |
+| Hammer and anvil | Chariots (Horsemanship 1) or a Cavalry Commander |
+| Wedge | Drill (Warfare 1) or a Reckless general |
+| Refused flank | Composite bows (Warfare 2) or a Tactician |
+| Stand fast | always |
+| Feigned retreat (needs cavalry) | Horse breeding (Horsemanship 2) or a Cavalry Commander |
+| Shield wall | Drill (Warfare 1) |
+| Flanking march | Tactics (Warfare 3) or a Tactician |
+
+- **Line depth**: *deep* is the formation as drawn; *wide* puts every block in the front rank
+  first (center outward), so a small army can't be outflanked but has no reserve.
+- **Stratagems**: *Stand fast*: nobody advances unless struck, +10 morale. *Feigned retreat*: the
+  cavalry falls back a square in round 1 while the rest wait; enemy blocks that move in rounds 1–2
+  are disordered and take +30% damage until the end of round 3. *Shield wall*: infantry takes 25%
+  less from arrows and moves only every other round. *Flanking march*: blocks on the formation's
+  outer columns start a rank further forward, if the square is free.
+- A plan is checked when set (against the general standing with the army) and again at battle:
+  whatever isn't unlocked for the army as it actually fights (its general stayed behind or died, or
+  a feigned retreat with no cavalry) falls back to the default formation and no stratagem.
+- **AI**: attacking, it picks its best unlocked formation by simulated odds, then tries a wide line
+  and each unlocked attacking stratagem and keeps whichever improves the odds. Defending, the same
+  with a wide line, stand fast and shield wall.
+- **Sims** (80 games, two seed sets): average length 43–46 rounds (was 42–43); dominations 11 and 4
+  (was 10 and 10). Wins: Egypt 35–42%, Mesopotamia 25–35%, Italia 22–30%, Greece 2–7%. Egypt gains
+  because Thutmose, a Cavalry Commander, unlocks hammer and anvil and the feigned retreat from the
+  start: an Egyptian chariot edge, kept. Advanced options are used in a few percent of battles,
+  since few civs reach the knowledge by mid-game.
+- Also fixed on the way: the naval AI no longer builds ships whose crews the harvest can't feed,
+  and brings troops home instead of leaving a too-small landing force to starve at sea.
