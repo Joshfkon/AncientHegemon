@@ -10,6 +10,8 @@ struct BoardArt: Decodable {
         let label: [Double]
         /// Lettering angle on the board, in degrees clockwise.
         let angle: Double
+        /// Where the army token sits.
+        let token: [Double]
     }
 
     let size: [Double]

@@ -22,6 +22,9 @@ public struct Engine: Sendable {
     @discardableResult
     public func apply(_ command: Command, to state: inout GameState) throws -> [GameEvent] {
         guard state.winner == nil else { throw GameError.gameOver }
+        if state.civs[state.activePlayer]!.crisis != nil {
+            guard case .resolveCrisis = command else { throw GameError.crisisPending }
+        }
         switch command {
         case let .recruit(territory, unit, count):
             return try recruit(territory, unit, count, &state)
@@ -47,6 +50,8 @@ public struct Engine: Sendable {
             return try appointGeneral(territory, &state)
         case let .honorGeneral(id):
             return try honorGeneral(id, &state)
+        case let .resolveCrisis(choice):
+            return try resolveCrisis(choice, &state)
         case .endTurn:
             return endTurn(&state)
         }

@@ -28,6 +28,8 @@ public enum Command: Codable, Sendable, Equatable {
     case appointGeneral(territory: TerritoryID)
     /// Shower a general with honors: costs gold (more for famous ones), restores loyalty.
     case honorGeneral(GeneralID)
+    /// Decide a contested succession (only offered to human rulers).
+    case resolveCrisis(CrisisChoice)
     /// End the active player's turn.
     case endTurn
 }
@@ -63,12 +65,23 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case rulerDied(civ: CivilizationID, name: String, age: Int, cause: DeathCause)
     case succession(civ: CivilizationID, ruler: String, outcome: SuccessionOutcome)
     case heirBorn(civ: CivilizationID, name: String)
+    /// A human ruler must decide a contested succession before doing anything else.
+    case successionCrisis(civ: CivilizationID, claimants: [GeneralID])
     /// A general rose up: `rebel` is the new civilization, holding `territories`.
     case civilWar(civ: CivilizationID, rebel: CivilizationID, general: GeneralID, territories: [TerritoryID])
     case generalAppointed(civ: CivilizationID, general: GeneralID)
     case generalHonored(GeneralID)
     case generalsUnpaid(civ: CivilizationID, count: Int)
     case event(EventReport)
+}
+
+public enum CrisisChoice: String, Codable, Sendable, CaseIterable {
+    /// Buy off every claimant with gold.
+    case payOff
+    /// Give the throne to the strongest claimant: a new dynasty, but no war.
+    case crownClaimant
+    /// Refuse them all: each claimant rises in civil war.
+    case standFirm
 }
 
 public enum DeathCause: String, Codable, Sendable {
@@ -86,6 +99,8 @@ public enum SuccessionOutcome: String, Codable, Sendable {
     case civilWar
     /// A famous general seized the republic and made himself king.
     case coup
+    /// The realm crowned the strongest claimant to avoid war.
+    case claimantCrowned
 }
 
 /// A random event striking a civilization (DESIGN §8).
@@ -132,4 +147,7 @@ public enum GameError: Error, Equatable, Sendable {
     case badOmen
     case unknownGeneral(GeneralID)
     case tooManyGenerals
+    /// A succession crisis must be resolved first.
+    case crisisPending
+    case noCrisis
 }

@@ -1,62 +1,19 @@
 import HegemonCore
 import SwiftUI
 
-struct BattleListView: View {
-    let session: GameSession
-
-    var body: some View {
-        NavigationStack {
-            List(session.battles) { entry in
-                NavigationLink {
-                    BattleReplayView(entry: entry, state: session.state, map: session.engine.map)
-                } label: {
-                    BattleRow(entry: entry, state: session.state, map: session.engine.map)
-                }
-            }
-            .overlay {
-                if session.battles.isEmpty {
-                    ContentUnavailableView("No battles yet", systemImage: "shield",
-                                           description: Text("Play a few rounds on the World tab."))
-                }
-            }
-            .navigationTitle("Battles")
-        }
-    }
-}
-
-private struct BattleRow: View {
-    let entry: BattleEntry
-    let state: GameState
-    let map: GameMap
-
-    var body: some View {
-        let a = entry.report.setup.attacker, d = entry.report.setup.defender
-        let won = entry.report.winner == .attacker
-        VStack(alignment: .leading, spacing: 3) {
-            Text("Battle of \(map.territory(entry.territory)?.name ?? entry.territory)").font(.headline)
-            HStack(spacing: 6) {
-                Circle().fill(Palette.color(a.civ, state)).frame(width: 8, height: 8)
-                Text("\(Palette.name(a.civ, state)) \(a.units.total)")
-                Text("vs").foregroundStyle(.secondary)
-                Circle().fill(Palette.color(d.civ, state)).frame(width: 8, height: 8)
-                Text("\(Palette.name(d.civ, state)) \(d.units.total)")
-            }
-            .font(.callout)
-            Text("Round \(entry.round) · \(won ? "attacker won" : "defender held") · \(entry.report.rounds) battle rounds")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-}
-
 /// Plays a battle back frame by frame on the 5×5 board.
 struct BattleReplayView: View {
     let entry: BattleEntry
     let state: GameState
     let map: GameMap
+    /// Start playing as soon as the replay opens (for battles just fought).
+    var autoplay = false
     @State private var frame = 0
     @State private var playing = false
 
     private var report: BattleReport { entry.report }
+    /// The frame on screen, always a valid index.
+    private var shown: Int { min(max(0, frame), report.frames.count - 1) }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -67,7 +24,7 @@ struct BattleReplayView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     header
                     controls
-                    if frame == report.frames.count - 1 { outcome }
+                    if shown == report.frames.count - 1 { outcome }
                 }
                 .padding(.vertical)
             }
@@ -76,12 +33,14 @@ struct BattleReplayView: View {
         .padding(.horizontal)
         .navigationTitle(map.territory(entry.territory)?.name ?? "Battle")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { if autoplay { playing = true } }
         .task(id: playing) {
             guard playing else { return }
             if frame >= report.frames.count - 1 { frame = 0 }
             while playing, frame < report.frames.count - 1 {
-                try? await Task.sleep(for: .milliseconds(900))
-                withAnimation(.easeInOut(duration: 0.5)) { frame += 1 }
+                // A cancelled sleep throws at once: stop, rather than racing to the end.
+                do { try await Task.sleep(for: .milliseconds(900)) } catch { return }
+                withAnimation(.easeInOut(duration: 0.5)) { frame = min(frame + 1, report.frames.count - 1) }
             }
             playing = false
         }
@@ -118,7 +77,7 @@ struct BattleReplayView: View {
     private var board: some View {
         GeometryReader { geo in
             let cell = geo.size.width / 5
-            let current = report.frames[frame]
+            let current = report.frames[shown]
             let rocks = Set(report.impassable)
             ZStack(alignment: .topLeading) {
                 // Squares: the defender's rows at the top, the attacker's at the bottom.
@@ -169,7 +128,7 @@ struct BattleReplayView: View {
                 Button { frame = min(report.frames.count - 1, frame + 1) } label: { Image(systemName: "forward.frame.fill") }
                     .disabled(frame == report.frames.count - 1)
             }
-            Text(frame == 0 ? "Deployment" : "Round \(frame) of \(report.rounds)")
+            Text(shown == 0 ? "Deployment" : "Round \(shown) of \(report.rounds)")
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
         }
     }
@@ -178,7 +137,7 @@ struct BattleReplayView: View {
         let won = report.winner == .attacker
         let winner = won ? report.setup.attacker.civ : report.setup.defender.civ
         return VStack(spacing: 4) {
-            Text("\(Palette.name(winner, state)) \(won ? "wins the field" : "holds the field")").font(.headline)
+            Text("\(won ? "Victory" : "Held") · \(Palette.name(winner, state))").font(.headline)
             Text("Losses: attacker \(report.attackerLosses.total), defender \(report.defenderLosses.total)")
                 .font(.callout)
             if report.attackerGeneralKilled || report.defenderGeneralKilled {

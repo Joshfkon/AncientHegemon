@@ -139,6 +139,42 @@ extension Engine {
         }
     }
 
+    /// The chance an attack succeeds, estimated by running the battle several times with seeds
+    /// derived from the state (the game's RNG is untouched). For the UI to show before attacking.
+    public func attackOdds(_ civ: CivilizationID, units: UnitCounts, into to: TerritoryID,
+                           from origin: TerritoryID? = nil, formation: FormationID? = nil,
+                           general: General? = nil, amphibious: Bool = false,
+                           samples: Int = 12, in state: GameState) -> Double? {
+        guard let defender = state.armies[to], defender.owner != civ, !units.isEmpty else { return nil }
+        let approach: Approach
+        if amphibious {
+            approach = .amphibious
+        } else {
+            approach = switch origin.flatMap({ map.crossing(between: $0, and: to) }) {
+            case .river: .river
+            case .strait: .strait
+            case nil: .overland
+            }
+        }
+        var salt: UInt64 = 0xCBF2_9CE4_8422_2325  // FNV-1a: stable across launches, unlike hashValue
+        for byte in (to + (origin ?? "sea")).utf8 { salt = (salt ^ UInt64(byte)) &* 0x100_0000_01B3 }
+        var rng = SeededRNG(seed: state.seed ^ (UInt64(state.turn) &* 0x2545_F491_4F6C_DD1D) ^ salt)
+        let sim = BattleSimulator(rules: rules)
+        var wins = 0
+        for _ in 0..<samples {
+            let report = sim.resolve(BattleSetup(
+                attacker: BattleArmy(civ: civ, units: units, formation: formation ?? rules.battle.defaultFormation,
+                                     general: general, bronzePercent: bronzePercent(civ, state)),
+                defender: BattleArmy(civ: defender.owner, units: defender.units,
+                                     formation: defender.formation ?? rules.battle.defaultFormation,
+                                     general: state.general(of: defender.owner, at: to),
+                                     bronzePercent: bronzePercent(defender.owner, state)),
+                terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next()))
+            if report.winner == .attacker { wins += 1 }
+        }
+        return Double(wins) / Double(samples)
+    }
+
     /// Bad omens forbid starting a fight: entering another civ's land or any foreign army.
     func checkOmen(_ civ: CivilizationID, attacking to: TerritoryID, _ state: GameState) throws {
         guard state.civs[civ]?.omen == true else { return }

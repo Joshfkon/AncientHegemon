@@ -581,3 +581,16 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     painting. Fixed to match it: Venedi now borders Macedonia across the river, and no longer
     borders Scythe. Painting and rules now agree on every border. In 40 sim games afterward,
     Mesopotamia won 60% (was 45%) and Greece 10% (was 20%); Macedonia has one more border.
+- **Playing it (step 7)**: the app opens on a civilization picker (or "watch the empires").
+  On your turn: tap your army, then a highlighted destination; an order panel sets how many
+  units go, whether the general leads, and the attacking formation, and shows the chance of
+  victory (12 seeded runs of the real battle sim, never touching the game's RNG). Battles you
+  fight replay at once. Tapping your own land offers recruiting, the defending formation,
+  appointing a general and building ships; ships are boarded by tapping a sea with your fleet,
+  sailed by tapping the fleet then a neighboring sea, and landed by tapping a coast. The Empire
+  panel holds diplomacy (offer or accept peace, declare war) and generals (loyalty, honors).
+  The AI empires then take their turns one at a time so their moves can be watched.
+  - **Succession crises are the player's call**: when a human ruler's throne is contested, the
+    game waits on a decision: pay off the claimants (gold), crown the strongest claimant (a new
+    dynasty, legitimacy cost, no war), or stand firm (each claimant rises in civil war). AI
+    empires still resolve these by rule.

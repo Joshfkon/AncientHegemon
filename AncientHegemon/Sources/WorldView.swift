@@ -1,89 +1,6 @@
 import HegemonCore
 import SwiftUI
 
-struct WorldView: View {
-    let session: GameSession
-    @State private var selected: TerritoryID?
-
-    /// Landscape: the map takes the left, the empires and chronicle the right.
-    var body: some View {
-        HStack(spacing: 0) {
-            MapView(state: session.state, map: session.engine.map, selected: $selected)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(red: 0.12, green: 0.10, blue: 0.08))
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(title).font(.headline)
-                    controls
-                    if let selected {
-                        TerritoryCard(id: selected, state: session.state, map: session.engine.map) {
-                            self.selected = nil
-                        }
-                    }
-                    if let victory = session.state.victory {
-                        VictoryBanner(victory: victory, state: session.state, engine: session.engine)
-                    }
-                    EmpireTable(state: session.state, engine: session.engine)
-                    chronicle
-                }
-                .padding(12)
-            }
-            .frame(width: 270)
-            .background(Color(.systemBackground))
-        }
-    }
-
-    private var title: String {
-        let limit = session.engine.rules.victory.roundLimit
-        return "Round \(session.state.turn) of \(limit) · seed \(session.seed)"
-    }
-
-    private var controls: some View {
-        HStack(spacing: 8) {
-            Button {
-                session.playing.toggle()
-            } label: {
-                Image(systemName: session.playing ? "pause.fill" : "play.fill")
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(session.isOver)
-
-            Button {
-                Task { await session.playRound() }
-            } label: {
-                Image(systemName: "forward.frame.fill")
-            }
-            .buttonStyle(.bordered)
-            .disabled(session.busy || session.playing || session.isOver)
-
-            if session.busy { ProgressView() }
-            Spacer()
-            Button("New game") { session.newGame() }
-                .buttonStyle(.bordered)
-        }
-        .controlSize(.small)
-    }
-
-    private var chronicle: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("Chronicle").font(.subheadline.bold())
-            if session.log.isEmpty {
-                Text("Press play to let the four empires fight it out.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            ForEach(session.log.prefix(80)) { line in
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(line.round)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-                        .frame(width: 20, alignment: .trailing)
-                    Circle().fill(Palette.color(line.civ, session.state)).frame(width: 7, height: 7)
-                    Text(line.text).font(.caption)
-                }
-            }
-        }
-    }
-}
-
 /// How the game was won, and how everyone finished.
 struct VictoryBanner: View {
     let victory: Victory
@@ -159,7 +76,12 @@ struct EmpireTable: View {
 struct MapView: View {
     let state: GameState
     let map: GameMap
-    @Binding var selected: TerritoryID?
+    /// The selected territory or sea.
+    var selected: MapPick?
+    /// Where the current selection can go: drawn with a dashed glow.
+    var targets: Set<MapPick> = []
+    /// A tap on a territory, or on a sea near its fleet marker.
+    var onTap: (MapPick?) -> Void = { _ in }
     private let art = BoardArt.shared
 
     var body: some View {
@@ -167,14 +89,28 @@ struct MapView: View {
             let t = BoardTransform(fitting: geo.size)
             Canvas { context, _ in draw(&context, t) }
                 .contentShape(Rectangle())
-                .onTapGesture { location in
-                    let hit = map.territories.first { territory in
-                        art.territories[territory.id].map { t.path($0.polygon).contains(location) } ?? false
-                    }?.id
-                    selected = hit == selected ? nil : hit
-                }
+                .onTapGesture { location in onTap(pick(at: location, t)) }
         }
     }
+
+    /// Seas win when the tap is near their fleet marker; otherwise the territory under the finger.
+    private func pick(at location: CGPoint, _ t: BoardTransform) -> MapPick? {
+        if let sea = art.seas.min(by: { distance(t.point($0.value), location) < distance(t.point($1.value), location) }),
+           distance(t.point(sea.value), location) < 16 {
+            return .sea(sea.key)
+        }
+        // Army tokens can sit near an edge; a tap on one picks its territory.
+        if let token = art.territories.min(by: { distance(t.point($0.value.token), location)
+                                                  < distance(t.point($1.value.token), location) }),
+           distance(t.point(token.value.token), location) < 9 {
+            return .territory(token.key)
+        }
+        return map.territories.first { territory in
+            art.territories[territory.id].map { t.path($0.polygon).contains(location) } ?? false
+        }.map { .territory($0.id) }
+    }
+
+    private func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(a.x - b.x, a.y - b.y) }
 
     private static let terrain: [Terrain: Color] = [
         .plains: Color(red: 0.42, green: 0.70, blue: 0.32),
@@ -234,7 +170,14 @@ struct MapView: View {
         seam.addLine(to: t.point([BoardArt.seamX, f.maxY]))
         context.stroke(seam, with: .color(.black.opacity(0.75)), lineWidth: 1.6)
 
-        if let selected, let shape = art.territories[selected] {
+        for target in targets {
+            if case .territory(let id) = target, let shape = art.territories[id] {
+                let path = t.path(shape.polygon)
+                context.fill(path, with: .color(.white.opacity(0.18)))
+                context.stroke(path, with: .color(.white), style: StrokeStyle(lineWidth: 1.8, dash: [4, 3]))
+            }
+        }
+        if case .territory(let id)? = selected, let shape = art.territories[id] {
             context.stroke(t.path(shape.polygon), with: .color(.white), lineWidth: 2.5)
         }
 
@@ -251,9 +194,7 @@ struct MapView: View {
                            at: .zero)
             if let army = state.armies[territory.id], army.units.total > 0 {
                 // Armies sit at the middle of the land, under the name for straight-lettered ones.
-                // Just beneath the lettering, following its angle.
-                let a = shape.angle * .pi / 180
-                let c = CGPoint(x: p.x - 11 * sin(a), y: p.y + 11 * cos(a))
+                let c = t.point(shape.token)
                 let native = !state.isPlayer(army.owner)
                 let r: CGFloat = native ? 5.5 : 7.5
                 let led = state.generals.values.contains { $0.location == territory.id }
@@ -268,6 +209,12 @@ struct MapView: View {
         }
         for (sea, label) in art.seas {
             let p = t.point(label)
+            if targets.contains(.sea(sea)) || selected == .sea(sea) {
+                let ring = Path(ellipseIn: CGRect(x: p.x - 13, y: p.y - 4, width: 26, height: 26))
+                context.stroke(ring, with: .color(.white),
+                               style: StrokeStyle(lineWidth: selected == .sea(sea) ? 2.5 : 1.6,
+                                                  dash: selected == .sea(sea) ? [] : [4, 3]))
+            }
             // The board doesn't name its seas, so only fleets are drawn there.
             for (i, fleet) in state.fleets.filter({ $0.sea == sea }).enumerated() {
                 context.draw(Text("⛵\(fleet.ships)\(fleet.cargo.total > 0 ? "+\(fleet.cargo.total)" : "")")
@@ -277,6 +224,12 @@ struct MapView: View {
             }
         }
     }
+}
+
+/// Something on the map that can be selected.
+enum MapPick: Hashable {
+    case territory(TerritoryID)
+    case sea(SeaZoneID)
 }
 
 /// What a tapped territory holds.

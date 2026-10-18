@@ -118,6 +118,13 @@ extension Engine {
                 adjustLegitimacy(civ, l.regency, &state)
                 if claimants.isEmpty {
                     events.append(.succession(civ: civ, ruler: name, outcome: .regency))
+                } else if state.civs[civ]!.isHuman {
+                    // A person decides: the realm waits on them.
+                    let ranked = claimants.sorted { ($0.renown, $1.id) > ($1.renown, $0.id) }.map(\.id)
+                    state.civs[civ]!.crisis = SuccessionCrisis(claimants: ranked,
+                                                               bribeCost: g.bribePerClaimant * claimants.count,
+                                                               ruler: name)
+                    events.append(.successionCrisis(civ: civ, claimants: ranked))
                 } else if state.civs[civ]!.gold >= g.bribePerClaimant * claimants.count {
                     state.civs[civ]!.gold -= g.bribePerClaimant * claimants.count
                     adjustLegitimacy(civ, l.bribe, &state)
@@ -211,6 +218,42 @@ extension Engine {
     }
 
     // MARK: Commands
+
+    func resolveCrisis(_ choice: CrisisChoice, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard let crisis = state.civs[civ]!.crisis else { throw GameError.noCrisis }
+        let g = rules.government
+        let claimants = crisis.claimants.filter { state.generals[$0]?.owner == civ && state.generals[$0]!.isAlive }
+        var events: [GameEvent] = []
+        switch choice {
+        case .payOff:
+            let gold = state.civs[civ]!.gold
+            guard gold >= crisis.bribeCost else {
+                throw GameError.insufficientGold(needed: crisis.bribeCost, available: gold)
+            }
+            state.civs[civ]!.gold -= crisis.bribeCost
+            adjustLegitimacy(civ, g.legitimacy.bribe, &state)
+            for id in claimants { state.generals[id]!.loyalty = g.claimantLoyalty }
+            events.append(.succession(civ: civ, ruler: crisis.ruler, outcome: .bribed))
+        case .crownClaimant:
+            guard let winner = claimants.first.flatMap({ state.generals[$0] }) else {
+                events.append(.succession(civ: civ, ruler: crisis.ruler, outcome: .regency))
+                break
+            }
+            state.civs[civ]!.ruler = Ruler(name: winner.name, age: GameState.roll(g.electedAge, &state.rng),
+                                           trait: RulerTrait.allCases.randomElement(using: &state.rng)!)
+            state.civs[civ]!.heir = nil
+            state.generals[winner.id]!.location = nil  // he leaves the army for the throne
+            adjustLegitimacy(civ, g.legitimacy.bribe, &state)
+            for id in claimants.dropFirst() { state.generals[id]!.loyalty = g.claimantLoyalty }
+            events.append(.succession(civ: civ, ruler: winner.name, outcome: .claimantCrowned))
+        case .standFirm:
+            events.append(.succession(civ: civ, ruler: crisis.ruler, outcome: .civilWar))
+            for id in claimants { events += civilWar(civ, id, &state) }
+        }
+        state.civs[civ]!.crisis = nil
+        return events
+    }
 
     func appointGeneral(_ territory: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer

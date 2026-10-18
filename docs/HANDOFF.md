@@ -51,6 +51,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     Venedi–Scythe removed, per Josh).
     Josh's second photo shows the board with its resource tokens; reconciling `map.json`'s
     resource values against those tokens is still to do.
+  - **Playable** (step 7, in progress): pick a civ and play it against the AI on the traced
+    board; orders on the map with battle odds, recruiting, formations, generals, ships,
+    diplomacy, succession-crisis decisions, battle replays. Engine: `CivState.isHuman`,
+    `.resolveCrisis`, `Engine.attackOdds`. 126 tests. Not yet: save/resume, a tutorial, sound,
+    SpriteKit animation of moves, iPhone device testing. Ship orders, the crisis sheet and
+    generals' honors haven't been exercised by hand in the Simulator yet.
   - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
     In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
     (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).

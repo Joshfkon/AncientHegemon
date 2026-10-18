@@ -16,20 +16,32 @@ struct BattleEntry: Identifiable {
     let report: BattleReport
 }
 
-/// Runs an AI-vs-AI game a round at a time, off the main thread, and keeps a readable chronicle.
+/// One game: a person playing one civilization against the AI (or just watching the AIs).
+/// Applies the player's orders, runs the AI empires' turns off the main thread one at a time so
+/// their moves can be watched, and keeps a readable chronicle.
 @MainActor @Observable
 final class GameSession {
     let engine: Engine
     private(set) var state: GameState
     private(set) var log: [LogLine] = []
     private(set) var battles: [BattleEntry] = []
+    /// The civilization the person plays; nil when watching the AIs play each other.
+    private(set) var human: CivilizationID?
+    /// Whether a game is under way (false shows the civilization picker).
+    private(set) var started = false
+    /// AI empires are taking their turns.
     private(set) var busy = false
     private(set) var seed: UInt64
+    /// The latest refusal from the engine, in words, for the order panel.
+    var message: String?
+    /// A battle the player fought, waiting to be watched.
+    var replay: BattleEntry?
+    /// Spectating: AI rounds keep playing until paused.
     var playing = false {
         didSet { if playing { startPlaying() } }
     }
-    /// Seconds between rounds while playing.
-    var delay = 0.6
+    /// Seconds between AI turns, so their moves can be followed on the map.
+    var pace = 0.35
     private var nextID = 0
 
     init() {
@@ -44,45 +56,124 @@ final class GameSession {
         shuffledTurnOrder(engine.map.civilizations.map(\.id), seed: seed)
     }
 
-    func newGame() {
+    /// Starts a game as `civ`, or as a spectator when nil.
+    func start(as civ: CivilizationID?) {
         playing = false
         seed = UInt64.random(in: 1...99_999)
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
+        human = civ
+        if let civ { state.civs[civ]!.isHuman = true }
         log = []
         battles = []
+        message = nil
+        replay = nil
+        started = true
+        if civ != nil { Task { await runAITurns() } }
+    }
+
+    func quit() {
+        playing = false
+        started = false
+        human = nil
     }
 
     var isOver: Bool { state.winner != nil }
+    var isHumanTurn: Bool { human != nil && state.activePlayer == human && !isOver && !busy }
+    var crisis: SuccessionCrisis? { human.flatMap { state.civs[$0]?.crisis } }
 
-    /// Plays every civ's turn once.
-    func playRound() async {
-        guard !busy, !isOver else { return }
+    // MARK: Orders
+
+    /// Applies one of the player's orders. Returns false (and sets `message`) if the engine refuses.
+    @discardableResult
+    func order(_ command: Command) -> Bool {
+        guard isHumanTurn else { return false }
+        let before = state
+        do {
+            var s = state
+            let events = try engine.apply(command, to: &s)
+            message = nil
+            record(events, round: before.turn, before: before, after: s)
+            state = s
+            if case .endTurn = command { Task { await runAITurns() } }
+            return true
+        } catch {
+            message = Self.describe(error, engine: engine)
+            return false
+        }
+    }
+
+    func endTurn() { order(.endTurn) }
+
+    /// Plays AI turns until it is the person's turn again (or the game ends).
+    private func runAITurns() async {
+        guard !busy else { return }
         busy = true
         defer { busy = false }
+        while !isOver, state.activePlayer != human {
+            await playOneAITurn()
+            try? await Task.sleep(for: .seconds(pace))
+        }
+    }
+
+    private func playOneAITurn() async {
         let engine = self.engine
         let start = state
-        let round = start.turn
         let (after, events) = await Task.detached(priority: .userInitiated) { () -> (GameState, [GameEvent]) in
             var s = start
-            var events: [GameEvent] = []
-            repeat {
-                let civ = s.activePlayer
-                let ai = AIPlayer(engine: engine, personality: .default(for: civ))
-                events += ai.playTurn(&s).events
-            } while s.winner == nil && s.activePlayerIndex != 0
-            return (s, events)
+            let ai = AIPlayer(engine: engine, personality: .default(for: s.activePlayer))
+            let turn = ai.playTurn(&s)
+            return (s, turn.events)
         }.value
-        record(events, round: round, before: start, after: after)
+        record(events, round: start.turn, before: start, after: after)
         state = after
+    }
+
+    // MARK: Spectating
+
+    /// Plays every civ's turn once (spectator mode).
+    func playRound() async {
+        guard human == nil, !busy, !isOver else { return }
+        busy = true
+        defer { busy = false }
+        let round = state.turn
+        repeat {
+            await playOneAITurn()
+        } while !isOver && state.turn == round
     }
 
     private func startPlaying() {
         Task {
             while playing, !isOver {
                 await playRound()
-                try? await Task.sleep(for: .seconds(delay))
+                try? await Task.sleep(for: .seconds(0.4))
             }
             playing = false
+        }
+    }
+
+    /// The engine's refusals, in words.
+    static func describe(_ error: Error, engine: Engine) -> String {
+        func place(_ t: String) -> String { engine.map.territory(t)?.name ?? engine.map.sea(t)?.name ?? t }
+        guard let e = error as? GameError else { return "That can't be done." }
+        switch e {
+        case .insufficientGold(let needed, let available): return "Not enough gold: \(needed) needed, \(available) in the treasury."
+        case .insufficientPopulation(let t): return "\(place(t)) has too few people left to raise troops."
+        case .resourceLimit(let r): return "Not enough \(r.rawValue) this turn."
+        case .notAdjacent(let a, let b): return "\(place(a)) and \(place(b)) don't border each other."
+        case .insufficientUnits(let t): return "Not enough troops ready in \(place(t)) (each unit moves once a turn)."
+        case .atPeace(let t): return "You are at peace with the owner of \(place(t)). Declare war first."
+        case .outOfSupply(let t): return "\(place(t)) is cut off from your capital's supply."
+        case .contested(let t): return "Another army holds \(place(t))."
+        case .badOmen: return "The omens forbid attacking this turn."
+        case .tooManyGenerals: return "Your realm can't support another general yet."
+        case .crisisPending: return "Settle the succession first."
+        case .chokepointClosed: return "An enemy holds the strait."
+        case .overCapacity: return "The ships can't carry that many."
+        case .blockaded(let s): return "An enemy fleet controls \(place(s))."
+        case .noGeneral: return "No general is ready to march from there."
+        case .notCoastal(let t, let s): return "\(place(t)) has no coast on \(place(s))."
+        case .insufficientShips: return "Not enough ships ready to sail."
+        default: return "That can't be done (\(e))."
         }
     }
 
@@ -112,7 +203,9 @@ final class GameSession {
                     + "\(name(d.civ)) (\(d.units.total)) in \(report.rounds) rounds")
                 if let t = target {
                     nextID += 1
-                    battles.insert(BattleEntry(id: nextID, round: round, territory: t, report: report), at: 0)
+                    let entry = BattleEntry(id: nextID, round: round, territory: t, report: report)
+                    battles.insert(entry, at: 0)
+                    if let human, a.civ == human || d.civ == human { replay = entry }
                 }
             case let .captured(civ, t, from) where before.isPlayer(from) || after.isPlayer(civ) && from != nil:
                 let verb = after.isPlayer(civ) ? "takes" : "seize"
@@ -128,6 +221,7 @@ final class GameSession {
                 case .bribed: "takes the throne after buying off rivals"
                 case .civilWar: "is crowned as rivals take up arms"
                 case .coup: "seizes power and ends the republic"
+                case .claimantCrowned: "is crowned to keep the peace"
                 }
                 add(civ, "\(ruler) \(how) in \(name(civ))")
             case let .event(r):
@@ -143,6 +237,12 @@ final class GameSession {
                 }
                 if r.kind == .revolt || r.kind == .barbarians { target = r.territory }
                 add(r.civ, text)
+            case let .successionCrisis(civ, claimants):
+                add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")
+            case let .peaceOffered(from, to):
+                if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
+            case let .recruited(civ, t, unit, count) where civ == human:
+                add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))")
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")
             case let .warDeclared(by, on): add(by, "\(name(by)) declares war on \(name(on))")
             case let .navalBattle(sea, r):

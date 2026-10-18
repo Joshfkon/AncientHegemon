@@ -124,6 +124,21 @@ LABELS = {
     "cyprus": ((1243, 600), -10),
 }
 
+# Where army tokens sit, for territories whose lettering leaves no room just beneath the name.
+TOKENS = {
+    "hibernia": (360, 185), "venedi": (950, 225), "scythe": (1272, 182), "italia": (760, 345),
+    "greece": (905, 395), "petraea": (1318, 660), "mesopotamia": (1480, 470), "sardinia": (628, 465),
+}
+
+
+def token(t, label, angle):
+    """Just beneath the name, following its angle, unless placed by hand."""
+    if t in TOKENS:
+        return list(TOKENS[t])
+    a = math.radians(angle)
+    return [round(label[0] - 37 * math.sin(a)), round(label[1] + 37 * math.cos(a))]
+
+
 # Where each sea's name is painted, in open water.
 SEA_LABELS = {
     "atlantic": (150, 470), "north_sea": (595, 135), "baltic": (855, 45), "western_med": (565, 480),
@@ -210,7 +225,9 @@ def main():
         "size": SIZE,
         "territories": {t: {"polygon": [list(p) for p in SHAPES[t]],
                             "label": list(LABELS[t][0]) if t in LABELS else [round(c) for c in centroid(SHAPES[t])],
-                            "angle": LABELS[t][1] if t in LABELS else 0} for t in ids},
+                            "angle": LABELS[t][1] if t in LABELS else 0,
+                            "token": token(t, LABELS[t][0] if t in LABELS else centroid(SHAPES[t]),
+                                           LABELS[t][1] if t in LABELS else 0)} for t in ids},
         "seas": {s: list(p) for s, p in SEA_LABELS.items()},
         "rivers": [[list(p) for p in r] for r in RIVERS],
         "peaks": {t: [list(p) for p in ps] for t, ps in PEAKS.items()},

@@ -64,6 +64,20 @@ public struct CivState: Codable, Sendable, Equatable {
     /// For civilizations born in a civil war: the realm they split from and their name.
     public var rebelledFrom: CivilizationID?
     public var displayName: String?
+    /// Played by a person: succession crises wait for their decision instead of resolving.
+    public var isHuman = false
+    /// A contested succession awaiting the human ruler's decision. Nothing else can be ordered
+    /// until it is resolved.
+    public var crisis: SuccessionCrisis?
+}
+
+/// Rival claimants to a contested throne, and what buying them off would cost.
+public struct SuccessionCrisis: Codable, Sendable, Equatable {
+    /// Generals pressing a claim, strongest first.
+    public let claimants: [GeneralID]
+    public let bribeCost: Int
+    /// The new ruler (the heir or regent) if the crisis is weathered.
+    public let ruler: String
 }
 
 public struct Ruler: Codable, Sendable, Equatable {
@@ -90,6 +104,11 @@ public struct CivPair: Codable, Sendable, Hashable {
 public struct PeaceOffer: Codable, Sendable, Hashable {
     public let from: CivilizationID
     public let to: CivilizationID
+
+    public init(from: CivilizationID, to: CivilizationID) {
+        self.from = from
+        self.to = to
+    }
 }
 
 /// An army stack in a territory. At most one civilization has an army in a territory;
