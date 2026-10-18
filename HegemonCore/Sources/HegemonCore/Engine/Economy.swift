@@ -69,12 +69,17 @@ extension Engine {
     }
 
     /// Grain eaten per turn by the population of `territories` and the civilization's armies in them.
+    /// Armies in the home network also pay for the length of their supply route.
     public func grainConsumption(of civ: CivilizationID, in territories: [TerritoryID],
                                  _ state: GameState) -> Int {
         let set = Set(territories)
         let population = territories.reduce(0) { $0 + state.population(of: $1) }
-        let units = state.armies(of: civ).filter { set.contains($0.territory) }.reduce(.zero) { $0 + $1.units }
-        return rules.grainEaten(byPopulation: population) + rules.upkeep(of: units)
+        let distances = supplyDistances(of: civ, in: state)
+        let armies = state.armies(of: civ).filter { set.contains($0.territory) }
+        return rules.grainEaten(byPopulation: population) + armies.reduce(0) { total, stack in
+            let haul = (distances[stack.territory] ?? 0) / rules.supply.stepsPerExtraGrain
+            return total + rules.upkeep(of: stack.units) + stack.units.total * haul
+        }
     }
 
     func fleetUpkeep(of civ: CivilizationID, _ state: GameState) -> Int {

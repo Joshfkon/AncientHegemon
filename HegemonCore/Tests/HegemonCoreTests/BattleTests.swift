@@ -128,7 +128,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 }
 
 @Suite struct LandWarTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func overwhelmingAttackCapturesAndDestroysTrappedDefender() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
@@ -244,7 +244,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 }
 
 @Suite struct NavalTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     /// Greece with Macedonia's timber (2) and plenty of gold.
     func greeceWithShipyards() throws -> GameState {

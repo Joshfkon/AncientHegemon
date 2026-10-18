@@ -160,7 +160,8 @@ public struct Engine: Sendable {
 
         let civ = state.activePlayer
         var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)]
-        events += harvest(civ, &state)
+        // Nobody harvests on turn 1, so every civ starts on equal terms whatever its seat.
+        if state.turn > 1 { events += harvest(civ, &state) }
         // A civilization with no land whose last army just starved is out of the game.
         let out = checkElimination(civ, &state)
         events += out

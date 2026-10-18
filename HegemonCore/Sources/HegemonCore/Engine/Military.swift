@@ -44,6 +44,11 @@ extension Engine {
             state.land[to]!.owner = civ
             events.append(.captured(civ: civ, territory: to, from: previous))
             if let previous { events += checkElimination(previous, &state) }
+            if state.winner == nil,
+               state.territories(of: civ).count * 100 >= map.territories.count * rules.victory.territoryPercent {
+                state.winner = civ
+                events.append(.victory(civ: civ))
+            }
         }
         return events
     }
@@ -131,6 +136,6 @@ extension Engine {
     /// How well a civilization's forces are equipped with bronze, 0–100.
     func bronzePercent(_ civ: CivilizationID, _ state: GameState) -> Int {
         let units = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
-        return min(100, state.civs[civ]!.bronze * 100 / max(1, units))
+        return min(100, (state.civs[civ]?.bronze ?? 0) * 100 / max(1, units))
     }
 }

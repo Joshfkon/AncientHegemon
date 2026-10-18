@@ -14,6 +14,11 @@ public struct UnitStats: Codable, Sendable, Equatable {
     public let requires: Resource?
 }
 
+public struct VictoryRules: Codable, Sendable, Equatable {
+    /// Holding this share of all territories wins the game (domination).
+    public let territoryPercent: Int
+}
+
 public struct EconomyRules: Codable, Sendable, Equatable {
     /// Mouths fed by one grain. An empire's population eats `ceil(population / populationPerGrain)`.
     public let populationPerGrain: Int
@@ -35,6 +40,9 @@ public struct SupplyRules: Codable, Sendable, Equatable {
     public let outOfSupplyAttrition: Int
     /// Extra units lost when the cut-off stack is in desert.
     public let desertAttrition: Int
+    /// Each unit eats one more grain for every this many steps along its supply route from the
+    /// seat (a sea crossing counts as 2 steps). Distant armies strain the granary.
+    public let stepsPerExtraGrain: Int
 }
 
 public struct TradeRules: Codable, Sendable, Equatable {
@@ -56,12 +64,25 @@ public struct StartRules: Codable, Sendable, Equatable {
     public let army: UnitCounts
     /// The general leading each civilization's starting army.
     public let generals: [CivilizationID: StartingGeneral]
+    /// Native garrisons in unclaimed territories.
+    public let natives: NativeRules
+    /// Territories each civilization holds at the start besides its capital (its heartland).
+    public let realms: [CivilizationID: [TerritoryID]]
+}
+
+/// Every territory no civilization starts in is held by local tribes: `base + grain / grainPerUnit`
+/// infantry that defend but never move. Conquering them costs armies in proportion to the
+/// land's worth.
+public struct NativeRules: Codable, Sendable, Equatable {
+    public let base: Int
+    public let grainPerUnit: Int
 }
 
 /// Tunable game rules, loaded from `rules.json`.
 public struct Rules: Codable, Sendable, Equatable {
     public let version: Int
     public let units: [UnitType: UnitStats]
+    public let victory: VictoryRules
     public let economy: EconomyRules
     public let supply: SupplyRules
     public let trade: TradeRules
@@ -84,7 +105,7 @@ public struct Rules: Codable, Sendable, Equatable {
             throw MapError.invalid("rules.json has no stats for unit '\(type.rawValue)'")
         }
         if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1
-            || trade.shareDivisor < 1 {
+            || trade.shareDivisor < 1 || supply.stepsPerExtraGrain < 1 {
             throw MapError.invalid("rules.json economy divisors must be at least 1")
         }
         guard battle.formation(battle.defaultFormation) != nil else {

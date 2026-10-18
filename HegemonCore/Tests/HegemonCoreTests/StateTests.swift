@@ -34,16 +34,28 @@ import Testing
     let map = try! GameMap.bundled()
     let rules = try! Rules.bundled()
 
-    @Test func civsStartWithTheirCapitals() throws {
+    @Test func civsStartWithCapitalAndHeartland() throws {
         let state = try GameState(map: map, rules: rules, seed: 1)
         #expect(state.turn == 1)
         #expect(state.players.count == 4)
         for civ in map.civilizations {
+            let realm = [civ.capital] + (rules.start.realms[civ.id] ?? [])
             #expect(state.owner(of: civ.capital) == civ.id)
-            #expect(state.territories(of: civ.id) == [civ.capital])
+            #expect(state.territories(of: civ.id) == realm.sorted())
             #expect(state.armies[civ.capital]?.units == rules.start.army)
             #expect(state.civs[civ.id]?.gold == rules.start.gold)
+            #expect(state.general(of: civ.id, at: civ.capital)?.name == rules.start.generals[civ.id]?.name)
         }
+    }
+
+    @Test func unclaimedLandHasNativeGarrisons() throws {
+        let state = try GameState(map: map, rules: rules, seed: 1)
+        let n = rules.start.natives
+        for t in map.territories where state.owner(of: t.id) == nil {
+            #expect(state.armies[t.id]?.owner == nativesID)
+            #expect(state.armies[t.id]?.units.infantry == n.base + t.grain / n.grainPerUnit)
+        }
+        #expect(!state.players.contains(nativesID))
     }
 
     @Test func populationStartsAtHalfCap() throws {

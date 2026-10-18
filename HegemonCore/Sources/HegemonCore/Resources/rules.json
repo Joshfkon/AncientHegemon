@@ -16,6 +16,9 @@
       "requires": "horses"
     }
   },
+  "victory": {
+    "territoryPercent": 60
+  },
   "economy": {
     "populationPerGrain": 2,
     "populationCapPerGrain": 1,
@@ -26,7 +29,8 @@
   },
   "supply": {
     "outOfSupplyAttrition": 1,
-    "desertAttrition": 1
+    "desertAttrition": 1,
+    "stepsPerExtraGrain": 3
   },
   "trade": {
     "goldPerRoute": 2,
@@ -59,6 +63,26 @@
         "name": "Sargon",
         "trait": "reckless"
       }
+    },
+    "natives": {
+      "base": 1,
+      "grainPerUnit": 3
+    },
+    "realms": {
+      "greece": [
+        "macedonia",
+        "thrace"
+      ],
+      "egypt": [
+        "libya",
+        "petraea"
+      ],
+      "italia": [
+        "sicilia"
+      ],
+      "mesopotamia": [
+        "persia"
+      ]
     }
   },
   "ships": {

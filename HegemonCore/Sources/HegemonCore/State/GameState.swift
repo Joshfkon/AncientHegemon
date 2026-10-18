@@ -1,3 +1,6 @@
+/// The owner of native garrisons. Not a player: natives never act, trade or make peace.
+public let nativesID: CivilizationID = "natives"
+
 /// Per-territory facts that change during a game.
 public struct TerritoryState: Codable, Sendable, Equatable {
     public var owner: CivilizationID?
@@ -87,8 +90,10 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Outstanding peace offers, accepted by the recipient on their turn.
     public var peaceOffers: Set<PeaceOffer>
 
-    /// Starts a new game. Each participating civilization begins holding only its capital,
-    /// with the starting army there; everything else is unowned. Everyone starts at war.
+    /// Starts a new game. Each participating civilization begins holding its capital and
+    /// heartland, with the starting army in the capital; everything else is unowned and held
+    /// by native garrisons.
+    /// Everyone starts at war.
     public init(map: GameMap, rules: Rules, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
         let ids = civilizations ?? map.civilizations.map(\.id)
         guard !ids.isEmpty else { throw MapError.invalid("a game needs at least one civilization") }
@@ -106,6 +111,10 @@ public struct GameState: Codable, Sendable, Equatable {
                 throw MapError.invalid("unknown civilization '\(id)'")
             }
             land[civ.capital]!.owner = civ.id
+            for t in rules.start.realms[civ.id] ?? [] {
+                guard land[t] != nil else { throw MapError.unknownTerritory(t, context: "start realm of '\(civ.id)'") }
+                land[t]!.owner = civ.id
+            }
             civs[civ.id] = CivState(gold: rules.start.gold, granary: rules.start.granary)
             if !rules.start.army.isEmpty {
                 armies[civ.capital] = Army(owner: civ.id, units: rules.start.army)
@@ -115,6 +124,12 @@ public struct GameState: Codable, Sendable, Equatable {
                 generals[gid] = General(id: gid, name: g.name, owner: civ.id, trait: g.trait,
                                         renown: 0, location: civ.capital)
             }
+        }
+
+        let natives = rules.start.natives
+        for t in map.territories where land[t.id]!.owner == nil {
+            let count = natives.base + t.grain / max(1, natives.grainPerUnit)
+            if count > 0 { armies[t.id] = Army(owner: nativesID, units: UnitCounts(infantry: count)) }
         }
 
         self.mapVersion = map.version

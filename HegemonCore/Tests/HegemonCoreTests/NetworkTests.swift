@@ -11,7 +11,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 }
 
 @Suite struct SupplyTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func connectedLandIsOnePocket() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
@@ -63,6 +63,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         s.armies["dacia"] = Army(owner: "greece", units: UnitCounts(infantry: 3))
         s.armies["libya"] = Army(owner: "greece", units: UnitCounts(infantry: 3))
         s.peace.insert(CivPair("greece", "egypt"))  // irrelevant third party; Libya is reachable by sea
+        s.turn = 2  // turn 1 has no harvest
         let events = try engine.apply(.endTurn, to: &s)  // Greece's harvest
         // Dacia is behind the enemy-held Bosporus: 1 unit lost. Libya connects via the Aegean.
         #expect(events.contains(.outOfSupply(civ: "greece", territory: "dacia", unitsLost: 1)))
@@ -113,7 +114,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 }
 
 @Suite struct DiplomacyTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func peaceNeedsOfferAndAcceptance() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
@@ -152,7 +153,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 }
 
 @Suite struct TradeTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func noTradeAtWar() throws {
         let s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])

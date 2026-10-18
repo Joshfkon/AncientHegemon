@@ -6,7 +6,7 @@ import Testing
 // the arithmetic in the comments along with the expectations.
 
 @Suite struct RecruitTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func recruitCostsGoldAndPopulation() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
@@ -59,7 +59,7 @@ import Testing
 }
 
 @Suite struct MoveTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func moveCapturesUnownedTerritory() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
@@ -123,7 +123,7 @@ import Testing
 }
 
 @Suite struct TurnTests {
-    let engine = try! Engine.bundled()
+    let engine = try! Engine.bare()
 
     @Test func turnOrderAndCounter() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt", "italia"])

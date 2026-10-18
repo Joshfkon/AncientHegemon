@@ -1,0 +1,104 @@
+/// One civilization's story over an AI-vs-AI game.
+public struct CivRecord: Sendable, Equatable {
+    public var personality: String
+    public var peakTerritories = 1
+    public var finalTerritories = 0
+    public var eliminatedOnTurn: Int?
+    public var turnsStarving = 0
+    public var populationStarved = 0
+    public var unitsDeserted = 0
+    public var unitsLostToAttrition = 0
+    public var attacksWon = 0
+    public var attacksLost = 0
+    public var defencesWon = 0
+    public var defencesLost = 0
+    public var rejectedCommands = 0
+
+    /// Lost at least half of a realm that once held 4+ territories.
+    public var collapsed: Bool { peakTerritories >= 4 && finalTerritories * 2 <= peakTerritories }
+}
+
+/// Wins by formation, as attacker and as defender.
+public struct FormationRecord: Sendable, Equatable {
+    public var attacks = 0
+    public var attackWins = 0
+    public var defences = 0
+    public var defenceWins = 0
+
+    public init() {}
+}
+
+public struct MatchRecord: Sendable {
+    public let seed: UInt64
+    public let winner: CivilizationID?
+    /// Turns played (the turn the game ended on, or the turn limit).
+    public let turns: Int
+    public let civs: [CivilizationID: CivRecord]
+    public let formations: [FormationID: FormationRecord]
+    public let finalState: GameState
+}
+
+/// A seeded shuffle of the turn order, so balance runs aren't skewed by who moves first.
+public func shuffledTurnOrder(_ civs: [CivilizationID], seed: UInt64) -> [CivilizationID] {
+    var rng = SeededRNG(seed: seed ^ 0x5EA7_0D3E)
+    var order = civs
+    order.shuffle(using: &rng)
+    return order
+}
+
+/// Plays a full AI-vs-AI game. Deterministic for a given seed and personalities.
+/// `onRound` is called at the start of every round (all civs have moved), for tracing.
+public func playAIMatch(engine: Engine, seed: UInt64, personalities: [CivilizationID: Personality],
+                        civilizations: [CivilizationID]? = nil, maxTurns: Int,
+                        onRound: ((GameState) -> Void)? = nil) throws -> MatchRecord {
+    var state = try engine.newGame(seed: seed, civilizations: civilizations)
+    var civs: [CivilizationID: CivRecord] = [:]
+    var ais: [CivilizationID: AIPlayer] = [:]
+    for civ in state.players {
+        let p = personalities[civ] ?? .default(for: civ)
+        civs[civ] = CivRecord(personality: p.name)
+        ais[civ] = AIPlayer(engine: engine, personality: p)
+    }
+    var formations: [FormationID: FormationRecord] = [:]
+
+    while state.winner == nil, state.turn <= maxTurns {
+        let civ = state.activePlayer
+        if state.activePlayerIndex == 0 { onRound?(state) }
+        let turn = ais[civ]!.playTurn(&state)
+        civs[civ]!.rejectedCommands += turn.rejected.count
+        for event in turn.events {
+            switch event {
+            case let .starvation(c, pop, units):
+                civs[c]!.turnsStarving += 1
+                civs[c]!.populationStarved += pop
+                civs[c]!.unitsDeserted += units
+            case let .outOfSupply(c, _, lost):
+                civs[c]!.unitsLostToAttrition += lost
+            case let .eliminated(c):
+                civs[c]!.eliminatedOnTurn = state.turn
+            case let .battle(report):
+                let a = report.setup.attacker, d = report.setup.defender
+                let attackerWon = report.winner == .attacker
+                if attackerWon {
+                    civs[a.civ]?.attacksWon += 1
+                    civs[d.civ]?.defencesLost += 1
+                } else {
+                    civs[a.civ]?.attacksLost += 1
+                    civs[d.civ]?.defencesWon += 1
+                }
+                formations[a.formation, default: FormationRecord()].attacks += 1
+                formations[a.formation, default: FormationRecord()].attackWins += attackerWon ? 1 : 0
+                formations[d.formation, default: FormationRecord()].defences += 1
+                formations[d.formation, default: FormationRecord()].defenceWins += attackerWon ? 0 : 1
+            default:
+                break
+            }
+        }
+        for c in state.players {
+            civs[c]!.peakTerritories = max(civs[c]!.peakTerritories, state.territories(of: c).count)
+        }
+    }
+    for c in state.players { civs[c]!.finalTerritories = state.territories(of: c).count }
+    return MatchRecord(seed: seed, winner: state.winner, turns: min(state.turn, maxTurns), civs: civs,
+                       formations: formations, finalState: state)
+}

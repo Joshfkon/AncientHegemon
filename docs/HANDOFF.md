@@ -25,6 +25,34 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     naval auto-resolve; engine battles on contested moves with retreats; generals; formations;
     ships (build, sail, embark, land, naval battles, blockades). 85 tests. Battle and ship rules,
     plus the open formation-balance issue, are in the DESIGN.md appendix.
+  - **Build step 5 complete**: `AIPlayer` (AI/), `playAIMatch`, and `hegemon-sim` as the balance
+    tool (`swift run -c release hegemon-sim --games 40`, `--personality NAME`, `--trace`,
+    `formations`). First balance runs led to native garrisons, starting heartlands,
+    supply-route upkeep and a 60% domination victory (all in the DESIGN.md appendix). 95 tests.
+
+## Balance findings (step 5, 40 games, default personalities, shuffled seating)
+
+| Civ | Wins | Eliminated | Avg land at end |
+|---|---|---|---|
+| Mesopotamia | 62% | 2% | 18.9 |
+| Italia | 30% | 0% | 11.8 |
+| Egypt | 2% | 45% | 2.1 |
+| Greece | 0% | 90% | 0.1 |
+
+- **Geography decides too much.** Mesopotamia sits at the hub of a big contiguous landmass.
+  Greece and Italia are hemmed in by sea, and the AI can't sail. With identical personalities
+  Mesopotamia still wins most games. The biggest missing piece is a **naval AI**.
+- **Games are too short**: about 16 rounds to domination, against a 45–90 minute target. Levers
+  to try: higher victory threshold, population loss when a territory is captured, stronger
+  natives, and step 6's internal strain (legitimacy, revolts, civil war), which is the design's
+  real anti-snowball mechanic.
+- **Defending almost never works** (defences hold 1–6%). The AI only attacks when it expects to
+  win, and defenders spread thin. Consider rewarding concentrated garrisons or capital defense.
+- **Formations**: the AI attacks with Hammer and Anvil and defends in Phalanx almost exclusively.
+  Skirmish Screen and Wedge are rarely worth choosing (see `hegemon-sim formations`).
+- Starvation is rare and gold still piles up (no sink until step 6).
+- Turn order mattered more than expected; the sim now shuffles seating per seed. The app should
+  probably randomize or rotate it too.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

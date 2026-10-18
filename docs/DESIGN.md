@@ -465,3 +465,36 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     fleet that loses half its ships withdraws). Sunk ships drown cargo that no longer fits.
     A beaten defender fleet withdraws to a neighboring open sea or is lost. Civs at peace share seas.
   - **Blockade**: a sea with an enemy fleet and none of yours is closed to your supply and trade.
+- **AI v1 (build step 5)**: `AIPlayer` in `HegemonCore`, playing through the same commands as a
+  human. Each turn: diplomacy, recruit, attack, fortify, then defensive formations.
+  - **Diplomacy**: offers or accepts peace with civs it doesn't border, when losing (under 0.75×
+    their strength), or when trade-minded. Once it has no unclaimed land next door, it declares
+    war on a bordering civ it outmatches by `1.6 − 0.4 × aggression` (conqueror ≈ 1.0×,
+    turtle ≈ 1.3×).
+  - **Recruit**: reinforces where threat minus garrison is highest (frontiers get a nudge),
+    picks the counter to the nearby enemy's main unit type, and stops before army upkeep would
+    outrun production plus a quarter of the granary.
+  - **Attack**: scores each move as `P(win) × value × aggression − risk`, with `P(win)` from
+    4 runs of the real battle simulator. Value counts grain, resources (tin and copper weighted up
+    when lacking), enemy capitals, finishing off a civ, and completing a chokepoint. Moves from
+    cut-off territory score 30%. It keeps garrisons against adjacent threats, picks the best
+    attacking formation, and brings its general. It greedily repeats while the best score is
+    positive.
+  - **Fortify**: interior armies march one step toward the nearest border.
+  - **Personalities**: conqueror, merchant, turtle, opportunist (weights for aggression,
+    caution, trade, opportunism). Defaults: Greece merchant, Egypt turtle, Italia conqueror,
+    Mesopotamia opportunist.
+  - Deterministic, and never touches the game's RNG (its estimates use seeds derived from state).
+  - **Not yet**: ships (the AI never builds or sails), and no lookahead beyond one move.
+- **Changes made from the first balance runs (step 5, provisional)**:
+  - **Native garrisons**: every territory not in a starting realm holds `1 + grain ÷ 3` native
+    infantry that defend but never move or act. Without them, whoever had the most empty
+    neighbors snowballed (Mesopotamia held 24 territories by turn 10).
+  - **Starting heartlands** (replacing capital-only starts): Greece + Macedonia + Thrace,
+    Egypt + Libya + Petraea, Italia + Sicilia, Mesopotamia + Persia. Greece's 2-grain capital
+    alone could never grow or recruit.
+  - **Supply-route upkeep** (DESIGN §6 "each step of route length costs grain"): units eat 1
+    extra grain per 3 steps from the seat (sea crossings count 2).
+  - **No harvest on turn 1**, so later seats don't start with a free harvest.
+  - **Domination victory**: holding 60% of territories (24 of 40) wins. Placeholder for open
+    question §14.5.

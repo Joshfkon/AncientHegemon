@@ -115,6 +115,28 @@ extension Engine {
         return pockets
     }
 
+    /// Steps along the supply route from the seat to each territory of the home network.
+    /// Land borders count 1; sailing counts 1 per sea zone plus 1 to land.
+    public func supplyDistances(of civ: CivilizationID, in state: GameState) -> [TerritoryID: Int] {
+        guard let seat = seat(of: civ, in: state) else { return [:] }
+        var steps: [NetworkNode: Int] = [.land(seat): 0]
+        var queue: [NetworkNode] = [.land(seat)]
+        var i = 0
+        while i < queue.count {
+            let node = queue[i]
+            i += 1
+            for next in neighbors(of: node, through: [civ], travelers: [civ], in: state) where steps[next] == nil {
+                steps[next] = steps[node]! + 1
+                queue.append(next)
+            }
+        }
+        var result: [TerritoryID: Int] = [:]
+        for (node, n) in steps {
+            if case .land(let t) = node { result[t] = n }
+        }
+        return result
+    }
+
     /// Territories in a civilization's home supply network.
     public func homeNetwork(of civ: CivilizationID, in state: GameState) -> [TerritoryID] {
         supplyPockets(of: civ, in: state).first ?? []
