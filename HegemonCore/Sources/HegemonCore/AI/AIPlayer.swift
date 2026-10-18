@@ -350,13 +350,11 @@ public struct AIPlayer: Sendable {
         case nil: .overland
         }
         return BattleSetup(
-            attacker: BattleArmy(civ: civ, units: units, formation: formation ?? rules.battle.defaultFormation,
-                                 general: general, bronzePercent: engine.bronzePercent(civ, state)),
-            defender: BattleArmy(civ: defender.owner, units: defender.units,
-                                 formation: defender.formation ?? rules.battle.defaultFormation,
-                                 general: state.general(of: defender.owner, at: to),
-                                 bronzePercent: engine.bronzePercent(defender.owner, state)),
-            terrain: map.territory(to)!.terrain, approach: approach, seed: seed)
+            attacker: engine.battleArmy(civ, units, formation: formation, general: general, state),
+            defender: engine.battleArmy(defender.owner, defender.units, formation: defender.formation,
+                                        general: state.general(of: defender.owner, at: to), state),
+            terrain: map.territory(to)!.terrain, approach: approach, seed: seed,
+            fortification: engine.fortification(at: to, state))
     }
 
     /// Seeds for estimates, derived from the state so the AI is deterministic without touching
@@ -402,11 +400,12 @@ public struct AIPlayer: Sendable {
             for formation in rules.battle.formations.map(\.id) {
                 let holds = seeds(state, "def" + t + formation).filter { seed in
                     var setup = BattleSetup(
-                        attacker: BattleArmy(civ: enemy.owner, units: enemy.units,
-                                             formation: enemy.formation ?? rules.battle.defaultFormation),
-                        defender: BattleArmy(civ: civ, units: units, formation: formation,
-                                             general: state.general(of: civ, at: t)),
-                        terrain: map.territory(t)!.terrain, seed: seed)
+                        attacker: engine.battleArmy(enemy.owner, enemy.units, formation: enemy.formation,
+                                                    general: nil, state),
+                        defender: engine.battleArmy(civ, units, formation: formation,
+                                                    general: state.general(of: civ, at: t), state),
+                        terrain: map.territory(t)!.terrain, seed: seed,
+                        fortification: engine.fortification(at: t, state))
                     if map.crossing(between: from, and: t) == .river { setup.approach = .river }
                     return sim.resolve(setup).winner == .defender
                 }.count

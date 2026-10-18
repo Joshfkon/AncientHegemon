@@ -83,7 +83,7 @@ public struct Engine: Sendable {
         }
         if let resource = stats.requires {
             let used = state.civs[civ]!.resourceUsedThisTurn[resource] ?? 0
-            guard used + count <= effectiveYield(of: resource, for: civ, in: state) else {
+            guard used + count <= effectiveYield(of: resource, for: civ, in: state) * recruitsPerPoint(unit, civ, state) else {
                 throw GameError.resourceLimit(resource)
             }
             state.civs[civ]!.resourceUsedThisTurn[resource] = used + count

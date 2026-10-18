@@ -79,6 +79,10 @@ public struct CivState: Codable, Sendable, Equatable {
     public var taxRate = 40
     /// Stockpiled stone, timber and iron.
     public var stock: [Resource: Int] = [:]
+    /// Progress in each field of knowledge.
+    public var knowledge: [KnowledgeField: Int] = [:]
+    /// Recent practice in each field, which steers where new knowledge goes.
+    public var experience: [KnowledgeField: Int] = [:]
     /// A contested succession awaiting the human ruler's decision. Nothing else can be ordered
     /// until it is resolved.
     public var crisis: SuccessionCrisis?

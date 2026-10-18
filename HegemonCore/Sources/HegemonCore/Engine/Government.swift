@@ -50,11 +50,13 @@ extension Engine {
         let drift = cs.legitimacy < 50 ? min(g.legitimacyDrift, 50 - cs.legitimacy)
             : -min(g.legitimacyDrift, cs.legitimacy - 50)
         adjustLegitimacy(civ, drift + (rules.rulerTraits[cs.ruler.trait]?.legitimacyPerTurn ?? 0)
-                         + taxAndLuxuryLegitimacy(civ, state), &state)
+                         + taxAndLuxuryLegitimacy(civ, state)
+                         + (level(.administration, of: civ, in: state) >= 3 ? rules.knowledge.effects.lawLegitimacy : 0), &state)
 
         // Generals are paid, and their loyalty moves toward what the throne commands.
         let distances = supplyDistances(of: civ, in: state)
-        let traitShift = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.loyaltyTarget ?? 0
+        let traitShift = (rules.rulerTraits[state.civs[civ]!.ruler.trait]?.loyaltyTarget ?? 0)
+            + (level(.administration, of: civ, in: state) >= 1 ? rules.knowledge.effects.writingLoyalty : 0)
         var unpaid = 0
         for general in livingGenerals(of: civ, state) {
             var loyalty = general.loyalty

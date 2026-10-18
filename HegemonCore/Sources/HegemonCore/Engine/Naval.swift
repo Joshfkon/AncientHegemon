@@ -27,9 +27,9 @@ extension Engine {
     }
 
     /// Drowns cargo that no longer fits after ship losses, most numerous type first.
-    private func drownExcess(_ cargo: inout UnitCounts, ships: Int) -> UnitCounts {
+    private func drownExcess(_ cargo: inout UnitCounts, ships: Int, capacity: Int) -> UnitCounts {
         var lost = UnitCounts.zero
-        while cargo.total > ships * rules.ships.capacity {
+        while cargo.total > ships * capacity {
             let type = UnitType.allCases.max { cargo[$0] < cargo[$1] }!
             cargo[type] -= 1
             lost[type] += 1
@@ -76,7 +76,7 @@ extension Engine {
             throw GameError.insufficientUnits(territory)
         }
         guard let i = fleetIndex(civ, sea, state) else { throw GameError.noFleet(sea) }
-        guard state.fleets[i].cargo.total + units.total <= state.fleets[i].ships * rules.ships.capacity else {
+        guard state.fleets[i].cargo.total + units.total <= state.fleets[i].ships * shipCapacity(civ, state) else {
             throw GameError.overCapacity(sea)
         }
 
@@ -112,7 +112,7 @@ extension Engine {
         let fleet = state.fleets[i]
         guard ships <= fleet.ships - fleet.movedShips else { throw GameError.insufficientShips(from) }
         guard cargo.fits(in: fleet.cargo) else { throw GameError.insufficientUnits(from) }
-        let cap = rules.ships.capacity
+        let cap = shipCapacity(civ, state)
         guard cargo.total <= ships * cap, (fleet.cargo - cargo).total <= (fleet.ships - ships) * cap else {
             throw GameError.overCapacity(from)
         }
@@ -147,18 +147,20 @@ extension Engine {
         let d = fleetIndex(enemy, sea, state)!
         let report = BattleSimulator(rules: rules).resolveNaval(
             attacker: civ, attackerShips: ships, defender: enemy, defenderShips: state.fleets[d].ships,
-            seed: state.rng.next())
+            seed: state.rng.next(), attackerPercent: navalPercent(civ, state), defenderPercent: navalPercent(enemy, state))
         var events: [GameEvent] = [.navalBattle(sea: sea, report: report)]
+        addExperience(civ, .seafaring, 5, &state)
+        addExperience(enemy, .seafaring, 5, &state)
 
         var cargo = cargo
-        let attackerDrowned = drownExcess(&cargo, ships: report.attackerShipsLeft)
+        let attackerDrowned = drownExcess(&cargo, ships: report.attackerShipsLeft, capacity: shipCapacity(civ, state))
         let attackerSunk = ships - report.attackerShipsLeft
         if attackerSunk > 0 || !attackerDrowned.isEmpty {
             events.append(.destroyed(civ: civ, units: attackerDrowned, ships: attackerSunk))
         }
 
         var defender = state.fleets.remove(at: d)
-        let defenderDrowned = drownExcess(&defender.cargo, ships: report.defenderShipsLeft)
+        let defenderDrowned = drownExcess(&defender.cargo, ships: report.defenderShipsLeft, capacity: shipCapacity(enemy, state))
         let defenderSunk = defender.ships - report.defenderShipsLeft
         defender.ships = report.defenderShipsLeft
         defender.movedShips = min(defender.movedShips, defender.ships)

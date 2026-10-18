@@ -42,8 +42,12 @@ extension Engine {
         // Taxes depend on the population after growth or starvation, so the gold forecast runs
         // the harvest itself on a scratch copy.
         var next = state
-        _ = harvest(civ, &next)
-        let gold = income(of: civ, home, routes, next)
+        let harvested = harvest(civ, &next)
+        let breakdown = income(of: civ, home, routes, next)
+        // The total comes from the harvest itself; learning during it can shift the breakdown.
+        var harvestIncome = breakdown.total
+        if case let .harvest(_, _, _, _, _, income)? = harvested.first { harvestIncome = income }
+        let gold = (taxes: breakdown.taxes, mines: breakdown.mines, trade: breakdown.trade, total: harvestIncome)
         var resources: [Resource: Int] = [:]
         for r in Resource.allCases where r != .grain {
             resources[r] = effectiveYield(of: r, for: civ, in: state, routes: routes)

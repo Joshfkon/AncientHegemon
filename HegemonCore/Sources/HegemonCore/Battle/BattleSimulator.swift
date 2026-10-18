@@ -168,7 +168,7 @@ public struct BattleSimulator: Sendable {
         }
 
         let formation = b.formation(army.formation) ?? b.formation(b.defaultFormation)!
-        let morale = 100 + (army.general.map { g in
+        let morale = 100 + army.morale + (army.general.map { g in
             rules.generals.presentMorale + (rules.generals.traits[g.trait]?.moralePercent ?? 0)
         } ?? 0)
         var taken = Set<GridPoint>()
@@ -257,7 +257,7 @@ public struct BattleSimulator: Sendable {
         var percents = [b.matchupPercent[attacker.type]![target.type]!]
         if attacker.type == .archers, !ranged { percents.append(b.archerMeleePercent) }
         if attacker.type == .cavalry, !ranged, !attacker.charged { percents.append(100 + b.chargeBonusPercent) }
-        percents.append(100 + (terrain.unitPercent[attacker.type] ?? 0))
+        percents.append(100 + (terrain.unitPercent[attacker.type] ?? 0) + (army.unitPercent[attacker.type] ?? 0))
         percents.append(100 + b.bronzeBonusPercent * army.bronzePercent / 100)
         if let g = army.general {
             let fx = rules.generals.traits[g.trait]
@@ -295,7 +295,8 @@ public struct BattleSimulator: Sendable {
     // MARK: Naval battle (auto-resolve only)
 
     public func resolveNaval(attacker: CivilizationID, attackerShips: Int,
-                             defender: CivilizationID, defenderShips: Int, seed: UInt64) -> NavalReport {
+                             defender: CivilizationID, defenderShips: Int, seed: UInt64,
+                             attackerPercent: Int = 100, defenderPercent: Int = 100) -> NavalReport {
         let n = rules.naval
         var rng = SeededRNG(seed: seed)
         var hpA = attackerShips * n.hpPerShip
@@ -304,17 +305,17 @@ public struct BattleSimulator: Sendable {
         func broken(_ hp: Int, _ start: Int) -> Bool {
             ships(hp) == 0 || (start - ships(hp)) * 100 >= start * n.retreatPercent
         }
-        func roll(_ shipsLeft: Int) -> Int {
+        func roll(_ shipsLeft: Int, _ skill: Int) -> Int {
             let spread = n.randomSpreadPercent
             let pct = 100 + Int(rng.next() % UInt64(2 * spread + 1)) - spread
-            return shipsLeft * n.attackPerShip * pct / 100
+            return shipsLeft * n.attackPerShip * pct / 100 * skill / 100
         }
 
         var round = 0
         while round < n.maxRounds, !broken(hpA, attackerShips), !broken(hpD, defenderShips) {
             round += 1
-            let toD = roll(ships(hpA))
-            let toA = roll(ships(hpD))
+            let toD = roll(ships(hpA), attackerPercent)
+            let toA = roll(ships(hpD), defenderPercent)
             hpD -= toD
             hpA -= toA
         }

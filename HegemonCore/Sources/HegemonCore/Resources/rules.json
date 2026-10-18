@@ -85,6 +85,73 @@
     "harborGold": 2,
     "harborShipDiscount": 2
   },
+  "knowledge": {
+    "populationPerPoint": 10,
+    "goldPerPoint": 5,
+    "experienceDecayPercent": 10,
+    "contactDiffusionPercent": 2,
+    "tradeDiffusionPercent": 5,
+    "levels": [120, 360, 800],
+    "fields": {
+      "agriculture": [
+        "Irrigation",
+        "Granaries",
+        "Crop rotation"
+      ],
+      "metallurgy": [
+        "Bronze casting",
+        "Ironworking",
+        "Steel"
+      ],
+      "horsemanship": [
+        "Chariots",
+        "Horse breeding",
+        "Horse archers"
+      ],
+      "seafaring": [
+        "Galleys",
+        "Navigation",
+        "Triremes"
+      ],
+      "construction": [
+        "Masonry",
+        "Fortification",
+        "Engineering"
+      ],
+      "warfare": [
+        "Drill",
+        "Composite bows",
+        "Tactics"
+      ],
+      "administration": [
+        "Writing",
+        "Coinage",
+        "Law"
+      ]
+    },
+    "effects": {
+      "irrigationRiverGrain": 1,
+      "granaryTurns": 2,
+      "cropRotationFarmGrain": 1,
+      "bronzeCastingPercent": 50,
+      "steelIronWeight": 2,
+      "chariotsPercent": 15,
+      "breedingMultiplier": 2,
+      "horseArchersPercent": 15,
+      "galleysCapacity": 1,
+      "navigationPercent": 30,
+      "triremesPercent": 30,
+      "masonryTurns": 1,
+      "fortificationPercent": 15,
+      "engineeringDiscount": 1,
+      "drillPercent": 10,
+      "bowsPercent": 15,
+      "tacticsMorale": 10,
+      "writingLoyalty": 10,
+      "coinagePercent": 20,
+      "lawLegitimacy": 1
+    }
+  },
   "supply": {
     "outOfSupplyAttrition": 1,
     "desertAttrition": 1,

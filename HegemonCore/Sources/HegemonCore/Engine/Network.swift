@@ -213,6 +213,8 @@ extension Engine {
     /// trade partner's. Grain is not traded; it feeds each network locally.
     public func effectiveYield(of resource: Resource, for civ: CivilizationID, in state: GameState,
                                routes: [TradeRoute]? = nil) -> Int {
+        // Iron ore is just rock until a civilization learns ironworking.
+        if resource == .iron, level(.metallurgy, of: civ, in: state) < 2 { return 0 }
         let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {

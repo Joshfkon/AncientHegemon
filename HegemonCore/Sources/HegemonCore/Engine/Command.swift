@@ -75,6 +75,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case civilWar(civ: CivilizationID, rebel: CivilizationID, general: GeneralID, territories: [TerritoryID])
     case generalAppointed(civ: CivilizationID, general: GeneralID)
     case taxRateSet(civ: CivilizationID, rate: Int)
+    /// A civilization reached a new level in a field of knowledge.
+    case discovery(civ: CivilizationID, field: KnowledgeField, level: Int)
     case projectStarted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
     case projectCompleted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
     case projectDestroyed(territory: TerritoryID, project: ProjectKind)

@@ -65,16 +65,16 @@ extension Engine {
         let defender = state.armies[to]!
         let defenderGeneral = state.general(of: defender.owner, at: to)
         let setup = BattleSetup(
-            attacker: BattleArmy(civ: civ, units: units, formation: formation ?? rules.battle.defaultFormation,
-                                 general: general, bronzePercent: bronzePercent(civ, state)),
-            defender: BattleArmy(civ: defender.owner, units: defender.units,
-                                 formation: defender.formation ?? rules.battle.defaultFormation,
-                                 general: defenderGeneral, bronzePercent: bronzePercent(defender.owner, state)),
+            attacker: battleArmy(civ, units, formation: formation, general: general, state),
+            defender: battleArmy(defender.owner, defender.units, formation: defender.formation,
+                                 general: defenderGeneral, state),
             terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next(),
             fortification: fortification(at: to, state))
         let report = BattleSimulator(rules: rules).resolve(setup)
         let won = report.winner == .attacker
         var events: [GameEvent] = [.battle(report)]
+        battleExperience(setup.attacker, &state)
+        battleExperience(setup.defender, &state)
         let l = rules.government.legitimacy
         adjustLegitimacy(civ, won ? l.battleWon : l.battleLost, &state)
         adjustLegitimacy(defender.owner, won ? l.battleLost : l.battleWon, &state)
@@ -143,7 +143,9 @@ extension Engine {
 
     /// Damage reduction walls give a territory's defenders.
     func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
-        state.land[territory]?.improvements.contains(.walls) == true ? rules.projectEffects.wallsDefensePercent : 0
+        guard state.land[territory]?.improvements.contains(.walls) == true else { return 0 }
+        let builders = level(.construction, of: state.owner(of: territory), in: state) >= 2
+        return rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0)
     }
 
     /// The chance an attack succeeds, estimated by running the battle several times with seeds
@@ -170,12 +172,9 @@ extension Engine {
         var wins = 0
         for _ in 0..<samples {
             let report = sim.resolve(BattleSetup(
-                attacker: BattleArmy(civ: civ, units: units, formation: formation ?? rules.battle.defaultFormation,
-                                     general: general, bronzePercent: bronzePercent(civ, state)),
-                defender: BattleArmy(civ: defender.owner, units: defender.units,
-                                     formation: defender.formation ?? rules.battle.defaultFormation,
-                                     general: state.general(of: defender.owner, at: to),
-                                     bronzePercent: bronzePercent(defender.owner, state)),
+                attacker: battleArmy(civ, units, formation: formation, general: general, state),
+                defender: battleArmy(defender.owner, defender.units, formation: defender.formation,
+                                     general: state.general(of: defender.owner, at: to), state),
                 terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next(),
                 fortification: fortification(at: to, state)))
             if report.winner == .attacker { wins += 1 }

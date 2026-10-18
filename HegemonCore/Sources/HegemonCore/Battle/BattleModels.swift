@@ -32,14 +32,21 @@ public struct BattleArmy: Codable, Sendable, Equatable {
     public var general: General?
     /// How well-equipped with bronze the army is, 0–100.
     public var bronzePercent: Int
+    /// Attack bonuses per unit type from the civilization's knowledge, in percent.
+    public var unitPercent: [UnitType: Int]
+    /// Extra starting morale from the civilization's knowledge.
+    public var morale: Int
 
     public init(civ: CivilizationID, units: UnitCounts, formation: FormationID,
-                general: General? = nil, bronzePercent: Int = 0) {
+                general: General? = nil, bronzePercent: Int = 0,
+                unitPercent: [UnitType: Int] = [:], morale: Int = 0) {
         self.civ = civ
         self.units = units
         self.formation = formation
         self.general = general
         self.bronzePercent = bronzePercent
+        self.unitPercent = unitPercent
+        self.morale = morale
     }
 }
 

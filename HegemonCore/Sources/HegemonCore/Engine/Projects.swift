@@ -8,8 +8,15 @@ extension Engine {
         let built = state.land[territory]?.improvements ?? []
         let fx = rules.projectEffects
         if resource == .grain {
+            let owner = state.owner(of: territory)
+            let farming = level(.agriculture, of: owner, in: state)
+            let kx = rules.knowledge.effects
             var grain = t.grain
-            if built.contains(.farm) { grain += t.has(.riverValley) ? fx.farmRiverValleyGrain : fx.farmGrain }
+            if t.has(.riverValley), farming >= 1 { grain += kx.irrigationRiverGrain }
+            if built.contains(.farm) {
+                grain += t.has(.riverValley) ? fx.farmRiverValleyGrain : fx.farmGrain
+                if farming >= 3 { grain += kx.cropRotationFarmGrain }
+            }
             return grain
         }
         let base = t.resources[resource] ?? 0
@@ -43,7 +50,7 @@ extension Engine {
         guard state.owner(of: territory) == civ else { throw GameError.notOwner(territory) }
         guard homeNetwork(of: civ, in: state).contains(territory) else { throw GameError.outOfSupply(territory) }
         guard canBuild(project, in: territory, state) else { throw GameError.projectUnavailable(territory, project) }
-        let cost = rules.projects[project]!
+        let cost = projectCost(project, for: civ, state)
         let cs = state.civs[civ]!
         guard cs.gold >= cost.gold else { throw GameError.insufficientGold(needed: cost.gold, available: cs.gold) }
         for (resource, needed) in [(Resource.stone, cost.stone), (.timber, cost.timber)] where needed > 0 {
@@ -66,6 +73,9 @@ extension Engine {
             if site.turnsLeft <= 0 {
                 state.land[t]!.improvements.insert(site.kind)
                 state.land[t]!.construction = nil
+                addExperience(civ, .construction, 4, &state)
+                if site.kind == .farm { addExperience(civ, .agriculture, 3, &state) }
+                if site.kind == .mine { addExperience(civ, .metallurgy, 2, &state) }
                 events.append(.projectCompleted(civ: civ, territory: t, project: site.kind))
             } else {
                 state.land[t]!.construction = site

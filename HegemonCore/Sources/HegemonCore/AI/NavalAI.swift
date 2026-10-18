@@ -12,7 +12,7 @@ struct SeaCampaign {
 }
 
 extension AIPlayer {
-    private var capacity: Int { rules.ships.capacity }
+
 
     /// Seas a fleet of `ships` may sail through: open lanes, and no enemy fleet it can't beat.
     private func sailable(_ sea: SeaZoneID, ships: Int, _ civ: CivilizationID, _ state: GameState) -> Bool {
@@ -69,6 +69,7 @@ extension AIPlayer {
     func buildTransports(_ civ: CivilizationID, for campaign: SeaCampaign,
                          _ state: inout GameState, _ turn: inout AITurn) {
         let have = state.fleets(of: civ).reduce(0) { $0 + $1.ships }
+        let capacity = engine.shipCapacity(civ, state)
         let want = (campaign.force + capacity - 1) / capacity
         guard have < want else { return }
         let dist = seaDistances(to: campaign.landingSeas, ships: want, civ, state)
@@ -91,7 +92,7 @@ extension AIPlayer {
             if land(civ, from: sea, campaign, &state, &turn) { continue }
             guard let fleet = state.fleet(of: civ, in: sea), fleet.cargo.total > 0 || fleet.ships > 0 else { continue }
             let ready = fleet.ships - fleet.movedShips
-            guard ready > 0, fleet.cargo.total <= ready * capacity else { continue }
+            guard ready > 0, fleet.cargo.total <= ready * engine.shipCapacity(civ, state) else { continue }
             // Too weak to land: go back to a port with spare troops instead of idling at sea.
             let ports = portSeas(civ, state)
             let goal = fleet.cargo.total < campaign.force && !ports.contains(sea) && !ports.isEmpty
@@ -119,7 +120,7 @@ extension AIPlayer {
                         _ state: inout GameState, _ turn: inout AITurn) {
         for t in map.coastalTerritories(of: sea).sorted() where state.armies[t]?.owner == civ {
             guard let fleet = state.fleet(of: civ, in: sea) else { return }
-            let room = min(fleet.ships * capacity - fleet.cargo.total, force - fleet.cargo.total)
+            let room = min(fleet.ships * engine.shipCapacity(civ, state) - fleet.cargo.total, force - fleet.cargo.total)
             guard room > 0 else { return }
             let spare = min(readyUnits(at: t, state).total, state.armies[t]!.units.total - garrison(t, for: civ, state) - 1)
             guard spare > 0 else { continue }
@@ -157,13 +158,11 @@ extension AIPlayer {
         let sim = BattleSimulator(rules: rules)
         let wins = seeds(state, "land" + sea + to).filter { seed in
             sim.resolve(BattleSetup(
-                attacker: BattleArmy(civ: civ, units: units, formation: rules.battle.defaultFormation,
-                                     bronzePercent: engine.bronzePercent(civ, state)),
-                defender: BattleArmy(civ: defender.owner, units: defender.units,
-                                     formation: defender.formation ?? rules.battle.defaultFormation,
-                                     general: state.general(of: defender.owner, at: to),
-                                     bronzePercent: engine.bronzePercent(defender.owner, state)),
-                terrain: map.territory(to)!.terrain, approach: .amphibious, seed: seed)).winner == .attacker
+                attacker: engine.battleArmy(civ, units, formation: nil, general: nil, state),
+                defender: engine.battleArmy(defender.owner, defender.units, formation: defender.formation,
+                                            general: state.general(of: defender.owner, at: to), state),
+                terrain: map.territory(to)!.terrain, approach: .amphibious, seed: seed,
+                fortification: engine.fortification(at: to, state))).winner == .attacker
         }.count
         return Double(wins) / Double(samples)
     }

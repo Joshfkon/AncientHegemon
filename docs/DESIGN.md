@@ -631,3 +631,27 @@ Decisions (his answers, with the details filled in):
   **trade routes break** for several rounds at a time. **Bronze wears out** without a steady tin
   supply; **iron** doesn't need tin. Tin-dependent palace empires crack; iron-workers endure.
 - **Trade made visible**: the map shows what goods flow along each route.
+
+### Knowledge model (phase 2, as built)
+
+- **Points a turn** = 10 × max(1, population/10 + income/5), in tenths of a point so small shares
+  still count. They split across fields in proportion to **experience**; leftovers go to the
+  most practiced field. Levels are reached at 12, 36 and 80 points.
+- **Experience each harvest**: Agriculture production/8; Metallurgy bronze + 2 × iron ore;
+  Horsemanship 2 × horses; Seafaring ships + 2 × sea routes; Construction stone; Administration
+  routes + territories/6 + income/10. **Events add more**: every land battle gives Warfare
+  3 + (infantry + archers)/3 and Horsemanship 2 × cavalry to both sides; naval battles give
+  Seafaring 5 to both sides; a finished project gives Construction 4 (farms add Agriculture,
+  mines Metallurgy). Experience **fades 10% a turn**, so direction follows recent practice.
+- **Diffusion**: each field gains the best of its contacts' leads × 2% (neighbor) or 5% (trade
+  partner). Kept low on purpose: at 5%/10% every civ converged on the same profile within 30 turns.
+- **Levels** (and what each does):
+  Agriculture: Irrigation (+1 grain in river valleys), Granaries (store 2 turns of grain more), Crop
+  rotation (+1 grain from farms). Metallurgy: Bronze casting (+50% bronze), Ironworking (iron ore
+  becomes usable), Steel (iron counts double for equipment). Horsemanship: Chariots (cavalry +15%),
+  Horse breeding (2 cavalry per horse), Horse archers (cavalry +15% more). Seafaring: Galleys (+1
+  troop per ship), Navigation (+30% at sea), Triremes (+30% more). Construction: Masonry (projects
+  a turn faster), Fortification (walls +15%), Engineering (1 less stone and timber). Warfare: Drill
+  (infantry +10%), Composite bows (archers +15%), Tactics (+10 morale). Administration: Writing
+  (+10 loyalty), Coinage (+20% taxes), Law (+1 legitimacy a turn).
+- A field appears in a civ's tree only once it has some experience or knowledge of it.

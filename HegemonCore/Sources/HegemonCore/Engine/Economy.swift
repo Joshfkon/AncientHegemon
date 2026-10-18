@@ -27,7 +27,7 @@ extension Engine {
                 let forGrowth = (production - consumption) * growthPercent(civ, state) / 100
                 grown = grow(pocket, surplus: forGrowth, &state)
                 granary = min(granary + production - consumption - grown,
-                              production * rules.economy.granaryCapTurns)
+                              production * granaryTurns(civ, state))
             } else {
                 let available = production + granary - atSea
                 let lost = starve(civ, pocket, toFit: available, &state)
@@ -57,8 +57,11 @@ extension Engine {
         let income = gold.total
         state.civs[civ]!.gold += income
 
-        let bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
+        var bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
                          effectiveYield(of: .tin, for: civ, in: state, routes: routes))
+        if level(.metallurgy, of: civ, in: state) >= 1 {
+            bronze = bronze * (100 + rules.knowledge.effects.bronzeCastingPercent) / 100
+        }
         state.civs[civ]!.bronze += bronze
 
         events.insert(.harvest(civ: civ, production: home.production, consumption: home.consumption,
@@ -69,6 +72,7 @@ extension Engine {
             events.append(.trade(civ: civ, partners: civRoutes.map { $0.partner(of: civ) }, income: tradeIncome))
         }
         if bronze > 0 { events.append(.bronzeMade(civ: civ, amount: bronze)) }
+        events += learn(civ, production: home.production, bronze: bronze, income: income, routes: routes, &state)
         return events
     }
 
@@ -77,7 +81,8 @@ extension Engine {
         -> (taxes: Int, mines: Int, trade: Int, total: Int) {
         let e = rules.economy
         let population = homeNet.reduce(0) { $0 + state.population(of: $1) }
-        let taxes = population * state.civs[civ]!.taxRate / max(1, e.populationPerGold * e.defaultTax)
+        let coinage = level(.administration, of: civ, in: state) >= 2 ? rules.knowledge.effects.coinagePercent : 0
+        let taxes = population * state.civs[civ]!.taxRate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100)
         let mines = yield(of: .gold, in: homeNet, state) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
         let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
