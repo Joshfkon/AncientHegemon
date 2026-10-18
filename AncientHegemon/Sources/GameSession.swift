@@ -377,6 +377,8 @@ final class GameSession {
                 add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")
             case let .peaceOffered(from, to):
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
+            case let .disbanded(civ, t, units, rejoined) where civ == human:
+                add(civ, "Disbanded \(units.total) troops in \(place(t))" + (rejoined > 0 ? "; \(rejoined) went home to farm" : ""), at: t)
             case let .recruited(civ, t, unit, count) where civ == human:
                 add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))", at: t)
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")

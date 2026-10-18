@@ -2,6 +2,8 @@
 public enum Command: Codable, Sendable, Equatable {
     /// Recruit units in an owned territory. Costs gold and turns population into soldiers.
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
+    /// Sends soldiers home: on the empire's own land they go back to the fields as people.
+    case disband(territory: TerritoryID, units: UnitCounts)
     /// Move units across a land border. Each unit moves once per turn. Entering an unowned or
     /// undefended enemy territory captures it; entering an enemy army's territory is a battle.
     /// With `general`, the general standing in `from` goes with them.
@@ -53,6 +55,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case peaceMade(CivPair)
     case warDeclared(by: CivilizationID, on: CivilizationID)
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
+    case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
     case formationSet(civ: CivilizationID, territory: TerritoryID, formation: FormationID)

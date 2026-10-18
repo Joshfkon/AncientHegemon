@@ -32,6 +32,8 @@ public struct Engine: Sendable {
             return try move(from, to, units, general, &state)
         case let .setFormation(territory, formation):
             return try setFormation(territory, formation, &state)
+        case let .disband(territory, units):
+            return try disband(territory, units, &state)
         case let .setBattlePlan(territory, plan):
             return try setBattlePlan(territory, plan, &state)
         case let .buildShips(territory, sea, count):
@@ -97,6 +99,30 @@ public struct Engine: Sendable {
         added[unit] = count
         state.armies[territory, default: Army(owner: civ, units: .zero)].units += added
         return [.recruited(civ: civ, territory: territory, unit: unit, count: count)]
+    }
+
+    /// Soldiers go home. On the civ's own land each becomes a person again (up to the land's
+    /// population cap); abroad they simply scatter. No gold comes back.
+    private func disband(_ territory: TerritoryID, _ units: UnitCounts, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard units.isNonNegative, !units.isEmpty else { throw GameError.invalidCount }
+        guard let army = state.armies[territory], army.owner == civ else { throw GameError.insufficientUnits(territory) }
+        let left = army.units - units
+        guard left.isNonNegative else { throw GameError.insufficientUnits(territory) }
+        if left.isEmpty { state.armies[territory] = nil } else { state.armies[territory]!.units = left }
+        if let moved = state.moved[territory] {
+            let still = moved - units
+            state.moved[territory] = UnitCounts(infantry: max(0, min(still.infantry, left.infantry)),
+                                                archers: max(0, min(still.archers, left.archers)),
+                                                cavalry: max(0, min(still.cavalry, left.cavalry)))
+        }
+        var rejoined = 0
+        if state.owner(of: territory) == civ {
+            let room = max(0, populationCap(of: territory) - state.population(of: territory))
+            rejoined = min(units.total, room)
+            state.land[territory]!.population += rejoined
+        }
+        return [.disbanded(civ: civ, territory: territory, units: units, rejoined: rejoined)]
     }
 
     // MARK: Move

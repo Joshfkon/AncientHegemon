@@ -1069,3 +1069,10 @@ A "Rivals" tab (headed Diplomacy; the toolbar's people button opens it) with a c
 war or peace and the action (offer peace / accept / declare war, with confirmation), land, troops
 and prestige, the ruler and how secure they are, whether they border you and where, and any trade
 route with the goods each side receives and tolls paid. The Empire tab is renamed Realm.
+
+### Disbanding (Josh)
+
+`.disband(territory:units:)` sends any number of the player's soldiers home. On the empire's own
+land each becomes a person again, up to the land's population cap; elsewhere they scatter. No gold
+comes back, so recruiting and disbanding can't be cycled for profit; the gain is the grain their
+upkeep was costing. It's undoable like any other order. The AI doesn't disband yet.

@@ -335,6 +335,8 @@ func traitName(_ trait: GeneralTrait) -> String {
 struct TerritoryPanel: View {
     let session: GameSession
     let territory: TerritoryID
+    @State private var disbanding = false
+    @State private var toDisband = UnitCounts.zero
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -401,6 +403,7 @@ struct TerritoryPanel: View {
         } else {
             Text("Cut off from your capital: no recruiting here.").font(.caption).foregroundStyle(.orange)
         }
+        if let army { disbandControls(army, human) }
         if let army {
             // Rarely changed, so tucked away at the bottom.
             DisclosureGroup {
@@ -423,6 +426,42 @@ struct TerritoryPanel: View {
 }
 
 extension TerritoryPanel {
+    /// Sending soldiers home: pick how many, see what it saves, confirm.
+    @ViewBuilder func disbandControls(_ army: Army, _ human: CivilizationID) -> some View {
+        if disbanding {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Disband").font(.subheadline.bold())
+                UnitPicker(available: army.units, units: $toDisband)
+                let own = state.owner(of: territory) == human
+                let upkeep = engine.rules.upkeep(of: toDisband)
+                Text((own ? "They go home and farm: up to \(toDisband.total) people return here. " : "Far from home, they simply scatter. ")
+                     + "Saves \(upkeep) grain a turn. No gold comes back.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("Cancel") { disbanding = false }.buttonStyle(.bordered)
+                    Spacer()
+                    Button("Disband \(toDisband.total)") {
+                        if session.order(.disband(territory: territory, units: toDisband)) { disbanding = false }
+                    }
+                    .buttonStyle(.borderedProminent).tint(.orange)
+                    .disabled(toDisband.isEmpty)
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.1)))
+        } else {
+            Button {
+                toDisband = .zero
+                disbanding = true
+            } label: {
+                Label("Disband troops", systemImage: "person.fill.xmark")
+            }
+            .buttonStyle(.bordered)
+            .font(.caption)
+        }
+    }
+
     /// Projects: what's built, what's underway, and what can be started here.
     @ViewBuilder func projects(_ human: CivilizationID) -> some View {
         let land = state.land[territory]!
