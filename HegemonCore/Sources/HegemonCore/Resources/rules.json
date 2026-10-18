@@ -81,7 +81,7 @@
     "farmGrain": 1,
     "farmRiverValleyGrain": 2,
     "mineBonus": 1,
-    "wallsDefensePercent": 25,
+    "wallsDefensePercent": 35,
     "harborGold": 2,
     "harborShipDiscount": 2
   },
@@ -255,13 +255,14 @@
     },
     "randomSpreadPercent": 25,
     "fortunePercent": 25,
+    "dayFortunePercent": 40,
     "flankMoraleLoss": 10,
     "breakPercent": 60,
     "pursuitPercent": 25,
     "bronzeBonusPercent": 20,
-    "homeGroundPercent": 10,
+    "homeGroundPercent": 2,
     "crossingPenaltyPercent": {
-      "river": 20,
+      "river": 30,
       "strait": 25,
       "amphibious": 30
     },

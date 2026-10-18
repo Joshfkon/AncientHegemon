@@ -11,6 +11,8 @@ import HegemonCore
 //       One game, printing every civ's land, units, population, gold and grain each round.
 //   hegemon-sim formations [--seeds N]
 //       Win rates for every formation pairing, mixed armies on open ground.
+//   Any mode takes --set KEY=VALUE (repeatable) to override a rules.json number for the run,
+//   e.g. --set battle.homeGroundPercent=5, for trying a balance change without rebuilding.
 //   hegemon-sim defence [--seeds N]
 //       Attacker win rates by army size, terrain and walls: the attacker uses its best formation,
 //       the defender the formation that holds best against it.
@@ -31,7 +33,33 @@ func pad(_ s: String, _ w: Int) -> String {
     s.count >= w ? s : String(repeating: " ", count: w - s.count) + s
 }
 
-let engine = try Engine.bundled()
+/// The bundled engine with any `--set path.to.key=number` overrides applied to the rules.
+func makeEngine() throws -> Engine {
+    let bundled = try Engine.bundled()
+    let args = CommandLine.arguments
+    let sets = args.indices.filter { args[$0] == "--set" && $0 + 1 < args.count }.map { args[$0 + 1] }
+    guard !sets.isEmpty else { return bundled }
+    var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(bundled.rules)) as! [String: Any]
+    func assign(_ path: ArraySlice<String>, _ value: Int, in dict: inout [String: Any]) {
+        guard let key = path.first else { return }
+        if path.count == 1 {
+            guard dict[key] is NSNumber else { print("--set: no number at \(key)"); exit(1) }
+            dict[key] = value
+        } else {
+            guard var inner = dict[key] as? [String: Any] else { print("--set: no section \(key)"); exit(1) }
+            assign(path.dropFirst(), value, in: &inner)
+            dict[key] = inner
+        }
+    }
+    for s in sets {
+        let parts = s.split(separator: "=", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let value = Int(parts[1]) else { print("--set wants KEY=NUMBER, got \(s)"); exit(1) }
+        assign(ArraySlice(parts[0].split(separator: ".").map(String.init)), value, in: &json)
+    }
+    let rules = try Rules(json: JSONSerialization.data(withJSONObject: json))
+    return Engine(map: bundled.map, rules: rules)
+}
+let engine = try makeEngine()
 
 if CommandLine.arguments.dropFirst().first == "formations" {
     let seeds = Int(option("--seeds") ?? "100") ?? 100
@@ -61,14 +89,15 @@ if CommandLine.arguments.dropFirst().first == "defence" {
     func army(_ n: Int) -> UnitCounts {
         UnitCounts(infantry: n - n / 4 - n / 4, archers: n / 4, cavalry: n / 4)
     }
-    func attackerWins(_ a: Int, _ d: Int, _ terrain: Terrain, _ walls: Int) -> Int {
+    func attackerWins(_ a: Int, _ d: Int, _ terrain: Terrain, _ walls: Int, _ approach: Approach = .overland) -> Int {
         // The defender commits to a formation first; the attacker answers it.
         ids.map { df in
             ids.map { af in
                 (0..<seeds).filter { seed in
                     sim.resolve(BattleSetup(attacker: BattleArmy(civ: "a", units: army(a), formation: af),
                                             defender: BattleArmy(civ: "d", units: army(d), formation: df),
-                                            terrain: terrain, seed: UInt64(seed), fortification: walls)).winner == .attacker
+                                            terrain: terrain, approach: approach, seed: UInt64(seed),
+                                            fortification: walls)).winner == .attacker
                 }.count
             }.max()!
         }.min()! * 100 / seeds
@@ -78,6 +107,8 @@ if CommandLine.arguments.dropFirst().first == "defence" {
                  engine.rules.projectEffects.wallsDefensePercent + engine.rules.knowledge.effects.fortificationPercent]
     print("attacker win %, mixed armies (half infantry, a quarter each archers and cavalry), \(seeds) seeds")
     print("terrain    walls " + matchups.map { pad("\($0.0)v\($0.1)", 6) }.joined())
+    print("plains, across a river".padding(toLength: 16, withPad: " ", startingAt: 0)
+          + matchups.map { pad("\(attackerWins($0.0, $0.1, .plains, 0, .river))%", 6) }.joined())
     for terrain in Terrain.allCases {
         for w in walls {
             print(terrain.rawValue.padding(toLength: 10, withPad: " ", startingAt: 0) + pad("\(w)%", 6)
@@ -142,13 +173,14 @@ let endings = Dictionary(grouping: records.compactMap(\.finalState.victory)) { "
 print("how games end: " + endings.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
       .map { "\($0.0) \($0.1)" }.joined(separator: ", "))
 print("")
-print("civ          personality   wins  elim  collapse  avg land  peak  starving turns  deserted  attrition    attacks won   defences held  rejected")
+print("civ          personality   wins  elim  collapse  avg land  peak  starving turns  deserted  attrition    attacks won   defences held   vs civs held  rejected")
 for civ in civs {
     let rs = records.compactMap { $0.civs[civ] }
     let n = max(1, rs.count)
     let sum = { (f: (CivRecord) -> Int) in rs.map(f).reduce(0, +) }
     let attacks = sum { $0.attacksWon + $0.attacksLost }
     let defences = sum { $0.defencesWon + $0.defencesLost }
+    let civDefences = sum { $0.defencesVsCivsWon + $0.defencesVsCivsLost }
     let cols = [
         civ.padding(toLength: 13, withPad: " ", startingAt: 0)
             + (rs.first?.personality ?? "").padding(toLength: 12, withPad: " ", startingAt: 0),
@@ -162,6 +194,7 @@ for civ in civs {
         pad(String(sum(\.unitsLostToAttrition) / n), 11),
         pad("\(pct(sum(\.attacksWon), attacks)) of \(attacks)", 15),
         pad("\(pct(sum(\.defencesWon), defences)) of \(defences)", 16),
+        pad("\(pct(sum(\.defencesVsCivsWon), civDefences)) of \(civDefences)", 15),
         pad(String(sum(\.rejectedCommands)), 10),
     ]
     print(cols.joined())
@@ -266,3 +299,18 @@ for f in engine.rules.battle.formations.map(\.id) {
           + pad("\(r.attacks) (\(pct(r.attackWins, r.attacks)))", 14)
           + pad("\(r.defences) (\(pct(r.defenceWins, r.defences)))", 18))
 }
+
+var odds = OddsTally()
+for r in records {
+    for i in odds.battles.indices {
+        odds.battles[i] += r.civBattles.battles[i]
+        odds.attackerWins[i] += r.civBattles.attackerWins[i]
+    }
+}
+let labels = ["< 1.25x", "1.25-1.5x", "1.5-2x", "2-3x", ">= 3x"]
+print("")
+print("civ against civ land battles, by attacker:defender troops")
+print("odds         " + labels.map { pad($0, 11) }.joined())
+print("battles      " + odds.battles.map { pad(String($0), 11) }.joined())
+print("attacker won " + odds.battles.indices.map { pad(pct(odds.attackerWins[$0], odds.battles[$0]), 11) }.joined())
+

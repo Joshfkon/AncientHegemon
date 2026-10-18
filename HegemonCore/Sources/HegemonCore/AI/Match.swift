@@ -12,6 +12,9 @@ public struct CivRecord: Sendable, Equatable {
     public var attacksLost = 0
     public var defencesWon = 0
     public var defencesLost = 0
+    /// Of those, defences against another civilization (not natives, barbarians or rebels in revolt).
+    public var defencesVsCivsWon = 0
+    public var defencesVsCivsLost = 0
     public var rejectedCommands = 0
     public var shipsBuilt = 0
     public var landings = 0
@@ -44,6 +47,23 @@ public struct FormationRecord: Sendable, Equatable {
     public init() {}
 }
 
+/// Civ-against-civ land battles, by how heavily the attacker outnumbered the defender.
+public struct OddsTally: Sendable, Equatable {
+    /// Upper bounds (attacker units ÷ defender units) of each bucket; the last is open-ended.
+    public static let bounds: [Double] = [1.25, 1.5, 2, 3]
+    public var battles = [Int](repeating: 0, count: bounds.count + 1)
+    public var attackerWins = [Int](repeating: 0, count: bounds.count + 1)
+
+    public init() {}
+
+    mutating func add(attackers: Int, defenders: Int, attackerWon: Bool) {
+        let ratio = Double(attackers) / Double(max(1, defenders))
+        let i = Self.bounds.firstIndex { ratio < $0 } ?? Self.bounds.count
+        battles[i] += 1
+        if attackerWon { attackerWins[i] += 1 }
+    }
+}
+
 public struct MatchRecord: Sendable {
     public let seed: UInt64
     public let winner: CivilizationID?
@@ -51,6 +71,7 @@ public struct MatchRecord: Sendable {
     public let turns: Int
     public let civs: [CivilizationID: CivRecord]
     public let formations: [FormationID: FormationRecord]
+    public let civBattles: OddsTally
     /// The civ holding the most territories at the start of each round (nil on a tie), from round 1.
     public let leaders: [CivilizationID?]
     public let finalState: GameState
@@ -93,6 +114,7 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
         ais[civ] = AIPlayer(engine: engine, personality: p)
     }
     var formations: [FormationID: FormationRecord] = [:]
+    var civBattles = OddsTally()
     var leaders: [CivilizationID?] = []
 
     while state.winner == nil, state.turn <= maxTurns {
@@ -164,12 +186,18 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
             case let .battle(report):
                 let a = report.setup.attacker, d = report.setup.defender
                 let attackerWon = report.winner == .attacker
+                let byCiv = a.civ != nativesID && a.civ != barbariansID
                 if attackerWon {
                     civs[a.civ]?.attacksWon += 1
                     civs[d.civ]?.defencesLost += 1
+                    if byCiv { civs[d.civ]?.defencesVsCivsLost += 1 }
                 } else {
                     civs[a.civ]?.attacksLost += 1
                     civs[d.civ]?.defencesWon += 1
+                    if byCiv { civs[d.civ]?.defencesVsCivsWon += 1 }
+                }
+                if byCiv, d.civ != nativesID, d.civ != barbariansID {
+                    civBattles.add(attackers: a.units.total, defenders: d.units.total, attackerWon: attackerWon)
                 }
                 formations[a.formation, default: FormationRecord()].attacks += 1
                 formations[a.formation, default: FormationRecord()].attackWins += attackerWon ? 1 : 0
@@ -185,5 +213,5 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
     }
     for c in state.players where civs[c] != nil { civs[c]!.finalTerritories = state.territories(of: c).count }
     return MatchRecord(seed: seed, winner: state.winner, turns: min(state.turn, maxTurns), civs: civs,
-                       formations: formations, leaders: leaders, finalState: state)
+                       formations: formations, civBattles: civBattles, leaders: leaders, finalState: state)
 }

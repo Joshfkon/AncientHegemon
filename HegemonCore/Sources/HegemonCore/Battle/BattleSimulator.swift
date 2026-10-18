@@ -31,6 +31,10 @@ public struct BattleSimulator: Sendable {
         let impassable = Set(terrain.impassable)
         let range = terrain.archerRange ?? b.archerRange
         var rng = SeededRNG(seed: setup.seed)
+        var day: [BattleSide: Int] = [:]
+        for side in [BattleSide.attacker, .defender] {
+            day[side] = 100 + Int(rng.next() % UInt64(2 * b.dayFortunePercent + 1)) - b.dayFortunePercent
+        }
 
         var blocks = deploy(setup.attacker, side: .attacker, firstID: 0)
         blocks += deploy(setup.defender, side: .defender, firstID: blocks.count)
@@ -66,7 +70,7 @@ public struct BattleSimulator: Sendable {
             // Strikes are computed from positions after movement, then applied together.
             var fortune: [BattleSide: Int] = [:]
             for side in [BattleSide.attacker, .defender] {
-                fortune[side] = 100 + Int(rng.next() % UInt64(2 * b.fortunePercent + 1)) - b.fortunePercent
+                fortune[side] = (100 + Int(rng.next() % UInt64(2 * b.fortunePercent + 1)) - b.fortunePercent) * day[side]! / 100
             }
             var strikes: [BattleStrike] = []
             for i in blocks.indices where blocks[i].status == .fighting {

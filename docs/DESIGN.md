@@ -690,11 +690,21 @@ Decisions (his answers, with the details filled in):
 
 ### Balance pass (after phase 5)
 
-Three targets, in Josh's order: the AI hoarding gold, Mesopotamia winning half the games, and
-defenders rarely holding. Rules version 4, so older saves are ignored.
+Three targets. Josh's order after the first round: **defenders rarely holding** (priority 1:
+"seems like a big issue"), then the AI hoarding gold, then Mesopotamia winning half the games.
+Rules version 4, so older saves are ignored.
 
 **What was wrong**
 
+- **Defending had no edge.** In formation mirrors on open plains the attacker won (phalanx v
+  phalanx 62%, hammer v hammer 58%, refused flank 81%, wedge 100%; `hegemon-sim formations
+  --seeds 200`). The advancing side picks where to engage and gangs up on holding blocks for the
+  flank-morale penalty, and open ground gave the defender nothing. Battles were also close to a
+  step function: per-strike and per-round luck average out over 20 rounds, so a quarter more
+  troops won almost every time and any flat bonus decided equal fights outright.
+  The headline "defences held 25%" was mostly beaten raids. **Against another civ, defences held
+  1–2%.** The AI attacks only what its own battle estimate says it will win, and most civ-vs-civ
+  battles were fought at 2× odds or more (377 of 616).
 - **Gold had nothing to buy.** The AI started one project a turn, but the deeper problem is that
   grain, not gold, caps every army: population grows to eat any surplus, so recruiting stalls on
   food long before money. Once an empire had built everything (or ran out of timber), gold just
@@ -702,20 +712,57 @@ defenders rarely holding. Rules version 4, so older saves are ignored.
 - **Mesopotamia's edge is the map, not its personality.** With every civ given the same
   temperament it still wins 47% (all opportunists) and 57% (all turtles). A 9-grain river capital
   plus Persia feeds about 16 troops by round 10 (others 7 to 11), and five weak native lands sit
-  next door on foot. 14 of its 21 wins were dominations before round 50, most by round 25. Its counterweights don't
-  bite: barbarian hordes are 3 + round/8 units against a 20-unit army, and the collapse hits
-  coasts (Sea Peoples) and dry land (drought), which spares an inland river valley.
-  Making expansion harder in general backfires: tougher natives (77%) or +15% defence everywhere
-  (72%) help Mesopotamia, because only it has the army to push through. Trimming its grain
-  (capital 8, Persia 3) looked good on one set of 40 seeds (37%) and did nothing on another (55%).
-- **Defending had no edge.** The battle tool's new `defence` probe shows an equal mixed army
-  attacking on open ground won 88–95% of the time. Formation mirrors favor the attacker (phalanx v
-  phalanx 61%, refused flank 85%, wedge 100%): the advancing side picks where to engage and gangs
-  up on holding blocks for the flank-morale penalty. The attacker also sees the defender's
-  formation and answers it. Battles are close to a step function: a quarter more troops wins
-  almost every time.
+  next door on foot. 14 of its 21 wins were dominations before round 50, most by round 25. Its
+  counterweights don't bite: barbarian hordes are 3 + round/8 units against a 20-unit army, and
+  the collapse hits coasts (Sea Peoples) and dry land (drought), which spares an inland river
+  valley. Making expansion harder in general backfires: tougher natives (77%) or +15% defence
+  everywhere (72%) help Mesopotamia, because only it has the army to push through. Trimming its
+  grain (capital 8, Persia 3) looked good on one set of 40 seeds (37%) and did nothing on another
+  (55%).
 
-**Rule changes**
+**Rule changes: battles**
+
+- **Fortune of the day** (`battle.dayFortunePercent`: 40). Each side draws its luck once per
+  battle, scaling all its damage by up to 40% either way. Unlike the per-round roll it doesn't
+  average out, so an edge makes a battle likely rather than certain. This is what lets a modest
+  defender edge read as modest.
+- **Home ground** (`battle.homeGroundPercent`: 2). Every defender takes 2% less damage, on top of
+  terrain and walls. Small on paper, but it tips the even fights: values from 1 to 5 all play the
+  same because of rounding in the damage steps. A first try at 10% (without day fortune) made the
+  defender hold 86% of mirror matchups and stretched games toward round 50, so it was replaced.
+- **Walls 25% → 35%** (`projectEffects.wallsDefensePercent`; 50% with Fortification) and **river
+  crossings 20% → 30%** (`battle.crossingPenaltyPercent.river`). With these, walls or a river
+  alone make the attacker want about 1.5×, and walls on a hill about 2×, as in Risk.
+
+Formations, attacker win % on plains (4 infantry, 2 archers, 2 cavalry each, 200 seeds):
+
+```
+before               phalanx hammer  skirm  refused  wedge   after   phalanx hammer  skirm  refused  wedge
+phalanx                  62%    87%   100%      86%    93%              37%    59%    85%      49%    63%
+hammer_and_anvil         59%    58%    94%      91%    97%              38%    40%    60%      58%    61%
+skirmish_screen           2%     0%    62%       6%     0%              15%    12%    40%      20%    17%
+refused_flank            46%    41%   100%      81%    91%              41%    37%    63%      44%    53%
+wedge                    15%    77%   100%      26%   100%              33%    45%    81%      35%    75%
+```
+
+The defender now holds 56–63% of mirrors (Josh's target 55–60%). The wedge mirror still favors the
+attacker (75%), but the AI almost never fields wedge. Formations also matter less: the worst
+pairing is no longer a sure thing either way.
+
+Attacker win % by odds (`hegemon-sim defence`; mixed armies; the defender picks a formation and
+the attacker answers it, as the AI does, which is why 4v4 on plains is 56% here):
+
+```
+                          before                       after
+                   1.25x  1.5x   2x   (5v4 6v4 8v4)   1.25x  1.5x   2x
+plains                 100%  100% 100%                  86%  100% 100%
+plains, walls          93%  100% 100%                  35%   90% 100%
+plains, across river      -                             35%   90% 100%
+hills                  98%  100% 100%                  65%  100% 100%
+hills, walls            8%   98% 100%                  11%   56%  90%
+```
+
+**Rule changes: economy and the collapse**
 
 - **Grain imports.** At harvest, if the home pocket would go hungry after the granary is emptied,
   it buys grain from trade partners: up to 2 per active route (`trade.grainPerRoute`), at 3 gold
@@ -724,18 +771,12 @@ defenders rarely holding. Rules version 4, so older saves are ignored.
   cover a shortfall; they never feed growth. New event `grainImported`; the Economy report gains
   `grainImportCap`. Chosen over a buy-grain command because it is automatic (the player makes
   Risk-sized decisions) and it uses routes, not haggling.
-- **Home ground.** Every defender takes 10% less damage (`battle.homeGroundPercent`), on top of
-  terrain and walls. Ties now go to the defender, as in Risk; a quarter more troops still wins.
-  Equal mixed armies on plains: attacker 95% → 78% (4v4), 88% → 58% (6v6). One knob instead of
-  +10 on each terrain, so it reads plainly. At 5% Mesopotamia went back to 50–60%, so 10% it is.
-  **Trade-off**: archers attacking infantry on open ground are now a coin flip (50%, was 86%);
-  defending, archers still beat infantry. The unit test now says so.
 - **Migrations swell with the collapse.** The collapse adds barbarian raids to its event table, 20
   weight per exposure to a barbarian homeland at full pressure (`collapse.weights.migrationsPerExposure`),
   and hordes gain pressure/20 units (`collapse.migrationPressurePerExtra`), up to +5. This is the
   land twin of the Sea Peoples: the Arameans out of the Syrian desert, the steppe and northern
   forest peoples. It falls hardest on the empire with the longest open frontier, which is
-  Mesopotamia (about 23 raids per 100 turns, was 17), but also on Egypt's desert flanks and
+  Mesopotamia (about 24 raids per 100 turns, was 17), but also on Egypt's desert flanks and
   Greece's Danube.
 
 **AI changes**
@@ -750,57 +791,64 @@ defenders rarely holding. Rules version 4, so older saves are ignored.
 - Fix: fleets no longer try to sail through a strait held by an enemy (a latent bug that showed
   up as rejected commands once games ran differently).
 
-**Sim tool**: `hegemon-sim defence` (attacker win % by size, terrain and walls, defender picking
-its best formation and the attacker answering it); a table of median gold in hand and units at
-rounds 10, 20 and 30 (civs holding land only, since landless fleets can't spend); and each game
-line names how it was won.
+**Sim tool**: `hegemon-sim defence` (attacker win % by size, terrain, walls and river crossing);
+`--set KEY=VALUE` to override any rules number for one run (e.g. `--set
+battle.dayFortunePercent=30`), so balance ideas can be tried without rebuilding; a "vs civs held"
+column next to "defences held"; a table of civ-against-civ battles by force ratio; median gold in
+hand and units at rounds 10, 20 and 30 (civs holding land only); and each game line names how it
+was won.
 
 **Before and after** (40 games, seeds 1–40, default personalities, shuffled seating)
 
 ```
-                    before                         after
-civ          wins  led r10  r30  def held   wins  led r10  r30  def held
-greece        17%      2%   10%      24%     25%      2%   10%      42%
-egypt         17%     17%   10%      17%      7%     17%   17%      28%
-italia        12%      5%   17%      27%     27%     17%   15%      49%
-mesopotamia   52%     55%   10%      26%     40%     50%   35%      40%
+                          before                                  after
+civ          wins  led r10  def held  vs civs held    wins  led r10  def held  vs civs held
+greece        17%      2%      24%        2%            12%      0%      39%        5%
+egypt         17%     17%      17%        1%             7%      7%      31%        3%
+italia        12%      5%      27%        1%            17%      7%      46%        1%
+mesopotamia   52%     55%      26%        2%            62%     67%      48%       12%
 
 endings   before: 17 decisive domination, 2 major domination, 11 major legacy, 10 minor legacy
-          after:   6 decisive domination, 20 major legacy, 14 minor legacy
-length    36 → 45 rounds; lead changes per game 2.1 → 2.6; round-10 leader won 37% → 35%
-"led r30" counts all 40 games; only 23 reached round 30 before, 34 after
-Mesopotamia's wins by round 25: 13 → 3 (seeds 101–140: 6)
-collapse  Mesopotamia 30% → 35% of games; Egypt 37% → 80%
+          after:  10 decisive domination, 1 major domination, 18 major legacy, 11 minor legacy
+length    36 → 41 rounds; lead changes per game 2.1 → 2.0
+civ-vs-civ battles  616 → 306; attacker won 94–99% → 82–99% (lowest at even odds)
 median gold in hand   r20 before → after   r30 before → after
-  greece                  171 → 108             270 → 221
-  egypt                    53 → 20               89 → 23
-  italia                   48 → 27               87 → 42
-  mesopotamia              99 → 27              210 → 136
-projects built per game  16–24 → 25–46
+  greece                  171 → 85              270 → 141
+  egypt                    53 → 21               89 → 45
+  italia                   48 → 37               87 → 85
+  mesopotamia              99 → 28              210 → 141
+projects built per game  16–24 → 21–47
 ```
 
-A second set of seeds (101–140) after the change: Mesopotamia 42%, Greece 35%, Italia 15%,
-Egypt 7%; Mesopotamia leads at round 10 in 60% of games and at round 30 in 25%.
+Seeds 101–140 after: Mesopotamia 65%, Italia 20%, Greece 10%, Egypt 5%; 42 rounds; 9
+dominations, 30 legacy, 1 trade; defences held 28–54%, against civs 7–10%.
 
-**What it means**: Mesopotamia is still the strongest start and still the most likely winner,
-about 40% against 25% for a fair share. What changed is how it wins: the early blitz (13
-dominations by round 25) is mostly gone, it collapses in about a third of games as the
-migrations arrive, and when it wins it is mostly on the round-50 legacy count. It still leads
-at round 30 in 14 of the 34 games that get there, so its advantage is checked, not reversed.
-That is closer to the shifting regional advantage Josh asked for, but not all the way.
-Defenders hold 28–49% of battles (17–27% before).
+**What it means**
+
+- **Defending works as a rule.** Even fights lean to the defender, walls and rivers ask for 1.5×,
+  walls on a hill for 2×. For a human player that is what counts. In AI-vs-AI games the
+  civ-vs-civ hold rate stays low (1–12%) because the AI still only attacks what it expects to
+  win. That is the AI playing well, not the battle system favoring attackers. What changed is
+  that it now needs real odds to attack: there are half as many civ-vs-civ battles.
+- **Pace holds.** Games run 41 rounds (36 before), and 11 of 40 still end in domination (19
+  before). An earlier version with a 10% home-ground bonus ran to 45 rounds with 6 dominations.
+- **Mesopotamia is stronger again: 62–65% wins (52% before).** The 10% home-ground version had
+  held it to 40%, by making every conquest of a defended civ slow. The modest edge Josh asked for
+  doesn't do that, and day fortune doesn't hurt the side with the biggest army. Stronger
+  migrations (twice the weight, twice the growth) and bigger hordes in general were tried on both
+  seed sets: Mesopotamia 50–65%, games 41–46 rounds. Neither is worth keeping.
 
 **Still open**
 
-- **Egypt is now the weak civ** (7% wins, collapses in 70–80% of games). The turtle sits behind
-  desert flanks that border two barbarian homelands, and the migrations find it. Next lever to
-  try: Egypt's walls and garrisons on the Libyan and Sinai flanks, or a sturdier Nile (Egypt's
-  desert neighbors as natural walls).
+- **Mesopotamia** (priority 3) needs a lever aimed at its early army, not at defence in general.
+  Candidates, in the order I'd try them: its starting realm (Persia) given to the natives, so it
+  starts with one territory like Italia; a supply cost for armies far from the river; or making
+  the AI's opportunist personality less greedy when it's already ahead.
+- **Egypt is the weak civ** (5–7% wins, collapses in 57–70% of games). The turtle sits behind
+  desert flanks that border two barbarian homelands, and the migrations find it.
 - **Greece still banks gold** in long peaceful games: everything built, grain already imported up
   to the cap, nothing left to buy. Its gold counts for prestige (gold/2) at round 50, so this is
   partly a legacy strategy. A real fix needs something new to buy (e.g. temples or monuments for
   prestige), which is a design call for Josh.
-- **Domination is rarer** (6 of 40, was 19); most games now go to round 50 and a legacy verdict.
-  If Josh wants more conquest endings, the 60% threshold or the round limit is the lever.
-- **Battles are close to a step function.** Small edges decide fights; any flat bonus flips equal
-  fights hard. Softening that (more fortune per round) didn't change outcomes in a 40-game test.
+- **Archers attacking infantry** on open ground are now roughly even (86% before; the test
+  asks for at least 40%); defending, archers still beat infantry.

@@ -71,6 +71,10 @@ public struct BattleRules: Codable, Sendable, Equatable {
     /// Each round, each side's damage as a whole swings by up to this much (the fortunes of war).
     /// Unlike the per-strike spread, this doesn't average out over many blocks.
     public let fortunePercent: Int
+    /// Each side's luck on the day: drawn once per battle, it scales all of that side's damage by
+    /// up to this much either way. It doesn't average out over rounds, so a modest edge in numbers
+    /// or ground makes a battle likely, not certain.
+    public let dayFortunePercent: Int
     /// Extra morale lost by a block attacked by two or more enemies in one round.
     public let flankMoraleLoss: Int
     /// An army breaks once it has lost this share of its starting strength.
