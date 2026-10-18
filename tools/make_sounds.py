@@ -91,6 +91,46 @@ def arrows(rng):
     return fade(out)
 
 
+def click(rng):
+    """A soft wooden tick, for selecting."""
+    out = []
+    for i in range(int(RATE * 0.06)):
+        t = i / RATE
+        out.append((math.sin(2 * math.pi * 1800 * t) * 0.6 + (rng.random() * 2 - 1) * 0.4) * math.exp(-t / 0.008))
+    return fade(out, 2)
+
+
+def drum(rng):
+    """A deep frame drum, for ending the turn: a pitch-dropping thump and a skin rattle."""
+    out = []
+    phase = 0.0
+    for i in range(int(RATE * 0.9)):
+        t = i / RATE
+        f = 55 + 70 * math.exp(-t * 18)
+        phase += 2 * math.pi * f / RATE
+        body = math.sin(phase) * math.exp(-t / 0.28)
+        skin = (rng.random() * 2 - 1) * 0.35 * math.exp(-t / 0.03)
+        out.append(body + skin)
+    # A second, softer stroke.
+    delay = int(RATE * 0.22)
+    for i in range(len(out) - delay):
+        out[i + delay] += 0.45 * out[i]
+    return fade(out)
+
+
+def coins(rng):
+    """A few coins dropping onto a pile."""
+    out = [0.0] * int(RATE * 0.5)
+    for k in range(5):
+        start = int(RATE * (0.02 + 0.07 * k + rng.random() * 0.02))
+        f = 3200 + rng.random() * 1400
+        for i in range(int(RATE * 0.18)):
+            t = i / RATE
+            if start + i < len(out):
+                out[start + i] += (math.sin(2 * math.pi * f * t) + 0.5 * math.sin(2 * math.pi * f * 1.51 * t)) * math.exp(-t / 0.04) * (0.9 - 0.12 * k)
+    return fade(out)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     rng = random.Random(1200)
@@ -101,6 +141,9 @@ def main():
     # Victory: a bright arpeggio. Defeat: a falling, darker call.
     write("victory", concat(horn_note(294, 0.22), horn_note(370, 0.22), horn_note(440, 0.22), horn_note(587, 0.9)), gain=0.6)
     write("defeat", concat(horn_note(220, 0.5), horn_note(196, 0.5), horn_note(147, 1.1)), gain=0.55)
+    write("click", click(rng), gain=0.35)
+    write("drum", drum(rng), gain=0.7)
+    write("coins", coins(rng), gain=0.4)
     print("wrote", sorted(os.listdir(OUT)))
 
 

@@ -39,6 +39,9 @@ struct GameScreen: View {
     @State private var showResources = false
     /// A resource whose sources are spotlit on the map.
     @State private var spotlit: Resource?
+    @State private var shake: CGFloat = 0
+    @State private var endDismissed = false
+    @State private var tint: Color?
 
     enum PanelTab: String, CaseIterable {
         case orders = "Orders", empire = "Realm", diplomacy = "Rivals", log = "Chronicle"
@@ -55,16 +58,29 @@ struct GameScreen: View {
                     onLongPress: { pick in
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
-                    marks: session.marks, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
+                    marks: session.marks, markTimes: session.markTimes, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
                     trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter,
-                    spotlight: spotlightTerritories)
+                    spotlight: spotlightTerritories, flashes: session.flashes)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
+                .modifier(Shake(animatableData: shake))
+                .overlay { if let tint { tint.opacity(0.35).allowsHitTesting(false).transition(.opacity) } }
                 .ignoresSafeArea()
             overlays
                 .padding(.trailing, panelOpen ? Self.panelWidth : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             // One interruption at a time: the very first tip, then the news.
-            if session.showReport, session.isHumanTurn, tip != .map {
+            if let moment = session.moments.first {
+                VStack {
+                    MomentBanner(moment: moment, session: session)
+                        .id(moment.id)
+                        .padding(.top, 70)
+                        .onTapGesture { session.dismissMoment() }
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .task(id: moment.id) { await play(moment) }
+            }
+            if session.showReport, session.isHumanTurn, tip != .map, session.moments.isEmpty {
                 TurnReportCard(session: session) { t in
                     selected = .territory(t)
                     session.showReport = false
@@ -115,6 +131,15 @@ struct GameScreen: View {
             resourcesAt = note.object as? Resource
             showResources = true
         }
+        .fullScreenCover(isPresented: Binding(get: { state.victory != nil && session.replay == nil && !endDismissed },
+                                              set: { if !$0 { endDismissed = true } })) {
+            if let victory = state.victory {
+                EndScreen(session: session, victory: victory) {
+                    endDismissed = true
+                    session.quit()
+                }
+            }
+        }
         .sheet(isPresented: $showCodex) {
             NavigationStack {
                 CodexView().toolbar { Button("Done") { showCodex = false } }
@@ -122,6 +147,16 @@ struct GameScreen: View {
         }
         .onChange(of: session.state.turn) { _, _ in pending = nil }
         .onAppear {
+            #if DEBUG
+            // Launch with DEMO_MOMENTS=1 to see one of each moment.
+            if UserDefaults.standard.bool(forKey: "demoMoments"), let human = session.human,
+               let seat = engine.seat(of: human, in: state) {
+                session.moments = [Moment(kind: .captured(seat)), Moment(kind: .discovery(.metallurgy, 2)),
+                                   Moment(kind: .war(state.players.first { $0 != human } ?? human)),
+                                   Moment(kind: .disaster(.earthquake, seat))]
+                session.demoFlash(seat)
+            }
+            #endif
             // Start close in on the player's own land.
             if let human = session.human, let seat = engine.seat(of: human, in: state) {
                 mapCenter = MapCenter(territory: seat, minZoom: 1.7, onlyIfHidden: false, id: 1)
@@ -131,6 +166,16 @@ struct GameScreen: View {
         .onChange(of: focusTerritory) { _, t in
             guard let t, panelOpen else { return }
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
+        .onChange(of: session.marks.count) { _, _ in
+            // Follow the rivals around the map as they move.
+            guard session.busy, !session.skipping, let mark = session.marks.last else { return }
+            let place: TerritoryID? = switch mark {
+            case let .march(_, _, to, _), let .landing(_, _, to, _): to
+            case let .battle(at, _, _): at
+            case let .captured(t, _), let .event(t, _): t
+            }
+            if let place { mapCenter = MapCenter(territory: place, id: (mapCenter?.id ?? 0) + 1) }
         }
         .onChange(of: panelOpen) { _, open in
             guard open, let t = focusTerritory else { return }
@@ -171,7 +216,7 @@ struct GameScreen: View {
                     .onTapGesture { session.message = nil }
                     .transition(.opacity)
             }
-            if !session.showReport, tip != .map, session.isHumanTurn {
+            if !session.showReport, tip != .map, session.isHumanTurn, session.moments.isEmpty {
                 HStack(spacing: 8) {
                     if offerCount > 0 {
                         notice("🕊️ \(offerCount) peace offer\(offerCount == 1 ? "" : "s")", "View") { open(.diplomacy) }
@@ -262,6 +307,31 @@ struct GameScreen: View {
         }
         if case .territory(let t)? = selected { return t }
         return nil
+    }
+
+    /// A moment's sound, jolt and screen effect, then it clears itself.
+    private func play(_ moment: Moment) async {
+        switch moment.kind {
+        case .captured, .peace: SoundBoard.shared.play(.victory, volume: 0.5); Feedback.outcome(true)
+        case .discovery: SoundBoard.shared.play(.horn, volume: 0.45); Feedback.outcome(true)
+        case .lost, .war: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
+        case .disaster: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(1)
+        }
+        let fx = MomentBanner.effect(moment.kind)
+        if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
+        if let color = fx.tint {
+            withAnimation(.easeOut(duration: 0.2)) { tint = color }
+            try? await Task.sleep(for: .milliseconds(450))
+            withAnimation(.easeIn(duration: 0.8)) { tint = nil }
+            if Task.isCancelled { return }
+        }
+        if case let .captured(t) = moment.kind {
+            mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
+        // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
+        do { try await Task.sleep(for: .milliseconds(1900)) } catch { return }
+        guard session.moments.first?.id == moment.id else { return }
+        withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }
     }
 
     // MARK: Guidance
@@ -469,6 +539,8 @@ struct GameScreen: View {
                     selected = nil
                     pending = nil
                     panelOpen = false
+                    SoundBoard.shared.play(.drum, volume: 0.7)
+                    Feedback.impact(0.8)
                     session.endTurn()
                 } label: {
                     VStack(spacing: 0) {
@@ -701,6 +773,7 @@ struct GameScreen: View {
         }
         pending = nil
         selected = pick == selected ? nil : pick
+        if pick != nil { SoundBoard.shared.play(.click, volume: 0.35) }
         if selected != nil {
             tab = .orders
             panelOpen = true

@@ -1076,3 +1076,23 @@ route with the goods each side receives and tolls paid. The Empire tab is rename
 land each becomes a person again, up to the land's population cap; elsewhere they scatter. No gold
 comes back, so recruiting and disbanding can't be cycled for profit; the gain is the grain their
 upkeep was costing. It's undoable like any other order. The AI doesn't disband yet.
+
+### Look and feel (polish pass)
+
+- **Title screen**: the painted board drifting behind a bronze serif title and "The end of the
+  Bronze Age · 1200 BC"; each empire a hanging banner (emblem, tagline, general, government);
+  choosing one sounds a horn before the game starts.
+- **Map**: terrain keeps its own colour; ownership is a bold inner border in the empire's colour
+  with a light wash. A paper grain and painted wave marks make it read as the board.
+- **Moments**: captures, losses, discoveries, war and peace, and disasters on the player's land
+  appear one at a time as ribbon banners with sound and haptics; captures sweep the new owner's
+  colour over the land, disasters shake or tint the screen.
+- **Movement**: marches and landings glide along their path before settling into arrows; battles
+  burst; while rivals move the camera follows them. When watching, each round's arrows replace the
+  last's.
+- **Battles**: terrain-coloured ground with marks, rocks, a river across the field for crossings,
+  a bronze frame on parchment, dust on hits, and a Victory/Defeat banner at the end. Routs read
+  as "X broke and fled; nobody fell".
+- **End of game**: a full-screen Victory or Defeat with the victory type, standings, and the
+  borders replayed round by round (the session records who held what each round).
+- **Sounds**: a click on selection, a drum on End turn, coins when spending.

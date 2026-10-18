@@ -268,7 +268,8 @@ struct OrderComposer: View {
         if walls > 0 { lines.append("They are behind walls.") }
         let terrain = engine.map.territory(to)!.terrain
         if (engine.rules.battle.terrain[terrain]?.defensePercent ?? 0) > 0 {
-            lines.append("The \(terrain.rawValue) favour the defender.")
+            lines.append(terrain == .forest || terrain == .desert ? "The \(terrain.rawValue) favours the defender."
+                                                                  : "The \(terrain.rawValue) favour the defender.")
         }
         switch order {
         case let .march(from, _):
@@ -358,7 +359,7 @@ struct TerritoryPanel: View {
         let home = engine.homeNetwork(of: human, in: state).contains(territory)
         if home, let strain = engine.supplyStrain(of: human, at: territory, in: state) {
             Text(strain.steps == 0 ? "Your capital." :
-                 "In supply · \(strain.steps) steps from the capital"
+                 "In supply · \(strain.steps) step\(strain.steps == 1 ? "" : "s") from the capital"
                  + (strain.extraGrain > 0 ? " · each unit here eats \(strain.extraGrain) extra grain" : ""))
                 .font(.caption).foregroundStyle(strain.extraGrain > 0 ? .orange : .secondary)
         }
@@ -398,7 +399,7 @@ struct TerritoryPanel: View {
                                 }
                             }
                             Spacer(minLength: 4)
-                            Text("\(stats.cost) 🪙 · 1 👥" + (stats.requires.map { " · 1 \(MapView.glyph($0))" } ?? ""))
+                            Text("\(stats.cost) gold · 1 👥" + (stats.requires.map { " · 1 \(MapView.glyph($0))" } ?? ""))
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.primary)
                         }

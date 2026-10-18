@@ -8,7 +8,7 @@ final class SoundBoard {
     static let shared = SoundBoard()
 
     enum Cue: String, CaseIterable {
-        case horn, clash, arrows, victory, defeat
+        case horn, clash, arrows, victory, defeat, click, drum, coins
     }
 
     /// Stored under this key in UserDefaults (read by `@AppStorage` in the replay).

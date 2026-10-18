@@ -13,6 +13,8 @@ struct SavedGame: Codable {
     var log: [LogLine]
     var battles: [BattleEntry]
     var savedAt: Date
+    /// Who held each territory at the start of each round, for the end-of-game replay.
+    var history: [[TerritoryID: CivilizationID]]?
 }
 
 /// One autosave slot in Application Support.

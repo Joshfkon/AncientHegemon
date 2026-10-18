@@ -191,7 +191,7 @@ struct ChronicleView: View {
         }
         .sheet(item: $replay) { entry in
             NavigationStack {
-                BattleReplayView(entry: entry, state: session.state, map: session.engine.map, autoplay: true)
+                BattleReplayView(entry: entry, state: session.state, map: session.engine.map, autoplay: true, perspective: session.human)
                     .id(entry.id)
                     .toolbar { Button("Done") { replay = nil } }
             }
@@ -252,55 +252,3 @@ struct CrisisView: View {
 }
 
 /// The opening screen: choose a civilization, or watch the AIs.
-struct CivPickerView: View {
-    let session: GameSession
-
-    var body: some View {
-        let engine = session.engine
-        let preview = session.state
-        VStack(spacing: 14) {
-            Text("ANCIENT HEGEMON").font(.custom("ChalkboardSE-Bold", size: 30))
-            Text(session.saved == nil ? "Choose your civilization" : "Or start anew as")
-                .font(.headline).foregroundStyle(.secondary)
-            HStack(spacing: 12) {
-                ForEach(engine.map.civilizations) { civ in
-                    Button { session.start(as: civ.id) } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Circle().fill(Palette.color(civ.id, preview)).frame(width: 12, height: 12)
-                                Text(civ.name).font(.title3.bold())
-                            }
-                            Text(civ.government == .republic ? "Republic" : "Monarchy").font(.caption)
-                            let land = ([civ.capital] + (engine.rules.start.realms[civ.id] ?? []))
-                                .compactMap { engine.map.territory($0)?.name }
-                            Text(land.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary)
-                            if let g = engine.rules.start.generals[civ.id] {
-                                Text("General \(g.name), \(traitName(g.trait))").font(.caption)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(10)
-                        .background(Palette.color(civ.id, preview).opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            if let game = session.saved {
-                Button { session.resume() } label: {
-                    VStack(spacing: 2) {
-                        Text("Continue as \(Palette.name(game.human, game.state)) · round \(game.state.turn)")
-                            .font(.headline)
-                        Text("Saved \(game.savedAt.formatted(date: .abbreviated, time: .shortened))")
-                            .font(.caption)
-                    }
-                    .padding(.horizontal, 8)
-                }
-                .buttonStyle(.borderedProminent)
-                Text("Starting a new game replaces the saved one.").font(.caption2).foregroundStyle(.secondary)
-            }
-            Button("Watch the empires play each other") { session.start(as: nil) }
-                .buttonStyle(.bordered)
-        }
-        .padding()
-    }
-}

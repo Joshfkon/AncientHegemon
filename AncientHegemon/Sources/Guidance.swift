@@ -46,7 +46,7 @@ struct QuickLookCard: View {
             if let human = session.human {
                 if owner == human {
                     let home = engine.homeNetwork(of: human, in: state).contains(id)
-                    Text(home ? (engine.supplyStrain(of: human, at: id, in: state).map { "In supply, \($0.steps) steps from the capital" } ?? "In supply")
+                    Text(home ? (engine.supplyStrain(of: human, at: id, in: state).map { "In supply, \($0.steps) step\($0.steps == 1 ? "" : "s") from the capital" } ?? "In supply")
                               : "⚠️ Cut off from your capital")
                         .font(.caption).foregroundStyle(home ? .secondary : Color.orange)
                     let levy = engine.levy(at: id, state)

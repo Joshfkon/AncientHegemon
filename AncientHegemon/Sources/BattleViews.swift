@@ -22,6 +22,13 @@ struct BattleReplayView: View {
         HStack(spacing: 16) {
             board
                 .aspectRatio(1, contentMode: .fit)
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color(red: 0.32, green: 0.24, blue: 0.15)))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Bronze.gradient, lineWidth: 3))
+                .shadow(color: .black.opacity(0.5), radius: 10, y: 4)
+                .overlay {
+                    if shown == report.frames.count - 1 { resultBanner.transition(.scale(scale: 1.6).combined(with: .opacity)) }
+                }
                 .padding(8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -34,6 +41,13 @@ struct BattleReplayView: View {
             .frame(width: 300)
         }
         .padding(.horizontal)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(colors: [Color(red: 0.93, green: 0.88, blue: 0.76), Color(red: 0.84, green: 0.76, blue: 0.6)],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+        )
+        .animation(.spring(duration: 0.5, bounce: 0.4), value: shown == report.frames.count - 1)
         .navigationTitle(map.territory(entry.territory)?.name ?? "Battle")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -120,12 +134,29 @@ struct BattleReplayView: View {
                 // Squares: the defender's rows at the top, the attacker's at the bottom.
                 ForEach(0..<25, id: \.self) { i in
                     let col = i % 5, row = 4 - i / 5
-                    Rectangle()
-                        .fill(rocks.contains(GridPoint(col, row)) ? Color(white: 0.35)
-                              : row == 2 ? Color(red: 0.86, green: 0.82, blue: 0.70) : Color(red: 0.78, green: 0.85, blue: 0.66))
-                        .border(Color.black.opacity(0.15))
-                        .frame(width: cell, height: cell)
-                        .offset(x: CGFloat(col) * cell, y: CGFloat(4 - row) * cell)
+                    let rock = rocks.contains(GridPoint(col, row))
+                    ZStack {
+                        Rectangle().fill(rock ? Self.rockColor : Self.ground(report.setup.terrain, row: row, col: col))
+                        if rock {
+                            Image(systemName: "mountain.2.fill").font(.system(size: cell * 0.4)).foregroundStyle(.white.opacity(0.35))
+                        } else if let glyph = Self.groundMark(report.setup.terrain), (col + row) % 3 == 0 {
+                            Image(systemName: glyph).font(.system(size: cell * 0.22)).foregroundStyle(.black.opacity(0.12))
+                                .offset(x: cell * 0.25, y: cell * 0.25)
+                        }
+                    }
+                    .overlay(Rectangle().stroke(Color.black.opacity(0.12), lineWidth: 0.5))
+                    .frame(width: cell, height: cell)
+                    .offset(x: CGFloat(col) * cell, y: CGFloat(4 - row) * cell)
+                }
+                // A river crossing runs across the middle of the field.
+                if report.setup.approach == .river || report.setup.approach == .strait, cell > 1 {
+                    Path { p in
+                        p.move(to: CGPoint(x: 0, y: cell * 2.5))
+                        for x in stride(from: 0, through: cell * 5, by: cell / 4) {
+                            p.addLine(to: CGPoint(x: x, y: cell * 2.5 + sin(x / cell * 3) * cell * 0.12))
+                        }
+                    }
+                    .stroke(Color(red: 0.2, green: 0.45, blue: 0.85).opacity(0.65), lineWidth: cell * 0.18)
                 }
                 // Strikes this round, drawn from striker to target.
                 StrikeLines(lines: current.strikes.compactMap { strike in
@@ -143,6 +174,7 @@ struct BattleReplayView: View {
                                                    : report.setup.defender.civ, state),
                               hit: lost > 0 ? shown : nil)
                         .frame(width: cell * 0.82, height: cell * 0.82)
+                        .background { if lost > 0 { DustPuff().id(shown) } }
                         .overlay { if lost > 0 { LossMarker(lost: lost).id(shown) } }
                         .position(center(block.position, cell))
                         .opacity(block.status == .routed ? 0.3 : 1)
@@ -150,6 +182,52 @@ struct BattleReplayView: View {
                 }
             }
         }
+    }
+
+    // MARK: Look
+
+    static let rockColor = Color(red: 0.36, green: 0.33, blue: 0.3)
+
+    /// The field's ground for the battle's terrain, lightly chequered.
+    static func ground(_ terrain: Terrain, row: Int, col: Int) -> Color {
+        let base: (Double, Double, Double) = switch terrain {
+        case .plains: (0.62, 0.74, 0.42)
+        case .hills: (0.55, 0.66, 0.4)
+        case .forest: (0.36, 0.52, 0.3)
+        case .mountains: (0.6, 0.6, 0.52)
+        case .desert: (0.88, 0.76, 0.5)
+        }
+        let k = (row + col) % 2 == 0 ? 1.0 : 0.94
+        return Color(red: base.0 * k, green: base.1 * k, blue: base.2 * k)
+    }
+
+    static func groundMark(_ terrain: Terrain) -> String? {
+        switch terrain {
+        case .forest: "tree.fill"
+        case .hills: "triangle.fill"
+        case .desert: "sun.dust.fill"
+        case .plains: "leaf.fill"
+        case .mountains: nil
+        }
+    }
+
+    /// A big banner over the field when the battle ends.
+    private var resultBanner: some View {
+        let won = report.winner == .attacker
+        let winner = won ? report.setup.attacker.civ : report.setup.defender.civ
+        let good = perspective.map { $0 == winner } ?? true
+        return VStack(spacing: 2) {
+            Text(perspective == nil ? (won ? "TAKEN" : "HELD") : (good ? "VICTORY" : "DEFEAT"))
+                .font(.system(size: 34, weight: .black, design: .serif))
+                .tracking(4)
+            Text(Palette.name(winner, state) + (won ? " take the field" : " hold the field"))
+                .font(.callout.bold())
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 28).padding(.vertical, 10)
+        .background(BannerRibbon().fill(good ? Palette.color(perspective ?? winner, state) : Color(red: 0.35, green: 0.08, blue: 0.08))
+            .overlay(BannerRibbon().stroke(Bronze.gradient, lineWidth: 2)))
+        .shadow(color: .black.opacity(0.5), radius: 10, y: 4)
     }
 
     private func center(_ p: GridPoint, _ cell: CGFloat) -> CGPoint {
@@ -172,13 +250,22 @@ struct BattleReplayView: View {
         }
     }
 
+    /// "Losses: …", or that a side was routed when it fled rather than fell.
+    private var lossText: String {
+        let a = report.attackerLosses.total, d = report.defenderLosses.total
+        if a == 0 && d == 0 {
+            let routed = report.winner == .attacker ? report.setup.defender.civ : report.setup.attacker.civ
+            return "\(Palette.name(routed, state)) broke and fled; nobody fell."
+        }
+        return "Losses: \(Palette.name(report.setup.attacker.civ, state)) \(a), \(Palette.name(report.setup.defender.civ, state)) \(d)"
+    }
+
     private var outcome: some View {
         let won = report.winner == .attacker
         let winner = won ? report.setup.attacker.civ : report.setup.defender.civ
         return VStack(spacing: 4) {
             Text("\(won ? "Victory" : "Held") · \(Palette.name(winner, state))").font(.headline)
-            Text("Losses: attacker \(report.attackerLosses.total), defender \(report.defenderLosses.total)")
-                .font(.callout)
+            Text(lossText).font(.callout)
             if report.attackerGeneralKilled || report.defenderGeneralKilled {
                 Text("A general fell in the fighting.").font(.callout).foregroundStyle(.red)
             }
@@ -211,6 +298,26 @@ private struct StrikeLines: View {
             }
         }
         .onAppear { withAnimation(.easeOut(duration: 0.35)) { progress = 1 } }
+        .allowsHitTesting(false)
+    }
+}
+
+/// A puff of dust kicked up around a block that was hit.
+private struct DustPuff: View {
+    @State private var out = false
+    var body: some View {
+        ZStack {
+            ForEach(0..<5, id: \.self) { i in
+                let angle = Double(i) / 5 * 2 * .pi + 0.4
+                Circle()
+                    .fill(Color(red: 0.75, green: 0.65, blue: 0.5))
+                    .frame(width: 18, height: 18)
+                    .offset(x: out ? cos(angle) * 30 : 0, y: out ? sin(angle) * 30 : 0)
+                    .scaleEffect(out ? 1.6 : 0.4)
+                    .opacity(out ? 0 : 0.8)
+            }
+        }
+        .onAppear { withAnimation(.easeOut(duration: 0.7).delay(0.2)) { out = true } }
         .allowsHitTesting(false)
     }
 }

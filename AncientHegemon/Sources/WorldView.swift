@@ -107,6 +107,8 @@ struct MapView: View {
     var onLongPress: (MapPick?) -> Void = { _ in }
     /// What happened this round, drawn as arrows, crossed swords and flashes.
     var marks: [MapMark] = []
+    /// When each mark appeared (parallel to `marks`), to animate new ones.
+    var markTimes: [Date] = []
     /// An attack being planned: an arrow with its label (the odds).
     var planned: (from: TerritoryID, to: TerritoryID, label: String?)?
     /// The player's armies that could still act this turn: they pulse.
@@ -117,6 +119,8 @@ struct MapView: View {
     var center: MapCenter?
     /// Territories to spotlight (e.g. where a resource comes from): the rest is dimmed.
     var spotlight: Set<TerritoryID> = []
+    /// Territories that just changed hands: a sweep of the new owner's colour.
+    var flashes: [TerritoryID: Date] = [:]
     @State private var viewSize: CGSize = .zero
     private let art = BoardArt.shared
 
@@ -130,9 +134,10 @@ struct MapView: View {
     var body: some View {
         GeometryReader { geo in
             let t = BoardTransform(fitting: geo.size, zoom: zoom, pan: pan)
-            TimelineView(.animation(minimumInterval: 1 / 15, paused: idle.isEmpty)) { timeline in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: idle.isEmpty && flashes.isEmpty && !animatingMarks)) { timeline in
                 Canvas { context, _ in
-                    draw(&context, t)
+                    draw(&context, t, now: timeline.date)
+                    drawFlashes(&context, t, now: timeline.date)
                     drawIdle(&context, t, phase: timeline.date.timeIntervalSinceReferenceDate)
                 }
             }
@@ -254,13 +259,20 @@ struct MapView: View {
         .desert: Color(red: 0.93, green: 0.69, blue: 0.21),
     ]
 
-    private func draw(_ context: inout GraphicsContext, _ t: BoardTransform) {
+    /// Marks young enough to still be moving.
+    private var animatingMarks: Bool {
+        guard let last = markTimes.last else { return false }
+        return Date.now.timeIntervalSince(last) < 1.2
+    }
+
+    private func draw(_ context: inout GraphicsContext, _ t: BoardTransform, now: Date = .now) {
         let f = BoardArt.frame
         let board = Path(CGRect(origin: t.point([f.minX, f.minY]),
                                 size: CGSize(width: f.width * t.scale, height: f.height * t.scale)))
         context.fill(board, with: .linearGradient(
-            Gradient(colors: [Color(red: 0.16, green: 0.36, blue: 0.74), Color(red: 0.24, green: 0.50, blue: 0.82)]),
+            Gradient(colors: [Color(red: 0.12, green: 0.30, blue: 0.62), Color(red: 0.20, green: 0.45, blue: 0.76)]),
             startPoint: t.point([f.minX, f.minY]), endPoint: t.point([f.maxX, f.maxY])))
+        drawWaves(&context, t)
 
         // Land, painted by terrain and tinted by owner.
         for territory in map.territories {
@@ -269,10 +281,12 @@ struct MapView: View {
             context.fill(path, with: .color(Self.terrain[territory.terrain] ?? .green))
             if let owner = state.owner(of: territory.id) {
                 let color = Palette.color(owner, state)
-                context.fill(path, with: .color(color.opacity(0.38)))
+                // A light wash keeps the terrain readable; the bold inner border says whose it is.
+                context.fill(path, with: .color(color.opacity(0.13)))
                 context.drawLayer { layer in
                     layer.clip(to: path)
-                    layer.stroke(path, with: .color(color), lineWidth: 5)
+                    layer.stroke(path, with: .color(color), lineWidth: 9 * t.detail)
+                    layer.stroke(path, with: .color(.white.opacity(0.35)), lineWidth: 1.2)
                     // Relations with the player: a thin inner line, green at peace, red at war.
                     if let me = focus, owner != me, state.isPlayer(owner) {
                         layer.stroke(path, with: .color(state.atPeace(me, owner) ? .green : .red),
@@ -282,6 +296,13 @@ struct MapView: View {
                 }
             }
             context.stroke(path, with: .color(.black.opacity(0.85)), lineWidth: 1.1)
+        }
+
+        // A paper grain over everything, so it reads as the painted board rather than flat colour.
+        context.drawLayer { layer in
+            layer.opacity = 0.18
+            layer.blendMode = .multiply
+            layer.fill(board, with: .tiledImage(Self.paper, origin: t.point([f.minX, f.minY]), scale: 0.5))
         }
 
         // Rivers and peaks, as painted.
@@ -327,7 +348,7 @@ struct MapView: View {
         case .threats: drawThreats(&context, t)
         case .armies, .resources: break
         }
-        drawMarks(&context, t)
+        drawMarks(&context, t, now: now)
         if !spotlight.isEmpty {
             for territory in map.territories {
                 guard let shape = art.territories[territory.id] else { continue }
@@ -341,6 +362,7 @@ struct MapView: View {
         }
 
         // Names in the board's hand lettering, then armies and fleets.
+        var infoPlates: [CGRect] = []
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
             let p = t.point(shape.label)
@@ -358,7 +380,7 @@ struct MapView: View {
                 let k = t.detail
                 let army = (state.armies[territory.id]?.units.total ?? 0) > 0
                 let below: CGFloat = army ? 7.5 * k + (k >= 1.5 ? 8 * k + 10 : 4) + 6 * k : 0
-                drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k)
+                drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k, avoiding: &infoPlates)
             }
             if layer == .resources {
                 drawResources(&context, territory, at: t.point(shape.token), scale: t.detail)
@@ -402,6 +424,42 @@ struct MapView: View {
 }
 
 extension MapView {
+    /// A seeded paper-grain texture, made once.
+    static let paper: Image = {
+        let size = 128
+        var rng = SystemRandomNumberGenerator()
+        _ = rng
+        var seed: UInt64 = 0x1200BC
+        func next() -> UInt64 { seed &+= 0x9E3779B97F4A7C15; var z = seed; z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9; z = (z ^ (z >> 27)) &* 0x94D049BB133111EB; return z ^ (z >> 31) }
+        var pixels = [UInt8](repeating: 255, count: size * size * 4)
+        for i in 0..<(size * size) {
+            let v = UInt8(170 + Int(next() % 86))
+            pixels[i * 4] = v; pixels[i * 4 + 1] = v; pixels[i * 4 + 2] = UInt8(max(0, Int(v) - 12)); pixels[i * 4 + 3] = 255
+        }
+        let provider = CGDataProvider(data: Data(pixels) as CFData)!
+        let cg = CGImage(width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: size * 4,
+                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                         provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)!
+        return Image(decorative: cg, scale: 1)
+    }()
+
+    /// Little painted wave marks scattered over the sea, as on old maps.
+    fileprivate func drawWaves(_ context: inout GraphicsContext, _ t: BoardTransform) {
+        let f = BoardArt.frame
+        var waves = Path()
+        var seed: UInt64 = 7
+        func rand() -> Double { seed = seed &* 6364136223846793005 &+ 1442695040888963407; return Double(seed >> 33) / Double(1 << 31) }
+        for _ in 0..<160 {
+            let x = f.minX + rand() * f.width, y = f.minY + rand() * f.height
+            let c = t.point([x, y])
+            let w = 7 * t.detail
+            waves.move(to: CGPoint(x: c.x - w, y: c.y))
+            waves.addQuadCurve(to: CGPoint(x: c.x, y: c.y), control: CGPoint(x: c.x - w / 2, y: c.y - w * 0.45))
+            waves.addQuadCurve(to: CGPoint(x: c.x + w, y: c.y), control: CGPoint(x: c.x + w / 2, y: c.y - w * 0.45))
+        }
+        context.stroke(waves, with: .color(.white.opacity(0.22)), style: StrokeStyle(lineWidth: 1 * t.detail, lineCap: .round))
+    }
+
     private func token(_ t: TerritoryID, _ bt: BoardTransform) -> CGPoint? {
         art.territories[t].map { bt.point($0.token) }
     }
@@ -430,7 +488,8 @@ extension MapView {
     }
 
     /// "🌾3 👥2 🧱🌱" under a territory's name.
-    fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint, scale: CGFloat) {
+    fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint, scale: CGFloat,
+                                  avoiding placed: inout [CGRect]) {
         guard let engine else { return }
         let land = state.land[territory.id]
         let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph).joined()
@@ -439,11 +498,31 @@ extension MapView {
             .font(.system(size: 7.5 * scale, weight: .semibold))
             .foregroundStyle(.black.opacity(0.8))
         let resolved = context.resolve(text)
-        let size = resolved.measure(in: CGSize(width: 200, height: 20))
-        context.fill(Path(roundedRect: CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2,
-                                              width: size.width + 4, height: size.height), cornerRadius: 3 * scale),
-                     with: .color(.white.opacity(0.6)))
-        context.draw(resolved, at: p)
+        let size = resolved.measure(in: CGSize(width: 400, height: 60))
+        // Step down past any plate already drawn here, so neighbours don't stack on each other.
+        var rect = CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2, width: size.width + 4, height: size.height)
+        for _ in 0..<4 where placed.contains(where: { $0.intersects(rect) }) {
+            rect.origin.y += size.height + 2
+        }
+        placed.append(rect)
+        context.fill(Path(roundedRect: rect, cornerRadius: 3 * scale), with: .color(.white.opacity(0.7)))
+        context.draw(resolved, at: CGPoint(x: rect.midX, y: rect.midY))
+    }
+
+    /// A capture: the new owner's colour floods the land, then settles.
+    fileprivate func drawFlashes(_ context: inout GraphicsContext, _ t: BoardTransform, now: Date) {
+        for (id, start) in flashes {
+            let e = now.timeIntervalSince(start)
+            guard e >= 0, e < 1.6, let shape = art.territories[id], let owner = state.owner(of: id) ?? state.armies[id]?.owner else { continue }
+            let path = t.path(shape.polygon)
+            let color = Palette.color(owner, state)
+            let k = e / 1.6
+            context.fill(path, with: .color(color.opacity(0.75 * (1 - k))))
+            context.drawLayer { layer in
+                layer.clip(to: path)
+                layer.stroke(path, with: .color(.white.opacity(1 - k)), lineWidth: (4 + 18 * k) * t.detail)
+            }
+        }
     }
 
     /// A breathing ring round each army that could still act this turn.
@@ -486,17 +565,38 @@ extension MapView {
 
     /// This round's happenings: arrows for marches and landings, swords for battles, flashes for
     /// captures, glyphs for disasters.
-    fileprivate func drawMarks(_ context: inout GraphicsContext, _ t: BoardTransform) {
-        for mark in marks {
+    fileprivate func drawMarks(_ context: inout GraphicsContext, _ t: BoardTransform, now: Date) {
+        for (i, mark) in marks.enumerated() {
+            // New marks animate in: armies glide along their path, battles burst.
+            let age = i < markTimes.count ? now.timeIntervalSince(markTimes[i]) : 10
+            let glide = min(1, max(0, age / 0.6))
             switch mark {
             case let .march(civ, from, to, units):
                 guard let a = token(from, t), let b = token(to, t) else { continue }
-                arrow(&context, from: a, to: b, color: Palette.color(civ, state), label: "\(units)", t)
+                if glide < 1 {
+                    marching(&context, from: a, to: b, progress: glide, color: Palette.color(civ, state), units: units, t)
+                } else {
+                    arrow(&context, from: a, to: b, color: Palette.color(civ, state), label: "\(units)", t)
+                }
             case let .landing(civ, sea, to, units):
                 guard let s = art.seas[sea].map(t.point), let b = token(to, t) else { continue }
-                arrow(&context, from: s, to: b, color: Palette.color(civ, state), label: "⛵\(units)", t)
+                if glide < 1 {
+                    marching(&context, from: s, to: b, progress: glide, color: Palette.color(civ, state), units: units, t)
+                } else {
+                    arrow(&context, from: s, to: b, color: Palette.color(civ, state), label: "⛵\(units)", t)
+                }
             case let .battle(at, winner, _):
                 guard let c = token(at, t) else { continue }
+                if age < 0.9 {
+                    // A clash: a flash and an expanding ring.
+                    let k = age / 0.9
+                    let r = (8 + 30 * k) * t.detail
+                    context.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
+                                   with: .color(.orange.opacity(1 - k)), lineWidth: 3 * (1 - k) + 1)
+                    context.fill(Path(ellipseIn: CGRect(x: c.x - 10 * t.detail, y: c.y - 10 * t.detail, width: 20 * t.detail, height: 20 * t.detail)),
+                                 with: .color(.yellow.opacity(0.8 * (1 - k))))
+                    context.draw(Text("⚔︎").font(.system(size: (14 + 10 * (1 - k)) * t.detail, weight: .black)).foregroundStyle(.white), at: c)
+                }
                 let r = 7 * t.detail
                 context.fill(Path(ellipseIn: CGRect(x: c.x + r * 0.6, y: c.y - r * 1.8, width: r * 1.6, height: r * 1.6)),
                              with: .color(Palette.color(winner, state)))
@@ -530,6 +630,29 @@ extension MapView {
                                  _ t: BoardTransform) {
         guard let a = token(plan.from, t), let b = token(plan.to, t) else { return }
         arrow(&context, from: a, to: b, color: .white, label: plan.label, t, width: 3.5)
+    }
+
+    /// An army on the move: a trail growing behind a token sliding along the path.
+    private func marching(_ context: inout GraphicsContext, from a: CGPoint, to b: CGPoint, progress: Double,
+                          color: Color, units: Int, _ t: BoardTransform) {
+        let eased = progress < 0.5 ? 2 * progress * progress : 1 - pow(-2 * progress + 2, 2) / 2
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len = max(1, hypot(dx, dy))
+        let bend = CGPoint(x: (a.x + b.x) / 2 - dy / len * len * 0.15, y: (a.y + b.y) / 2 + dx / len * len * 0.15)
+        func at(_ u: Double) -> CGPoint {
+            let v = 1 - u
+            return CGPoint(x: v * v * a.x + 2 * v * u * bend.x + u * u * b.x, y: v * v * a.y + 2 * v * u * bend.y + u * u * b.y)
+        }
+        var trail = Path()
+        trail.move(to: a)
+        for step in 1...20 { trail.addLine(to: at(eased * Double(step) / 20)) }
+        context.stroke(trail, with: .color(color.opacity(0.8)), style: StrokeStyle(lineWidth: 3 * t.detail, lineCap: .round, dash: [5, 4]))
+        let p = at(eased)
+        let r = 8 * t.detail
+        let disc = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
+        context.fill(disc, with: .color(color))
+        context.stroke(disc, with: .color(.white), lineWidth: 1.5)
+        context.draw(Text("\(units)").font(.system(size: 9 * t.detail, weight: .heavy)).foregroundStyle(.white), at: p)
     }
 
     /// A curved arrow between two points, stopping short of the token, with an optional label.

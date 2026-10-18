@@ -55,6 +55,10 @@ final class GameSession {
     private(set) var saved: SavedGame?
     /// What the rivals did since the player's last turn, marked on the map until it ends again.
     private(set) var marks: [MapMark] = []
+    /// When each mark appeared, so new ones can animate in.
+    private(set) var markTimes: [Date] = []
+    /// Who held each territory at the start of each round, for the end-of-game replay.
+    private(set) var history: [[TerritoryID: CivilizationID]] = []
     /// The chronicle lines since the player last ended a turn, shown as a summary card.
     private(set) var report: [LogLine] = []
     var showReport = false
@@ -62,9 +66,13 @@ final class GameSession {
     var skipping = false
     /// The odds of the attack being planned, for the arrow on the map.
     var plannedOdds: Double?
+    /// Big moments waiting to be shown, one at a time.
+    var moments: [Moment] = []
+    /// Territories that just changed hands, with when, for a colour sweep on the map.
+    private(set) var flashes: [TerritoryID: Date] = [:]
     /// States to step back to within the turn. Anything left to chance (a battle, an event)
     /// clears it, so undo can't re-roll fate.
-    private var undoStack: [(state: GameState, log: [LogLine], battles: [BattleEntry], nextID: Int)] = []
+    private var undoStack: [(state: GameState, log: [LogLine], battles: [BattleEntry], nextID: Int, marks: Int)] = []
     var canUndo: Bool { isHumanTurn && !undoStack.isEmpty }
     private var reportFrom = 0
 
@@ -91,6 +99,8 @@ final class GameSession {
         refreshEconomy()
         log = []
         battles = []
+        history = []
+        snapshotBorders()
         message = nil
         replay = nil
         started = true
@@ -111,6 +121,7 @@ final class GameSession {
         state = game.state
         log = game.log
         battles = game.battles
+        history = game.history ?? []
         nextID = (game.log.map(\.id) + game.battles.map(\.id)).max() ?? 0
         message = nil
         replay = nil
@@ -128,7 +139,7 @@ final class GameSession {
             return
         }
         let game = SavedGame(human: human, seed: seed, state: state, log: Array(log.prefix(150)),
-                             battles: Array(battles.prefix(30)), savedAt: .now)
+                             battles: Array(battles.prefix(30)), savedAt: .now, history: history)
         SaveStore.save(game)
         saved = game
     }
@@ -155,7 +166,7 @@ final class GameSession {
     func order(_ command: Command) -> Bool {
         guard isHumanTurn else { return false }
         let before = state
-        let snapshot = (state: state, log: log, battles: battles, nextID: nextID)
+        let snapshot = (state: state, log: log, battles: battles, nextID: nextID, marks: marks.count)
         do {
             var s = state
             let events = try engine.apply(command, to: &s)
@@ -163,12 +174,20 @@ final class GameSession {
             if case .endTurn = command {
                 undoStack = []
                 marks = []
+                markTimes = []
                 showReport = false
                 skipping = false
                 reportFrom = nextID
             }
             record(events, round: before.turn, before: before, after: s)
             state = s
+            // The player's own marches glide too.
+            if case .endTurn = command {} else {
+                for mark in MapMark.from(events, before: before, after: s) {
+                    marks.append(mark)
+                    markTimes.append(.now)
+                }
+            }
             if case .endTurn = command {
             } else if s.rng != before.rng || events.contains(where: { if case .battle = $0 { true } else { false } }) {
                 undoStack = []  // chance has spoken
@@ -176,6 +195,10 @@ final class GameSession {
                 undoStack.append(snapshot)
             }
             autosave()
+            switch command {
+            case .recruit, .buildShips, .build, .appointGeneral, .honorGeneral: SoundBoard.shared.play(.coins, volume: 0.6)
+            default: break
+            }
             if case .endTurn = command { Task { await runAITurns() } }
             return true
         } catch {
@@ -193,6 +216,8 @@ final class GameSession {
         log = last.log
         battles = last.battles
         nextID = last.nextID
+        marks = Array(marks.prefix(last.marks))
+        markTimes = Array(markTimes.prefix(last.marks))
         message = nil
         autosave()
     }
@@ -224,10 +249,15 @@ final class GameSession {
         }.value
         record(events, round: start.turn, before: start, after: after)
         state = after
+        if after.turn > start.turn || after.winner != nil { snapshotBorders() }
         // Reveal this rival's moves one at a time, so they can be followed on the map.
         for mark in MapMark.from(events, before: start, after: after) {
             marks.append(mark)
-            if human != nil, !skipping { try? await Task.sleep(for: .milliseconds(220)) }
+            markTimes.append(.now)
+            if human != nil, !skipping {
+                let pause = if case .battle = mark { 700 } else if case .march = mark { 650 } else { 300 }
+                try? await Task.sleep(for: .milliseconds(pause))
+            }
         }
     }
 
@@ -239,6 +269,9 @@ final class GameSession {
         busy = true
         defer { busy = false }
         let round = state.turn
+        // Watching: each round's moves replace the last round's on the map.
+        marks = []
+        markTimes = []
         repeat {
             await playOneAITurn()
         } while !isOver && state.turn == round
@@ -283,6 +316,57 @@ final class GameSession {
         case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."
         default: return "That can't be done (\(e))."
         }
+    }
+
+    private func snapshotBorders() {
+        var owners: [TerritoryID: CivilizationID] = [:]
+        for (t, land) in state.land { if let o = land.owner { owners[t] = o } }
+        history.append(owners)
+    }
+
+    // MARK: Moments
+
+    private func noteMoments(_ events: [GameEvent], before: GameState, after: GameState) {
+        guard let me = human else { return }
+        var new: [Moment] = []
+        for event in events {
+            switch event {
+            case let .captured(civ, t, from):
+                flashes[t] = .now
+                if civ == me { new.append(Moment(kind: .captured(t))) }
+                else if from == me { new.append(Moment(kind: .lost(t))) }
+            case let .discovery(civ, field, level) where civ == me:
+                new.append(Moment(kind: .discovery(field, level)))
+            case let .peaceMade(pair) where pair.a == me || pair.b == me:
+                new.append(Moment(kind: .peace(pair.a == me ? pair.b : pair.a)))
+            case let .warDeclared(by, on) where by == me || on == me:
+                new.append(Moment(kind: .war(by == me ? on : by)))
+            case let .event(r) where r.civ == me:
+                if [.famine, .drought, .flood, .plague, .earthquake, .seaPeoples, .barbarians, .revolt].contains(r.kind) {
+                    new.append(Moment(kind: .disaster(r.kind, r.territory)))
+                }
+            default:
+                break
+            }
+        }
+        moments.append(contentsOf: new)
+        if moments.count > 4 { moments.removeFirst(moments.count - 4) }
+        // Let the sweeps fade, then forget them, so the map stops redrawing.
+        if !flashes.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let now = Date.now
+                flashes = flashes.filter { now.timeIntervalSince($0.value) < 1.7 }
+            }
+        }
+    }
+
+    #if DEBUG
+    func demoFlash(_ t: TerritoryID) { flashes[t] = .now }
+    #endif
+
+    func dismissMoment() {
+        if !moments.isEmpty { moments.removeFirst() }
     }
 
     // MARK: Chronicle
@@ -407,6 +491,7 @@ final class GameSession {
             default: break
             }
         }
+        noteMoments(events, before: before, after: after)
         log.insert(contentsOf: lines.reversed(), at: 0)
         if log.count > 300 { log.removeLast(log.count - 300) }
         if battles.count > 100 { battles.removeLast(battles.count - 100) }

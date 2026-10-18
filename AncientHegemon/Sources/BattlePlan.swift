@@ -244,7 +244,10 @@ struct Outlook {
 
 /// Small touches of feel: haptics on choices and battle hits.
 enum Feedback {
-    @MainActor static func select() { UISelectionFeedbackGenerator().selectionChanged() }
+    @MainActor static func select() {
+        UISelectionFeedbackGenerator().selectionChanged()
+        SoundBoard.shared.play(.click, volume: 0.5)
+    }
     @MainActor static func impact(_ weight: CGFloat) {
         UIImpactFeedbackGenerator(style: weight > 0.6 ? .heavy : .medium).impactOccurred(intensity: max(0.3, min(1, weight)))
     }
