@@ -508,7 +508,7 @@ struct GameScreen: View {
                 spotlit = nil
             } label: {
                 HStack(spacing: 6) {
-                    Text("\(MapView.glyph(r)) Where \(r.rawValue) comes from")
+                    Text("\(MapView.glyph(r)) Where to find \(r.rawValue)")
                     Image(systemName: "xmark.circle.fill")
                 }
                 .font(.callout.bold())
