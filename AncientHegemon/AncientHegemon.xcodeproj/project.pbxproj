@@ -1,0 +1,354 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */; };
+		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
+		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
+		CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5ACD1C217BD355BA7B28AFB5 /* HegemonCore */; };
+		D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */; };
+		E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
+		3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleViews.swift; sourceTree = "<group>"; };
+		7DEFB823D986E1A428DCF40F /* MapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLayout.swift; sourceTree = "<group>"; };
+		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0154D70203F3EB68C8F8532 /* HegemonCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HegemonCore; path = ../HegemonCore; sourceTree = SOURCE_ROOT; };
+		E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AncientHegemonApp.swift; sourceTree = "<group>"; };
+		FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A144F32226E1F43E77413F8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6E85AD14D5B595611F91587B = {
+			isa = PBXGroup;
+			children = (
+				732CB08F6BDCAAA40B857620 /* Packages */,
+				BFA8AFED8A6372F6F5B96C27 /* Sources */,
+				7BD20A532AA72D17F2858F8E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		732CB08F6BDCAAA40B857620 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				D0154D70203F3EB68C8F8532 /* HegemonCore */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		7BD20A532AA72D17F2858F8E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BFA8AFED8A6372F6F5B96C27 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */,
+				3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */,
+				FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */,
+				7DEFB823D986E1A428DCF40F /* MapLayout.swift */,
+				274DD8EB3BAAB27A38991F2C /* WorldView.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A7D089A5C2CF4618AD3DC15B /* AncientHegemon */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0871924E092DD5BF9C1A11F4 /* Build configuration list for PBXNativeTarget "AncientHegemon" */;
+			buildPhases = (
+				7C2AEEF6E020A2DC16CD6C9F /* Sources */,
+				A144F32226E1F43E77413F8E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AncientHegemon;
+			packageProductDependencies = (
+				5ACD1C217BD355BA7B28AFB5 /* HegemonCore */,
+			);
+			productName = AncientHegemon;
+			productReference = C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CF0BF32E831B81BAC7C9E1F8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					A7D089A5C2CF4618AD3DC15B = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = F6BB207D346ECD33B74BB069 /* Build configuration list for PBXProject "AncientHegemon" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 6E85AD14D5B595611F91587B;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				94338483EA9D99D519226843 /* XCLocalSwiftPackageReference "../HegemonCore" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7BD20A532AA72D17F2858F8E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A7D089A5C2CF4618AD3DC15B /* AncientHegemon */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7C2AEEF6E020A2DC16CD6C9F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */,
+				E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */,
+				4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */,
+				70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */,
+				B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		28C29918A26EB3FCE9AD7EA9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5D9A8D3315FB27DA27A9E64B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joshuakonstantinos.ancienthegemon;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		680A94468D4CC76FEF422C7C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.joshuakonstantinos.ancienthegemon;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		9DDD78B374A03AAAEE1B8BE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0871924E092DD5BF9C1A11F4 /* Build configuration list for PBXNativeTarget "AncientHegemon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5D9A8D3315FB27DA27A9E64B /* Debug */,
+				680A94468D4CC76FEF422C7C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F6BB207D346ECD33B74BB069 /* Build configuration list for PBXProject "AncientHegemon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28C29918A26EB3FCE9AD7EA9 /* Debug */,
+				9DDD78B374A03AAAEE1B8BE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		94338483EA9D99D519226843 /* XCLocalSwiftPackageReference "../HegemonCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../HegemonCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5ACD1C217BD355BA7B28AFB5 /* HegemonCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HegemonCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CF0BF32E831B81BAC7C9E1F8 /* Project object */;
+}

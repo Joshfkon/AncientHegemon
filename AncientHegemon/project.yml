@@ -1,0 +1,29 @@
+# Generates AncientHegemon.xcodeproj: run `xcodegen` in this folder after changing it.
+name: AncientHegemon
+options:
+  bundleIdPrefix: com.joshuakonstantinos
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  HegemonCore:
+    path: ../HegemonCore
+targets:
+  AncientHegemon:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: HegemonCore
+        product: HegemonCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.joshuakonstantinos.ancienthegemon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Hegemon
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

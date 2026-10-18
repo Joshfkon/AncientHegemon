@@ -37,6 +37,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     (8 geography-weighted events, barbarian raids, revolts), region tags in `map.json`, AI court
     phase, and lead/government/event reporting in `hegemon-sim`. Tests use `Engine.calm()` /
     `Engine.bare()` rule variants for exact-number scenarios. 114 tests.
+  - **Simulator preview app** (start of step 7, at Josh's request): `AncientHegemon/`, generated
+    by xcodegen from `project.yml` (run `xcodegen` there after changing it). It plays an
+    AI-vs-AI game round by round on a schematic placeholder map (approximate lon/lat
+    positions in `MapLayout.swift`), shows each empire's land, army, gold, legitimacy and
+    ruler, keeps a chronicle, and replays any battle on the 5×5 board. SwiftUI Canvas only so
+    far; no human player, no painted-board art, no SpriteKit yet.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.
