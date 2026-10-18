@@ -23,8 +23,12 @@ struct GameScreen: View {
     @State private var quickLook: TerritoryID?
     @State private var explain: StatTopic?
     @State private var tip: Tip?
-    @State private var laterOffers: Set<CivilizationID> = []
+    /// Tips waiting their turn, shown one at a time in the order of `Tip.allCases`.
+    @State private var tipQueue: [Tip] = []
+    /// The last chronicle line the player has seen, for the Chronicle badge.
+    @State private var seenLog = 0
     @State private var idleIndex = 0
+    @State private var mapCenter: MapCenter?
 
     enum PanelTab: String, CaseIterable {
         case orders = "Orders", empire = "Realm", diplomacy = "Rivals", log = "Chronicle"
@@ -41,13 +45,15 @@ struct GameScreen: View {
                     onLongPress: { pick in
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
-                    marks: session.marks, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [])
+                    marks: session.marks, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
+                    trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
                 .ignoresSafeArea()
             overlays
                 .padding(.trailing, panelOpen ? Self.panelWidth : 0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            if session.showReport, session.isHumanTurn {
+            // One interruption at a time: the very first tip, then the news.
+            if session.showReport, session.isHumanTurn, tip != .map {
                 TurnReportCard(session: session) { t in
                     selected = .territory(t)
                     session.showReport = false
@@ -87,7 +93,21 @@ struct GameScreen: View {
             }
         }
         .onChange(of: session.state.turn) { _, _ in pending = nil }
-        .onAppear { offer(.map) }
+        .onAppear {
+            // Start close in on the player's own land.
+            if let human = session.human, let seat = engine.seat(of: human, in: state) {
+                mapCenter = MapCenter(territory: seat, minZoom: 1.7, onlyIfHidden: false, id: 1)
+            }
+            offer(.map)
+        }
+        .onChange(of: focusTerritory) { _, t in
+            guard let t, panelOpen else { return }
+            mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
+        .onChange(of: panelOpen) { _, open in
+            guard open, let t = focusTerritory else { return }
+            mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
         .onChange(of: session.showReport) { _, shown in if shown { offer(.rivals) } }
         .onChange(of: pending) { _, p in
             if case let .march(_, to)? = p, state.armies[to].map({ $0.owner != session.human }) ?? false { offer(.battle) }
@@ -123,8 +143,15 @@ struct GameScreen: View {
                     .onTapGesture { session.message = nil }
                     .transition(.opacity)
             }
-            if let from = peaceOffer {
-                PeaceOfferCard(from: from, session: session) { laterOffers.insert(from) }
+            if !session.showReport, tip != .map, session.isHumanTurn {
+                HStack(spacing: 8) {
+                    if offerCount > 0 {
+                        notice("🕊️ \(offerCount) peace offer\(offerCount == 1 ? "" : "s")", "View") { open(.diplomacy) }
+                    }
+                    if !session.report.isEmpty, !session.report.contains(where: { $0.mine == true }) {
+                        notice("📜 \(session.report.count) events elsewhere", "Read") { session.showReport = true }
+                    }
+                }
             }
             Spacer(minLength: 0)
             HStack(alignment: .bottom) {
@@ -133,10 +160,11 @@ struct GameScreen: View {
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
                 Spacer()
-                if let tip, !session.showReport {
+                if let tip, !session.showReport || tip == .map {
                     TipBanner(tip: tip) {
                         tip.markSeen()
                         self.tip = nil
+                        showNextTip()
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
@@ -144,12 +172,6 @@ struct GameScreen: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 6) {
-                    if let nudge, session.isHumanTurn {
-                        Text(nudge)
-                            .font(.caption)
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(.ultraThinMaterial, in: Capsule())
-                    }
                     HStack(spacing: 8) {
                         if session.isHumanTurn {
                             if session.canUndo {
@@ -176,18 +198,66 @@ struct GameScreen: View {
     private func circleButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.headline)
-                .frame(width: 44, height: 44)
+                .font(.callout.weight(.semibold))
+                .frame(width: 40, height: 40)
                 .background(.ultraThinMaterial, in: Circle())
         }
         .accessibilityLabel(label)
     }
 
+    /// A small, dismissable pill for news that can wait.
+    private func notice(_ text: String, _ action: String, perform: @escaping () -> Void) -> some View {
+        Button(action: perform) {
+            HStack(spacing: 6) {
+                Text(text).foregroundStyle(.primary)
+                Text(action).bold()
+            }
+            .font(.callout)
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background(.regularMaterial, in: Capsule())
+            .shadow(radius: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var offerCount: Int {
+        guard let human = session.human else { return 0 }
+        return state.peaceOffers.filter { $0.to == human }.count
+    }
+
+    /// Where the player is looking: the order's target, else the selected territory.
+    private var focusTerritory: TerritoryID? {
+        switch pending {
+        case let .march(_, to)?, let .land(_, to)?: return to
+        case let .embark(from, _)?: return from
+        case nil: break
+        }
+        if case .territory(let t)? = selected { return t }
+        return nil
+    }
+
     // MARK: Guidance
 
     private func offer(_ t: Tip) {
-        guard session.human != nil, t.isNew, tip == nil else { return }
-        tip = t
+        guard session.human != nil, t.isNew, tip != t, !tipQueue.contains(t) else { return }
+        tipQueue.append(t)
+        if tip == nil { showNextTip() }
+    }
+
+    /// The earliest waiting tip comes next, so the basics always come first.
+    private func showNextTip() {
+        tipQueue.sort { Tip.allCases.firstIndex(of: $0)! < Tip.allCases.firstIndex(of: $1)! }
+        while let next = tipQueue.first {
+            tipQueue.removeFirst()
+            if next.isNew { tip = next; return }
+        }
+    }
+
+    /// A famine, drought or flood struck the player's harvest at the start of this turn.
+    private var harvestHit: Bool {
+        guard let human = session.human else { return false }
+        return session.report.contains { $0.mine == true && $0.civ == human
+            && ($0.text.hasPrefix("Famine") || $0.text.hasPrefix("Drought") || $0.text.hasPrefix("Floods")) }
     }
 
     /// Total knowledge levels, to notice a discovery.
@@ -196,10 +266,6 @@ struct GameScreen: View {
         return KnowledgeField.allCases.reduce(0) { $0 + engine.level($1, of: human, in: state) }
     }
 
-    private var peaceOffer: CivilizationID? {
-        guard let human = session.human, session.isHumanTurn else { return nil }
-        return state.peaceOffers.filter { $0.to == human && !laterOffers.contains($0.from) }.map(\.from).sorted().first
-    }
 
     /// The player's armies that still have troops ready to move and somewhere new to go: next to
     /// land that isn't theirs, or on a coast where their own ships wait.
@@ -271,7 +337,9 @@ struct GameScreen: View {
             if let human = session.human, let cs = state.civs[human], let econ = session.economy {
                 HStack(spacing: 12) {
                     Button { explain = .gold } label: { stat("Gold", "\(cs.gold)", change: econ.income, color: .orange) }
-                    Button { explain = .grain } label: { stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green) }
+                    Button { explain = .grain } label: {
+                        stat(harvestHit ? "Grain ⚠" : "Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
+                    }
                     Button { explain = .legitimacy } label: { stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple) }
                 }
                 .buttonStyle(.plain)
@@ -294,10 +362,10 @@ struct GameScreen: View {
         HStack(spacing: 4) {
             if session.human != nil {
                 toolButton("Empire", "building.columns.fill") { open(.empire) }
-                toolButton("Diplomacy", "person.2.fill") { open(.diplomacy) }
+                toolButton("Diplomacy", "person.2.fill", badge: offerCount) { open(.diplomacy) }
                 toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
             }
-            toolButton("Chronicle", "scroll.fill") { open(.log) }
+            toolButton("Chronicle", "scroll.fill", badge: unreadLog) { open(.log); seenLog = session.log.first?.id ?? 0 }
             Menu {
                 Button("How to play", systemImage: "book") { showCodex = true }
                 Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
@@ -310,13 +378,28 @@ struct GameScreen: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func toolButton(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+    private func toolButton(_ title: String, _ symbol: String, badge: Int = 0, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
                 .frame(width: 34, height: 34)
+                .overlay(alignment: .topTrailing) {
+                    if badge > 0 {
+                        Text(badge > 9 ? "9+" : "\(badge)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(.red, in: Capsule())
+                            .offset(x: 4, y: -2)
+                    }
+                }
         }
-        .accessibilityLabel(title)
+        .accessibilityLabel(badge > 0 ? "\(title), \(badge) new" : title)
+    }
+
+    /// Chronicle lines the player hasn't opened the Chronicle to see.
+    private var unreadLog: Int {
+        session.log.filter { $0.id > seenLog && $0.mine == true }.count
     }
 
     @ViewBuilder private var turnButton: some View {
@@ -338,11 +421,16 @@ struct GameScreen: View {
                     panelOpen = false
                     session.endTurn()
                 } label: {
-                    Label("End turn", systemImage: "hourglass")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, 6).padding(.vertical, 4)
+                    VStack(spacing: 0) {
+                        Label("End turn", systemImage: "hourglass")
+                            .font(.callout.bold())
+                        if let nudge {
+                            Text(nudge).font(.caption2).opacity(0.85)
+                        }
+                    }
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 4).padding(.vertical, 2)
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
@@ -409,16 +497,25 @@ struct GameScreen: View {
                 }
                 .accessibilityLabel("Close")
             }
-            ScrollView {
-                Group {
-                switch tab {
-                case .orders: orders
-                case .empire: EmpireView(session: session)
-                case .diplomacy: DiplomacyView(session: session)
-                case .log: ChronicleView(session: session)
+            if tab == .orders, let pending, session.isHumanTurn {
+                // The order composer scrolls its own choices and keeps its buttons in view.
+                OrderComposer(session: session, order: pending) { done in
+                    self.pending = nil
+                    if let done { selected = done } else if selected == nil { panelOpen = false }
                 }
+                .id(pending)
+            } else {
+                ScrollView {
+                    Group {
+                    switch tab {
+                    case .orders: orders
+                    case .empire: EmpireView(session: session)
+                    case .diplomacy: DiplomacyView(session: session)
+                    case .log: ChronicleView(session: session)
+                    }
+                    }
+                    .padding(.trailing, 4)
                 }
-                .padding(.trailing, 4)
             }
         }
         .padding(12)
@@ -455,13 +552,7 @@ struct GameScreen: View {
                 VictoryBanner(victory: victory, state: state, engine: engine)
                 Button("New game") { session.quit() }.buttonStyle(.borderedProminent)
             }
-            if let pending, session.isHumanTurn {
-                OrderComposer(session: session, order: pending) { done in
-                    self.pending = nil
-                    if let done { selected = done } else if selected == nil { panelOpen = false }
-                }
-                .id(pending)
-            } else if case .territory(let id)? = selected {
+            if case .territory(let id)? = selected {
                 TerritoryPanel(session: session, territory: id)
             } else if case .sea(let sea)? = selected {
                 FleetPanel(session: session, sea: sea)

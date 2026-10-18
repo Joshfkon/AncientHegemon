@@ -78,6 +78,17 @@ enum MapLayer: String, CaseIterable {
     case armies = "Armies", threats = "Threats", supply = "Supply", trade = "Trade", resources = "Resources"
 }
 
+/// A request to bring a territory into view, e.g. when the panel opens over it.
+struct MapCenter: Equatable {
+    let territory: TerritoryID
+    /// Zoom in at least this far.
+    var minZoom: CGFloat = 1
+    /// Only move if the territory is outside the visible area (otherwise always center it).
+    var onlyIfHidden = true
+    /// Distinguishes repeated requests for the same place.
+    var id = 0
+}
+
 struct MapView: View {
     let state: GameState
     let map: GameMap
@@ -100,6 +111,11 @@ struct MapView: View {
     var planned: (from: TerritoryID, to: TerritoryID, label: String?)?
     /// The player's armies that could still act this turn: they pulse.
     var idle: Set<TerritoryID> = []
+    /// Width covered by the panel on the right; the map can pan further so nothing is stuck under it.
+    var trailingInset: CGFloat = 0
+    /// Bring a territory into the visible part of the map.
+    var center: MapCenter?
+    @State private var viewSize: CGSize = .zero
     private let art = BoardArt.shared
 
     /// Pinch to zoom (about the pinch), drag to pan.
@@ -121,6 +137,17 @@ struct MapView: View {
                 .contentShape(Rectangle())
                 .gesture(press(t).exclusively(before: SpatialTapGesture().onEnded { onTap(pick(at: $0.location, t)) }))
                 .gesture(pinch(geo.size).simultaneously(with: drag(geo.size)))
+                .onAppear {
+                    viewSize = geo.size
+                    if let center { bring(center, geo.size, animated: false) }
+                }
+                .onChange(of: geo.size) { _, size in viewSize = size }
+                .onChange(of: center) { _, request in
+                    if let request { bring(request, geo.size, animated: true) }
+                }
+                .onChange(of: trailingInset) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.3)) { pan = clamped(pan, geo.size) }
+                }
                 .overlay(alignment: .bottomLeading) {
                     if zoom > 1.01 {
                         Button {
@@ -178,8 +205,24 @@ struct MapView: View {
 
     private func clamped(_ pan: CGSize, _ size: CGSize) -> CGSize {
         let limit = BoardTransform.panLimit(size, zoom: zoom)
-        return CGSize(width: min(limit.width, max(-limit.width, pan.width)),
+        // With the panel open the board may slide left by its width, so the east isn't trapped.
+        return CGSize(width: min(limit.width, max(-limit.width - trailingInset, pan.width)),
                       height: min(limit.height, max(-limit.height, pan.height)))
+    }
+
+    /// Zooms and pans so a territory sits in the middle of the visible area.
+    private func bring(_ request: MapCenter, _ size: CGSize, animated: Bool) {
+        guard size.width > 0, let shape = art.territories[request.territory] else { return }
+        let visible = CGRect(x: 0, y: 0, width: size.width - trailingInset, height: size.height)
+        let now = BoardTransform(fitting: size, zoom: zoom, pan: pan).point(shape.token)
+        if request.onlyIfHidden, zoom >= request.minZoom, visible.insetBy(dx: 70, dy: 60).contains(now) { return }
+        let newZoom = max(zoom, request.minZoom)
+        let base = BoardTransform(fitting: size, zoom: newZoom, pan: .zero).point(shape.token)
+        let update = {
+            zoom = newZoom
+            pan = clamped(CGSize(width: visible.midX - base.x, height: visible.midY - base.y), size)
+        }
+        if animated { withAnimation(.easeInOut(duration: 0.4), update) } else { update() }
     }
 
     /// Seas win when the tap is near their fleet marker; otherwise the territory under the finger.
@@ -447,9 +490,21 @@ extension MapView {
                 context.draw(Text("⚔︎").font(.system(size: 8 * t.detail, weight: .black)).foregroundStyle(.white),
                              at: CGPoint(x: c.x + r * 1.4, y: c.y - r))
             case let .captured(id, civ):
-                guard let shape = art.territories[id] else { continue }
-                context.stroke(t.path(shape.polygon), with: .color(Palette.color(civ, state)),
-                               style: StrokeStyle(lineWidth: 3, dash: [6, 3]))
+                // A planted flag in the taker's colour, beside the token.
+                guard let c = token(id, t) else { continue }
+                let k = t.detail
+                let base = CGPoint(x: c.x + 9 * k, y: c.y + 6 * k)
+                var pole = Path()
+                pole.move(to: base)
+                pole.addLine(to: CGPoint(x: base.x, y: base.y - 16 * k))
+                context.stroke(pole, with: .color(.black.opacity(0.85)), lineWidth: 1.4 * k)
+                var flag = Path()
+                flag.move(to: CGPoint(x: base.x, y: base.y - 16 * k))
+                flag.addLine(to: CGPoint(x: base.x + 10 * k, y: base.y - 12.5 * k))
+                flag.addLine(to: CGPoint(x: base.x, y: base.y - 9 * k))
+                flag.closeSubpath()
+                context.fill(flag, with: .color(Palette.color(civ, state)))
+                context.stroke(flag, with: .color(.black.opacity(0.7)), lineWidth: 0.8)
             case let .event(id, kind):
                 guard let c = token(id, t) else { continue }
                 context.draw(Text(MapMark.glyph(kind)).font(.system(size: 9 * t.detail)),
@@ -466,7 +521,7 @@ extension MapView {
 
     /// A curved arrow between two points, stopping short of the token, with an optional label.
     private func arrow(_ context: inout GraphicsContext, from a: CGPoint, to b: CGPoint, color: Color, label: String?,
-                       _ t: BoardTransform, width: CGFloat = 2.4) {
+                       _ t: BoardTransform, width: CGFloat = 3.2) {
         let dx = b.x - a.x, dy = b.y - a.y
         let len = max(1, hypot(dx, dy))
         let inset = 9 * t.detail

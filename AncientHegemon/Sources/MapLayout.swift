@@ -56,8 +56,10 @@ struct BoardTransform {
     static func panLimit(_ size: CGSize, zoom: CGFloat) -> CGSize {
         let f = BoardArt.frame
         let fit = min(size.width / f.width, size.height / f.height)
+        // A little room past the edges (more top and bottom), so lands along the board's rim
+        // can still be brought to the middle of the screen, clear of the controls.
         return CGSize(width: max(0, (f.width * fit * zoom - size.width) / 2) + 24,
-                      height: max(0, (f.height * fit * zoom - size.height) / 2) + 24)
+                      height: max(0, (f.height * fit * zoom - size.height) / 2) + (zoom > 1.01 ? size.height * 0.3 : 24))
     }
 
     func point(_ p: [Double]) -> CGPoint {

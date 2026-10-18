@@ -9,6 +9,8 @@ struct LogLine: Identifiable, Codable {
     let text: String
     /// Where it happened, to jump the map there.
     var territory: TerritoryID?
+    /// It touches the player: their land, armies, ruler, diplomacy or discoveries.
+    var mine: Bool?
 }
 
 struct BattleEntry: Identifiable, Codable {
@@ -206,7 +208,8 @@ final class GameSession {
         }
         // Back to the player: sum up what happened since they ended their turn.
         report = log.filter { $0.id > reportFrom }.sorted { $0.id < $1.id }
-        showReport = human != nil && !report.isEmpty && !isOver
+        // Only interrupt for news that touches the player; the rest waits behind the News button.
+        showReport = human != nil && report.contains { $0.mine == true } && !isOver
         autosave()
     }
 
@@ -283,17 +286,42 @@ final class GameSession {
 
     // MARK: Chronicle
 
+    /// Whether an event touches the player directly.
+    private func involvesHuman(_ event: GameEvent, before: GameState, target: TerritoryID?) -> Bool {
+        guard let me = human else { return false }
+        switch event {
+        case let .landed(civ, _, t, _): return civ == me || before.owner(of: t) == me
+        case let .battle(report): return report.setup.attacker.civ == me || report.setup.defender.civ == me
+        case let .captured(civ, _, from): return civ == me || from == me
+        case let .civilWar(civ, _, _, _), let .rulerDied(civ, _, _, _), let .succession(civ, _, _),
+             let .successionCrisis(civ, _), let .discovery(civ, _, _), let .recruited(civ, _, _, _),
+             let .projectStarted(civ, _, _), let .projectCompleted(civ, _, _), let .taxRateSet(civ, _):
+            return civ == me
+        case let .event(r): return r.civ == me || r.partner == me || r.territory.map { before.owner(of: $0) == me } ?? false
+        case let .peaceOffered(from, to): return from == me || to == me
+        case let .peaceMade(pair): return pair.a == me || pair.b == me
+        case let .warDeclared(by, on): return by == me || on == me
+        case let .navalBattle(_, r): return r.attacker == me || r.defender == me
+        case let .generalKilled(id): return before.generals[id]?.owner == me
+        case let .projectDestroyed(t, _): return before.owner(of: t) == me
+        case let .eliminated(civ): return civ == me
+        default: return false
+        }
+    }
+
     private func record(_ events: [GameEvent], round: Int, before: GameState, after: GameState) {
         var lines: [LogLine] = []
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name } ?? "?" }
+        var mine = false
         func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
             nextID += 1
-            lines.append(LogLine(id: nextID, round: round, civ: civ, text: text, territory: territory))
+            lines.append(LogLine(id: nextID, round: round, civ: civ, text: text, territory: territory, mine: mine))
         }
 
         for event in events {
+            mine = involvesHuman(event, before: before, target: target)
             switch event {
             case let .moved(_, _, to, _): target = to
             case let .landed(civ, _, t, units):
@@ -330,7 +358,7 @@ final class GameSession {
                 add(civ, "\(ruler) \(how) in \(name(civ))")
             case let .event(r):
                 let text = switch r.kind {
-                case .famine: "Famine in \(place(r.territory))"
+                case .famine: "Famine in \(place(r.territory))" + (r.civ == human ? ": its harvest this turn was halved" : "")
                 case .flood: "Floods in \(place(r.territory))" + (r.amount > 0 ? " (−\(r.amount) people)" : "")
                 case .goodHarvest: "Bumper harvest in \(place(r.territory))"
                 case .plague: "Plague in \(name(r.civ))" + (r.amount > 0 ? " (−\(r.amount) people)" : "")
@@ -339,8 +367,8 @@ final class GameSession {
                 case .barbarians: "A barbarian horde of \(r.amount) falls on \(place(r.territory))"
                 case .revolt: "\(place(r.territory)) revolts against \(name(r.civ))"
                 case .seaPeoples: "Sea Peoples, \(r.amount) strong, land in \(place(r.territory))"
-                case .drought: "Drought in \(name(r.civ)): \(r.amount) harvests wither"
-                case .earthquake: "An earthquake shakes \(place(r.territory))"
+                case .drought: "Drought in \(name(r.civ)): \(r.amount) harvests wither" + (r.civ == human ? " (less grain this turn)" : "")
+                case .earthquake: "An earthquake shakes \(place(r.territory))" + (r.civ == human ? ", costing people and buildings" : "")
                 case .tradeDisrupted: "Trade between \(name(r.civ)) and \(name(r.partner)) breaks down for \(r.amount) rounds"
                 }
                 if [.revolt, .barbarians, .seaPeoples].contains(r.kind) { target = r.territory }

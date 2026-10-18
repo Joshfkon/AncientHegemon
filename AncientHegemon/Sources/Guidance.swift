@@ -72,14 +72,17 @@ struct QuickLookCard: View {
 
 // MARK: Turn report
 
-/// "Since your last turn": what every empire did, one line each, tap to see it on the map.
+/// "Since your last turn": the player's own news first, highlighted; everyone else's folded into
+/// one line that opens. Tap a line to see it on the map.
 struct TurnReportCard: View {
     let session: GameSession
     let jump: (TerritoryID) -> Void
+    @State private var showOthers = false
 
     var body: some View {
         let state = session.state
-        let lines = session.report
+        let mine = session.report.filter { $0.mine == true }
+        let others = session.report.filter { $0.mine != true }
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Since your last turn").font(.headline)
@@ -88,58 +91,56 @@ struct TurnReportCard: View {
                     .buttonStyle(.borderedProminent).controlSize(.small)
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(lines) { line in
-                        Button {
-                            if let t = line.territory { jump(t) }
-                        } label: {
-                            HStack(alignment: .top, spacing: 6) {
-                                Circle().fill(Palette.color(line.civ, state)).frame(width: 8, height: 8).padding(.top, 5)
-                                Text(line.text).font(.callout).multilineTextAlignment(.leading)
-                                    .foregroundStyle(.primary)
-                                Spacer(minLength: 0)
-                                if line.territory != nil {
-                                    Image(systemName: "scope").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
+                VStack(alignment: .leading, spacing: 6) {
+                    if mine.isEmpty {
+                        Text("Nothing touched your realm.").font(.callout).foregroundStyle(.secondary)
+                    }
+                    ForEach(mine) { line in row(line, state, strong: true) }
+                    if !others.isEmpty {
+                        HStack(spacing: 6) {
+                            Image(systemName: showOthers ? "chevron.down" : "chevron.right")
+                            Text("\(others.count) other event\(others.count == 1 ? "" : "s") across the world")
                         }
-                        .buttonStyle(.plain)
-                        .allowsHitTesting(line.territory != nil)
+                        .font(.callout)
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.top, 4)
+                        .contentShape(Rectangle())
+                        .onTapGesture { withAnimation { showOthers.toggle() } }
+                        if showOthers {
+                            ForEach(others) { line in row(line, state, strong: false) }
+                        }
                     }
                 }
             }
-            .frame(height: min(220, CGFloat(lines.count) * 30 + 6))
+            .frame(height: min(240, CGFloat(mine.count) * 30 + (mine.isEmpty ? 24 : 0)
+                                + (others.isEmpty ? 0 : 34) + (showOthers ? CGFloat(others.count) * 24 : 0) + 6))
             Text("Arrows and markers on the map show these until you end your turn.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(14)
-        .frame(width: 420)
+        .frame(width: 440)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .shadow(radius: 10)
     }
-}
 
-// MARK: Peace offers
-
-struct PeaceOfferCard: View {
-    let from: CivilizationID
-    let session: GameSession
-    let later: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "dove.fill").foregroundStyle(.green)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(Palette.name(from, session.state)) offers peace").font(.callout.bold())
-                Text("Peace opens trade routes; breaking it later costs legitimacy.").font(.caption2).foregroundStyle(.secondary)
+    private func row(_ line: LogLine, _ state: GameState, strong: Bool) -> some View {
+        Button {
+            if let t = line.territory { jump(t) }
+        } label: {
+            HStack(alignment: .top, spacing: 6) {
+                Circle().fill(Palette.color(line.civ, state)).frame(width: 8, height: 8).padding(.top, 5)
+                Text(line.text)
+                    .font(strong ? .callout.weight(.semibold) : .footnote)
+                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(strong ? .primary : .secondary)
+                Spacer(minLength: 0)
+                if line.territory != nil {
+                    Image(systemName: "scope").font(.caption).foregroundStyle(.secondary)
+                }
             }
-            Button("Accept") { session.order(.acceptPeace(from: from)) }
-                .buttonStyle(.borderedProminent).tint(.green).controlSize(.small)
-            Button("Later", action: later).buttonStyle(.bordered).controlSize(.small)
         }
-        .padding(10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .shadow(radius: 6)
+        .buttonStyle(.plain)
+        .allowsHitTesting(line.territory != nil)
     }
 }
 
@@ -182,6 +183,8 @@ struct StatExplainer: View {
                     row("Each turn", e.grainBalance, bold: true)
                     Text("Granary \(e.granary) of \(e.granaryCap).").font(.caption)
                 }
+                Text("This is a forecast for your next harvest. Famine, drought and floods strike at the start of a turn and can cut it; they show in your news and as ⚠ here.")
+                    .font(.caption).foregroundStyle(.orange)
                 Text("Armies far from your capital eat more. When the granary runs dry, people and soldiers starve.")
                     .font(.caption).foregroundStyle(.secondary)
             case .legitimacy:

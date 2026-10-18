@@ -35,6 +35,7 @@ struct OrderComposer: View {
     @State private var units = UnitCounts.zero
     @State private var withGeneral = false
     @State private var plan = BattlePlan()
+    @State private var showPlan = false
     /// Chance of victory with each formation, recomputed when the force or plan changes.
     @State private var oddsByFormation: [FormationID: Double] = [:]
 
@@ -81,20 +82,38 @@ struct OrderComposer: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
-            if let to = destination { destinationSummary(to) }
-            UnitPicker(available: available, units: $units)
-            if let general {
-                Toggle("\(general.name) leads (\(traitName(general.trait)))", isOn: $withGeneral).font(.callout)
-            }
-            if isBattle, case .march = order {
-                Text("Battle plan").font(.subheadline.bold())
-                BattlePlanEditor(engine: engine, civ: human, state: state, units: units,
-                                 general: withGeneral ? general : nil, plan: $plan, odds: oddsByFormation)
-            }
-            if isBattle, destination != nil {
-                odds
+        // The choices scroll; Cancel and the order itself stay put at the bottom.
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(title).font(.headline)
+                    if let to = destination { destinationSummary(to) }
+                    UnitPicker(available: available, units: $units)
+                    if let general {
+                        Toggle("\(general.name) leads (\(traitName(general.trait)))", isOn: $withGeneral).font(.callout)
+                    }
+                    if isBattle, destination != nil {
+                        odds
+                    }
+                    if let warning = garrisonWarning {
+                        Label(warning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if isBattle, case .march = order {
+                        DisclosureGroup(isExpanded: $showPlan) {
+                            BattlePlanEditor(engine: engine, civ: human, state: state, units: units,
+                                             general: withGeneral ? general : nil, plan: $plan, odds: oddsByFormation)
+                                .padding(.top, 6)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Battle plan").font(.subheadline.bold())
+                                Text(planSummary).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(.trailing, 4)
             }
             HStack {
                 Button("Cancel") { done(nil) }.buttonStyle(.bordered)
@@ -104,6 +123,7 @@ struct OrderComposer: View {
                     .tint(isBattle ? .red : .accentColor)
                     .disabled(units.isEmpty)
             }
+            .padding(.top, 4)
         }
         .onAppear {
             setDefaults()
@@ -176,6 +196,24 @@ struct OrderComposer: View {
         }
     }
 
+    /// "Phalanx · Deep line · Straight fight".
+    private var planSummary: String {
+        let f = engine.rules.battle.formation(plan.formation ?? engine.rules.battle.defaultFormation)?.name ?? ""
+        return [f, plan.depth == .deep ? "deep line" : "wide line", BattlePlanEditor.name(plan.stratagem).lowercased()]
+            .joined(separator: " · ")
+    }
+
+    /// Marching everyone out leaves the land to its levy.
+    private var garrisonWarning: String? {
+        guard case let .march(from, _) = order, let army = state.armies[from], units.total > 0,
+              units.total >= army.units.total else { return nil }
+        let name = engine.map.territory(from)?.name ?? from
+        let levy = engine.levy(at: from, state)
+        let capital = engine.seat(of: human, in: state) == from
+        return "This leaves \(name)\(capital ? ", your capital," : "") with no garrison"
+            + (levy > 0 ? " (its people would raise \(levy) militia)." : ".")
+    }
+
     /// The scouts' report: how the numbers compare, what favours the defender, and the officers'
     /// feeling about it. Deliberately no percentages.
     private var odds: some View {
@@ -208,6 +246,21 @@ struct OrderComposer: View {
         default: "We greatly outnumber them."
         }
         lines.append(numbers)
+        if ratio < 1.6 { lines.append("Defenders hold the edge in an even fight.") }
+        // How the two armies compare as they would actually fight.
+        let leader = withGeneral ? general : nil
+        let ourArmy = engine.battleArmy(human, units, plan: plan, general: leader, state)
+        if let theirArmy = engine.defendingArmy(of: to, against: human, state) {
+            if theirArmy.bronzePercent >= ourArmy.bronzePercent + 30 { lines.append("Their troops are better armed with bronze.") }
+            if ourArmy.bronzePercent >= theirArmy.bronzePercent + 30 { lines.append("Our bronze gives us the edge.") }
+            let ourDrill = ourArmy.unitPercent.values.reduce(0, +) + ourArmy.morale
+            let theirDrill = theirArmy.unitPercent.values.reduce(0, +) + theirArmy.morale
+            if theirDrill > ourDrill + 10 { lines.append("Their soldiers are better trained.") }
+            if ourDrill > theirDrill + 10 { lines.append("Our soldiers are better trained.") }
+            if theirArmy.units.archers > 0, units.cavalry == 0 { lines.append("Their archers will thin our ranks, and we have no cavalry.") }
+            if theirArmy.general != nil, leader == nil { lines.append("A general leads them; none leads us.") }
+            if leader != nil, theirArmy.general == nil { lines.append("Our general leads; they have none.") }
+        }
         if d.levy > 0 {
             lines.append(defender.units.total == 0 ? "No soldiers, but the people will take up arms." : "The people will take up arms beside them.")
         }
@@ -223,7 +276,6 @@ struct OrderComposer: View {
         case .land: lines.append("We must fight our way ashore.")
         case .embark: break
         }
-        if state.general(of: defender.owner, at: to) != nil { lines.append("A general leads them.") }
         return lines
     }
 
@@ -313,11 +365,6 @@ struct TerritoryPanel: View {
             Text(ready.total > 0 ? "Tap a highlighted territory to march \(ready.total) ready units, or a sea with your ships to board."
                                  : "These troops have moved this turn.")
                 .font(.caption).foregroundStyle(.secondary)
-            Text("Defensive plan").font(.subheadline.bold())
-            BattlePlanEditor(engine: engine, civ: human, state: state, units: army.units,
-                             general: state.general(of: human, at: territory), plan: Binding(
-                get: { army.plan },
-                set: { session.order(.setBattlePlan(territory: territory, plan: $0)) }))
         }
         if home {
             Text("Recruit").font(.subheadline.bold())
@@ -353,6 +400,24 @@ struct TerritoryPanel: View {
             projects(human)
         } else {
             Text("Cut off from your capital: no recruiting here.").font(.caption).foregroundStyle(.orange)
+        }
+        if let army {
+            // Rarely changed, so tucked away at the bottom.
+            DisclosureGroup {
+                BattlePlanEditor(engine: engine, civ: human, state: state, units: army.units,
+                                 general: state.general(of: human, at: territory), plan: Binding(
+                    get: { army.plan },
+                    set: { session.order(.setBattlePlan(territory: territory, plan: $0)) }))
+                    .padding(.top, 6)
+            } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Defensive plan").font(.subheadline.bold())
+                    let f = engine.rules.battle.formation(army.formation ?? engine.rules.battle.defaultFormation)?.name ?? ""
+                    Text([f, army.plan.depth == .deep ? "deep line" : "wide line",
+                          BattlePlanEditor.name(army.plan.stratagem).lowercased()].joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }
