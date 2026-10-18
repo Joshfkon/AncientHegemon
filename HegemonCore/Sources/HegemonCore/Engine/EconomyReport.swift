@@ -20,7 +20,19 @@ public struct EconomyReport: Sendable, Equatable {
     /// Gold next harvest, including the ruler's administration bonus.
     public let income: Int
     public let bronze: Int
+    /// Bronze cast next harvest (after Bronze casting), and bronze worn out.
     public let bronzePerTurn: Int
+    public let bronzeWear: Int
+    /// How well the troops are equipped (bronze plus usable iron), 0–100.
+    public let equipmentPercent: Int
+    public let taxRate: Int
+    /// Legitimacy a turn from the tax rate and luxuries.
+    public let taxLegitimacy: Int
+    /// Share of surplus grain that goes into growth at this tax rate.
+    public let growthPercent: Int
+    /// Stone, timber and iron in store, and the cap.
+    public let stock: [Resource: Int]
+    public let stockCap: Int
     public let tradePartners: [CivilizationID]
     /// Copper, tin, horses, timber and gold available, counting trade access.
     public let resources: [Resource: Int]
@@ -48,6 +60,14 @@ extension Engine {
         var harvestIncome = breakdown.total
         if case let .harvest(_, _, _, _, _, income)? = harvested.first { harvestIncome = income }
         let gold = (taxes: breakdown.taxes, mines: breakdown.mines, trade: breakdown.trade, total: harvestIncome)
+        let cs = state.civs[civ]!
+        var cast = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
+                       effectiveYield(of: .tin, for: civ, in: state, routes: routes))
+        if level(.metallurgy, of: civ, in: state) >= 1 {
+            cast = cast * (100 + rules.knowledge.effects.bronzeCastingPercent) / 100
+        }
+        var worn = state
+        wearBronze(civ, &worn)
         var resources: [Resource: Int] = [:]
         for r in Resource.allCases where r != .grain {
             resources[r] = effectiveYield(of: r, for: civ, in: state, routes: routes)
@@ -55,9 +75,12 @@ extension Engine {
         return EconomyReport(
             grainProduced: produced, eatenByPeople: people, eatenByArmies: base, eatenByDistance: total - base,
             eatenAtSea: fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
-            granaryCap: produced * rules.economy.granaryCapTurns,
+            granaryCap: produced * granaryTurns(civ, state),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, income: gold.total,
-            bronze: state.civs[civ]!.bronze, bronzePerTurn: min(resources[.copper] ?? 0, resources[.tin] ?? 0),
+            bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,
+            equipmentPercent: bronzePercent(civ, state), taxRate: cs.taxRate,
+            taxLegitimacy: taxAndLuxuryLegitimacy(civ, state), growthPercent: growthPercent(civ, state),
+            stock: cs.stock, stockCap: rules.economy.stockCap,
             tradePartners: routes.filter { $0.involves(civ) }.map { $0.partner(of: civ) },
             resources: resources, cutOff: pockets.dropFirst().flatMap { $0 })
     }

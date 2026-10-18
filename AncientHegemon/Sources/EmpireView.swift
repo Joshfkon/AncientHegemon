@@ -14,7 +14,12 @@ struct EmpireView: View {
         VStack(alignment: .leading, spacing: 14) {
             EmpireTable(state: state, engine: engine)
             if let human = session.human {
-                if let econ = session.economy { EconomyView(econ: econ, state: state, engine: engine) }
+                CollapseGauge(pressure: engine.collapsePressure(state))
+                if let econ = session.economy {
+                    TaxesView(session: session, econ: econ)
+                    EconomyView(econ: econ, state: state, engine: engine)
+                }
+                KnowledgeView(civ: human, state: state, engine: engine)
                 ruler(human)
                 diplomacy(human)
                 generals(human)
@@ -140,22 +145,30 @@ struct EconomyView: View {
                 } else {
                     Text(econ.tradePartners.map { Palette.name($0, state) }.joined(separator: ", "))
                         .font(.caption)
-                    Text("Each partner shares half its copper, tin, horses, timber and gold.")
+                    Text("Each partner shares half its ore, horses, timber, stone and luxuries; wine sells to partners who have none.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text("Resources within reach").font(.caption.bold())
                 HStack(spacing: 10) {
-                    resource("Copper", .copper); resource("Tin", .tin); resource("Horses", .horses)
+                    resource("Copper", .copper); resource("Tin", .tin); resource("Iron", .iron); resource("Horses", .horses)
                 }
                 HStack(spacing: 10) {
-                    resource("Timber", .timber); resource("Gold", .gold)
+                    resource("Gold", .gold); resource("Wine", .wine); resource("Luxuries", .luxuries)
                 }
-                Text("Bronze \(econ.bronze) (+\(econ.bronzePerTurn) a turn, from copper and tin together). "
-                     + "Arms your troops: up to +\(engine.rules.battle.bronzeBonusPercent)% in battle.")
+                HStack(spacing: 10) {
+                    ForEach(Resource.stockpiled, id: \.self) { r in
+                        Text("\(r.rawValue.capitalized) \(econ.stock[r] ?? 0)/\(econ.stockCap)")
+                            .font(.caption.monospacedDigit())
+                    }
+                    Text("in store").font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Bronze \(econ.bronze) (+\(econ.bronzePerTurn) cast, −\(econ.bronzeWear) worn a turn). "
+                     + "Troops \(econ.equipmentPercent)% equipped: up to +\(engine.rules.battle.bronzeBonusPercent)% in battle.")
                     .font(.caption)
-                Text("Horses limit cavalry recruits, timber limits shipbuilding, each per turn.")
+                Text("Bronze needs copper and tin together and wears out; iron needs ironworking but lasts. "
+                     + "Stone and timber build projects; horses limit cavalry recruits.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }

@@ -69,6 +69,27 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
     (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).
     Wins: Mesopotamia 45%, Italia 22%, Greece 20%, Egypt 10%. 119 tests.
+  - **Late Bronze Age redesign** (Josh: "the end of the Bronze Age", "Risk with logistics"; all
+    decisions in the DESIGN.md section of that name), in five phases:
+    1. New resources (iron, wine & oil, luxuries, stone), stockpiles, a tax rate, and projects
+       (roads, walls, farms, mines, harbors). Rules version 2.
+    2. Knowledge that grows from population, wealth and experience in seven fields, three named
+       levels each, spread by contact and trade (`Engine/Knowledge.swift`). Nobody picks techs.
+    3. The collapse arc, rounds 12 to 40: Sea Peoples, droughts, earthquakes, broken trade
+       routes; bronze wears out; iron arms troops after Ironworking (`Engine/Collapse.swift`).
+       Rules version 3, so older saves are ignored.
+    4. AI garrisons and walls its coasts as the collapse deepens; the sim reports knowledge at
+       round 20 and projects built/lost. 40 games: about 40 rounds on average, far more legacy
+       wins. Mesopotamia still wins about half.
+    5. App: tax slider, Build list in the territory panel, Knowledge panel, "The age" gauge, a
+       fuller Economy (all resources, stores, bronze cast/worn, equipment %), trade goods on
+       the Trade layer, new resource and building glyphs on the Resources layer, and chronicle
+       lines for discoveries, projects and the collapse events. Checked in the Simulator on a
+       round-26 save.
+    155 tests.
+  - **Known open issues**: Mesopotamia's early lead; defenders rarely hold (about 25%); the
+    AI hoards gold (one project a turn, so 200+ gold by round 26); no trade victories; the
+    Trade layer's goods labels get crowded on big empires.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

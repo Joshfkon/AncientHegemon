@@ -141,8 +141,9 @@ struct GameScreen: View {
         let text: String? = switch layer {
         case .armies: nil
         case .supply: "Supply lines from your capital ♛ · orange/red: distance costs extra grain · red land: cut off"
-        case .trade: "Trade routes between empires at peace · dots: sea straits, colored by holder"
-        case .resources: "🌾 grain · Cu copper · Sn tin · 🐎 horses · 🪵 timber · 🪙 gold · copper + tin make bronze"
+        case .trade: "Trade routes between empires at peace · ▸ goods each partner receives · dots: sea straits, colored by holder"
+        case .resources: "🌾 grain · Cu copper · Sn tin · Fe iron · 🐎 horses · 🪵 timber · 🪨 stone · 🪙 gold · 🍷 wine · 💎 luxuries"
+            + " · built: 🛤 road 🧱 walls 🌱 farm ⛏ mine ⚓ harbor 🏗 underway"
         }
         if let text {
             Text(text).font(.caption2).foregroundStyle(.white)

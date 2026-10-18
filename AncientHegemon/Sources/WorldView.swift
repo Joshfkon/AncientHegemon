@@ -304,6 +304,32 @@ extension MapView {
             context.stroke(path, with: .color(.yellow),
                            style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round, dash: [6, 3]))
         }
+        // What each route carries, at its middle: each partner's color, then what it receives.
+        for route in routes {
+            let stops = route.path.compactMap { point($0, t) }
+            guard !stops.isEmpty else { continue }
+            let middle = stops[stops.count / 2]
+            let flows = engine.goods(along: route, in: state)
+            var lines: [Text] = []
+            for to in [route.partners.a, route.partners.b] {
+                let goods = Resource.allCases.compactMap { r in flows[to]?[r].map { _ in Self.glyph(r) } }
+                guard !goods.isEmpty else { continue }
+                lines.append(Text("▸ ").foregroundStyle(Palette.color(to, state))
+                             + Text(goods.joined(separator: " ")).foregroundStyle(.black))
+            }
+            guard !lines.isEmpty else { continue }
+            let resolved = lines.map { context.resolve($0.font(.system(size: 6.5, weight: .bold))) }
+            let width = (resolved.map { $0.measure(in: CGSize(width: 200, height: 20)).width }.max() ?? 0) + 4
+            let height = CGFloat(lines.count) * 9 + 3
+            // Keep the label on the board.
+            let left = t.point([BoardArt.frame.minX, 0]).x, right = t.point([BoardArt.frame.maxX, 0]).x
+            let mid = CGPoint(x: min(max(middle.x, left + width / 2 + 2), right - width / 2 - 2), y: middle.y)
+            context.fill(Path(roundedRect: CGRect(x: mid.x - width / 2, y: mid.y - height / 2, width: width, height: height),
+                              cornerRadius: 3), with: .color(.white.opacity(0.8)))
+            for (i, line) in resolved.enumerated() {
+                context.draw(line, at: CGPoint(x: mid.x, y: mid.y - height / 2 + 6 + CGFloat(i) * 9))
+            }
+        }
         let tolled = Set(routes.flatMap(\.chokepoints))
         for strait in map.chokepoints {
             guard let link = strait.gatesSeaLink, let a = art.seas[link[0]], let b = art.seas[link[1]] else { continue }
@@ -318,23 +344,53 @@ extension MapView {
         }
     }
 
-    /// Grain and resources on each territory, as on the board's tokens.
+    static func glyph(_ r: Resource) -> String {
+        switch r {
+        case .grain: "🌾"
+        case .copper: "Cu"
+        case .tin: "Sn"
+        case .iron: "Fe"
+        case .horses: "🐎"
+        case .timber: "🪵"
+        case .gold: "🪙"
+        case .wine: "🍷"
+        case .luxuries: "💎"
+        case .stone: "🪨"
+        }
+    }
+
+    /// Grain and resources on each territory, as on the board's tokens, and what's been built.
     fileprivate func drawResources(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint) {
         var parts = [Text("🌾\(territory.grain)").foregroundStyle(.black)]
-        let glyphs: [(Resource, String, Color)] = [
-            (.copper, "Cu", Color(red: 0.7, green: 0.35, blue: 0.1)), (.tin, "Sn", Color(white: 0.35)),
-            (.horses, "🐎", .black), (.timber, "🪵", .black), (.gold, "🪙", .black),
-        ]
-        for (resource, glyph, color) in glyphs {
+        let metals: [Resource: Color] = [.copper: Color(red: 0.7, green: 0.35, blue: 0.1), .tin: Color(white: 0.35),
+                                         .iron: Color(red: 0.45, green: 0.2, blue: 0.2)]
+        for resource in Resource.allCases where resource != .grain {
             if let n = territory.resources[resource], n > 0 {
-                parts.append(Text(" \(glyph)\(n)").foregroundStyle(color))
+                parts.append(Text(" \(Self.glyph(resource))\(n)").foregroundStyle(metals[resource] ?? .black))
             }
         }
-        let label = parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 7.5, weight: .bold))
-        let size = CGSize(width: 18 + CGFloat(parts.count - 1) * 18, height: 11)
-        context.fill(Path(roundedRect: CGRect(x: c.x - size.width / 2, y: c.y - 5.5, width: size.width, height: size.height),
-                          cornerRadius: 4), with: .color(.white.opacity(0.75)))
+        let label = context.resolve(parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 6.5, weight: .bold)))
+        let measured = label.measure(in: CGSize(width: 200, height: 20))
+        let size = CGSize(width: measured.width + 4, height: measured.height + 1)
+        context.fill(Path(roundedRect: CGRect(x: c.x - size.width / 2, y: c.y - size.height / 2, width: size.width, height: size.height),
+                          cornerRadius: 3), with: .color(.white.opacity(0.75)))
         context.draw(label, at: c)
+        let land = state.land[territory.id]
+        let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph)
+            + (land?.construction == nil ? [] : ["🏗"])
+        if !built.isEmpty {
+            context.draw(Text(built.joined()).font(.system(size: 7)), at: CGPoint(x: c.x, y: c.y + 11))
+        }
+    }
+
+    static func projectGlyph(_ kind: ProjectKind) -> String {
+        switch kind {
+        case .road: "🛤"
+        case .walls: "🧱"
+        case .farm: "🌱"
+        case .mine: "⛏"
+        case .harbor: "⚓"
+        }
     }
 }
 
@@ -366,6 +422,13 @@ struct TerritoryCard: View {
                 .font(.caption)
             Text("Held by \(owner.map { Palette.name($0, state) } ?? "nobody") · population \(state.population(of: id))")
                 .font(.caption)
+            let built = state.land[id]?.improvements ?? []
+            if !built.isEmpty || state.land[id]?.construction != nil {
+                Text((ProjectKind.allCases.filter { built.contains($0) }.map(projectName)
+                      + (state.land[id]?.construction.map { ["building \(projectName($0.kind).lowercased())"] } ?? []))
+                        .joined(separator: " · "))
+                    .font(.caption)
+            }
             if let army = state.armies[id], army.units.total > 0 {
                 Text("\(Palette.name(army.owner, state)): \(army.units.infantry) inf, \(army.units.archers) arc, "
                      + "\(army.units.cavalry) cav"

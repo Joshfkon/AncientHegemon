@@ -224,6 +224,9 @@ final class GameSession {
         case .noGeneral: return "No general is ready to march from there."
         case .notCoastal(let t, let s): return "\(place(t)) has no coast on \(place(s))."
         case .insufficientShips: return "Not enough ships ready to sail."
+        case .invalidTaxRate: return "Taxes go from 0 to 100% in steps of 10."
+        case .projectUnavailable(let t, let p): return "Can't build \(projectName(p).lowercased()) in \(place(t))."
+        case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."
         default: return "That can't be done (\(e))."
         }
     }
@@ -305,6 +308,19 @@ final class GameSession {
                 add(winner, "Sea battle in the \(engine.map.sea(sea)?.name ?? sea): \(name(winner)) wins")
             case let .generalKilled(id):
                 if let g = after.generals[id] { add(g.owner, "General \(g.name) of \(name(g.owner)) falls") }
+            case let .discovery(civ, field, level):
+                if civ == human || level >= 2 {
+                    add(civ, "\(name(civ)) discover\(civ == human ? "" : "s") \(engine.levelName(field, level) ?? field.rawValue)"
+                        + (civ == human ? ": \(KnowledgeView.effect(field, level))" : ""))
+                }
+            case let .projectStarted(civ, t, kind) where civ == human:
+                add(civ, "Work begins on \(projectName(kind).lowercased()) in \(place(t))")
+            case let .projectCompleted(civ, t, kind) where civ == human:
+                add(civ, "\(projectName(kind)) finished in \(place(t))")
+            case let .projectDestroyed(t, kind) where before.owner(of: t) == human:
+                add(human, "\(projectName(kind)) in \(place(t)) destroyed")
+            case let .taxRateSet(civ, rate) where civ == human:
+                add(civ, "Taxes set to \(rate)%")
             case let .eliminated(civ): add(civ, "\(name(civ)) is destroyed")
             case let .victory(civ): add(civ, "\(name(civ)) dominates the known world")
             default: break

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFEA270691335D57E5FC99 /* GameScreen.swift */; };
+		357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */; };
 		45672360191504BA6F4B6C43 /* map_shapes.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E7B5FD5E53683B4C70351A3 /* map_shapes.json */; };
 		4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
@@ -27,6 +28,7 @@
 		7E7B5FD5E53683B4C70351A3 /* map_shapes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = map_shapes.json; sourceTree = "<group>"; };
 		8264F7FC3FCC73EAA576137C /* SaveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStore.swift; sourceTree = "<group>"; };
 		90545C84FE5971D4416409AA /* OrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderViews.swift; sourceTree = "<group>"; };
+		94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeView.swift; sourceTree = "<group>"; };
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
@@ -81,6 +83,7 @@
 				CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */,
 				A9FFEA270691335D57E5FC99 /* GameScreen.swift */,
 				FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */,
+				94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */,
 				7DEFB823D986E1A428DCF40F /* MapLayout.swift */,
 				90545C84FE5971D4416409AA /* OrderViews.swift */,
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
@@ -177,6 +180,7 @@
 				BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */,
 				2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */,
 				4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */,
+				357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */,
 				70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */,
 				D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */,
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,

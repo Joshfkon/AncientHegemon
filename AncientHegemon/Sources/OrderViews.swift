@@ -263,8 +263,51 @@ struct TerritoryPanel: View {
                 .buttonStyle(.bordered)
                 .font(.caption)
             }
+            projects(human)
         } else {
             Text("Cut off from your capital: no recruiting here.").font(.caption).foregroundStyle(.orange)
+        }
+    }
+}
+
+extension TerritoryPanel {
+    /// Projects: what's built, what's underway, and what can be started here.
+    @ViewBuilder func projects(_ human: CivilizationID) -> some View {
+        let land = state.land[territory]!
+        let cs = state.civs[human]!
+        Text("Build").font(.subheadline.bold())
+        Text("In store: \(cs.gold) gold · \(cs.stock[.stone] ?? 0) stone · \(cs.stock[.timber] ?? 0) timber"
+             + " (stone and timber pile up each harvest from your land and trade)")
+            .font(.caption2).foregroundStyle(.secondary)
+        if let site = land.construction {
+            Text("\(projectName(site.kind)) under construction: \(site.turnsLeft) turn\(site.turnsLeft == 1 ? "" : "s") left.")
+                .font(.caption)
+        } else {
+            ForEach(ProjectKind.allCases.filter { engine.canBuild($0, in: territory, state) }, id: \.self) { kind in
+                let cost = engine.projectCost(kind, for: human, state)
+                let affordable = cs.gold >= cost.gold && (cs.stock[.stone] ?? 0) >= cost.stone
+                    && (cs.stock[.timber] ?? 0) >= cost.timber
+                Button {
+                    session.order(.build(territory: territory, project: kind))
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(projectName(kind)).font(.caption.bold())
+                            Text(projectPurpose(kind)).font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(([("\(cost.gold) gold", cost.gold), ("\(cost.stone) stone", cost.stone),
+                               ("\(cost.timber) timber", cost.timber)].filter { $0.1 > 0 }.map(\.0)
+                              + ["\(cost.turns) turns"]).joined(separator: " · "))
+                            .font(.caption2.monospacedDigit())
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(!affordable)
+            }
+            if ProjectKind.allCases.allSatisfy({ !engine.canBuild($0, in: territory, state) }) {
+                Text("Nothing more to build here.").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 }

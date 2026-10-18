@@ -224,6 +224,26 @@ extension Engine {
         return own + shared
     }
 
+    /// What flows along a route: for each partner, the resources it receives from the other
+    /// (wine counts when the receiver has none of its own).
+    public func goods(along route: TradeRoute, in state: GameState) -> [CivilizationID: [Resource: Int]] {
+        var flows: [CivilizationID: [Resource: Int]] = [:]
+        for (to, from) in [(route.partners.a, route.partners.b), (route.partners.b, route.partners.a)] {
+            let theirs = homeNetwork(of: from, in: state)
+            let mine = homeNetwork(of: to, in: state)
+            var received: [Resource: Int] = [:]
+            for r in Resource.allCases where r != .grain && r != .wine {
+                if r == .iron, level(.metallurgy, of: to, in: state) < 2 { continue }
+                let n = yield(of: r, in: theirs, state) / rules.trade.shareDivisor
+                if n > 0 { received[r] = n }
+            }
+            let wine = yield(of: .wine, in: theirs, state)
+            if wine > 0, yield(of: .wine, in: mine, state) == 0 { received[.wine] = min(wine, rules.economy.wineExportCap) }
+            flows[to] = received
+        }
+        return flows
+    }
+
     /// Total yield of a resource across territories, counting farms and mines.
     public func yield(of resource: Resource, in territories: [TerritoryID], _ state: GameState) -> Int {
         territories.reduce(0) { $0 + territoryYield(resource, $1, state) }
