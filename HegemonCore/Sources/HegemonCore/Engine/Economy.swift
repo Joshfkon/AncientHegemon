@@ -48,11 +48,9 @@ extension Engine {
         // Income, trade and bronze come from the home network only.
         let homeNet = pockets.first ?? []
         let routes = tradeRoutes(in: state)
-        let tradeIncome = tradeGold(for: civ, routes)
-        let taxes = homeNet.reduce(0) { $0 + state.population(of: $1) } / rules.economy.populationPerGold
-        let mines = yield(of: .gold, in: homeNet) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
-        let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
-        let income = (taxes + mines) * (100 + administration) / 100 + tradeIncome
+        let gold = income(of: civ, homeNet, routes, state)
+        let tradeIncome = gold.trade
+        let income = gold.total
         state.civs[civ]!.gold += income
 
         let bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
@@ -68,6 +66,16 @@ extension Engine {
         }
         if bronze > 0 { events.append(.bronzeMade(civ: civ, amount: bronze)) }
         return events
+    }
+
+    /// Gold a civilization takes in per turn, by source.
+    func income(of civ: CivilizationID, _ homeNet: [TerritoryID], _ routes: [TradeRoute], _ state: GameState)
+        -> (taxes: Int, mines: Int, trade: Int, total: Int) {
+        let taxes = homeNet.reduce(0) { $0 + state.population(of: $1) } / rules.economy.populationPerGold
+        let mines = yield(of: .gold, in: homeNet) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
+        let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
+        let trade = tradeGold(for: civ, routes)
+        return (taxes, mines, trade, (taxes + mines) * (100 + administration) / 100 + trade)
     }
 
     func populationCap(of territory: TerritoryID) -> Int {
@@ -88,7 +96,7 @@ extension Engine {
         }
     }
 
-    func fleetUpkeep(of civ: CivilizationID, _ state: GameState) -> Int {
+    public func fleetUpkeep(of civ: CivilizationID, _ state: GameState) -> Int {
         state.fleets(of: civ).reduce(0) { $0 + $1.ships * rules.ships.upkeep + rules.upkeep(of: $1.cargo) }
     }
 

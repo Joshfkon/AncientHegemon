@@ -217,6 +217,12 @@ struct TerritoryPanel: View {
         let t = engine.map.territory(territory)!
         let army = state.armies[territory].flatMap { $0.owner == human ? $0 : nil }
         let home = engine.homeNetwork(of: human, in: state).contains(territory)
+        if home, let strain = engine.supplyStrain(of: human, at: territory, in: state) {
+            Text(strain.steps == 0 ? "Your capital." :
+                 "In supply · \(strain.steps) steps from the capital"
+                 + (strain.extraGrain > 0 ? " · each unit here eats \(strain.extraGrain) extra grain" : ""))
+                .font(.caption).foregroundStyle(strain.extraGrain > 0 ? .orange : .secondary)
+        }
         if let army {
             let ready = army.units - (state.moved[territory] ?? .zero)
             Text(ready.total > 0 ? "Tap a highlighted territory to march \(ready.total) ready units, or a sea with your ships to board."

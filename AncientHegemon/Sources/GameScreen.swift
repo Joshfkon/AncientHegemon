@@ -14,6 +14,7 @@ struct GameScreen: View {
     @State private var selected: MapPick?
     @State private var pending: PendingOrder?
     @State private var tab = PanelTab.orders
+    @State private var layer = MapLayer.armies
 
     enum PanelTab: String, CaseIterable {
         case orders = "Orders", empire = "Empire", log = "Chronicle"
@@ -24,9 +25,21 @@ struct GameScreen: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            MapView(state: state, map: engine.map, selected: selected, targets: targets, onTap: tapped)
+            MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
+                    selected: selected, targets: targets, onTap: tapped)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
+                .overlay(alignment: .top) {
+                    Picker("Map", selection: $layer) {
+                        ForEach(MapLayer.allCases.filter { session.human != nil || $0 != .supply }, id: \.self) {
+                            Text($0.rawValue).tag($0)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 360)
+                    .padding(.top, 8)
+                }
+                .overlay(alignment: .bottom) { legend.padding(.bottom, 8) }
             VStack(alignment: .leading, spacing: 10) {
                 header
                 if let message = session.message {
@@ -81,10 +94,18 @@ struct GameScreen: View {
                 } label: { Image(systemName: "ellipsis.circle") }
             }
             if let human = session.human, let cs = state.civs[human] {
+                if let econ = session.economy {
+                    HStack(spacing: 10) {
+                        stat("Gold", "\(cs.gold)", change: econ.income, color: .orange)
+                        stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
+                        stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple)
+                    }
+                }
                 HStack(spacing: 10) {
-                    Label("\(cs.gold)", systemImage: "circle.hexagongrid.fill").foregroundStyle(.orange)
-                    Label("\(cs.granary)", systemImage: "leaf.fill").foregroundStyle(.green)
-                    Label("\(cs.legitimacy)", systemImage: "crown.fill").foregroundStyle(.purple)
+                    if let econ = session.economy, !econ.cutOff.isEmpty {
+                        Label("\(econ.cutOff.count) cut off", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
                     Spacer()
                     if session.busy {
                         ProgressView().controlSize(.small)
@@ -112,6 +133,35 @@ struct GameScreen: View {
                         .disabled(session.busy || session.playing || session.isOver)
                 }
                 .controlSize(.small)
+            }
+        }
+    }
+
+    @ViewBuilder private var legend: some View {
+        let text: String? = switch layer {
+        case .armies: nil
+        case .supply: "Supply lines from your capital ♛ · orange/red: distance costs extra grain · red land: cut off"
+        case .trade: "Trade routes between empires at peace · dots: sea straits, colored by holder"
+        case .resources: "🌾 grain · Cu copper · Sn tin · 🐎 horses · 🪵 timber · 🪙 gold · copper + tin make bronze"
+        }
+        if let text {
+            Text(text).font(.caption2).foregroundStyle(.white)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(.black.opacity(0.6), in: Capsule())
+        }
+    }
+
+    /// A labeled number with its change per turn, red when falling.
+    private func stat(_ name: String, _ value: String, change: Int?, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(name).font(.caption2).foregroundStyle(.secondary)
+            HStack(spacing: 3) {
+                Text(value).font(.callout.bold().monospacedDigit()).foregroundStyle(color)
+                if let change {
+                    Text(change >= 0 ? "+\(change)" : "\(change)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(change < 0 ? .red : .secondary)
+                }
             }
         }
     }

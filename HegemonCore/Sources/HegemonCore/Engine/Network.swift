@@ -3,7 +3,8 @@
 /// travelers when the chokepoint's holder is at war with any of them.
 ///
 /// A sea holding an enemy fleet, and none of the travelers' own, is blockaded and impassable.
-enum NetworkNode: Hashable {
+/// A stop on a supply or trade route: a territory or a sea zone.
+public enum NetworkNode: Hashable, Codable, Sendable {
     case land(TerritoryID)
     case sea(SeaZoneID)
 }
@@ -15,6 +16,8 @@ public struct TradeRoute: Codable, Sendable, Equatable {
     public let chokepoints: [ChokepointID]
     /// Third-party civilizations that take a toll from each side, one entry per chokepoint.
     public let tolls: [CivilizationID]
+    /// The way the goods travel, from one partner's land to the other's.
+    public let path: [NetworkNode]
 
     public func involves(_ civ: CivilizationID) -> Bool {
         partners.a == civ || partners.b == civ
@@ -137,6 +140,20 @@ extension Engine {
         return result
     }
 
+    /// The supply line from the seat to a territory in the home network, through owned land and
+    /// open sea lanes. Nil if the territory is cut off (or not the civilization's).
+    public func supplyRoute(of civ: CivilizationID, to territory: TerritoryID,
+                            in state: GameState) -> [NetworkNode]? {
+        guard let seat = seat(of: civ, in: state) else { return nil }
+        let (parents, found) = search(from: [.land(seat)], through: [civ], travelers: [civ], in: state) {
+            $0 == .land(territory)
+        }
+        guard let found else { return nil }
+        var path: [NetworkNode] = [found]
+        while let parent = parents[path.last!] ?? nil { path.append(parent) }
+        return path.reversed()
+    }
+
     /// Territories in a civilization's home supply network.
     public func homeNetwork(of civ: CivilizationID, in state: GameState) -> [TerritoryID] {
         supplyPockets(of: civ, in: state).first ?? []
@@ -171,7 +188,7 @@ extension Engine {
             chokepoints.append(gate.id)
             if let h = holder(of: gate, in: state), h != a, h != b { tolls.append(h) }
         }
-        return TradeRoute(partners: CivPair(a, b), chokepoints: chokepoints, tolls: tolls)
+        return TradeRoute(partners: CivPair(a, b), chokepoints: chokepoints, tolls: tolls, path: path)
     }
 
     /// Every active trade route in the game, in a stable order.

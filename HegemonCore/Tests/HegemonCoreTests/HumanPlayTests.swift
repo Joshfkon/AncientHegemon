@@ -94,3 +94,41 @@ import Testing
         #expect(s.rng == before)
     }
 }
+
+@Suite struct EconomyReportTests {
+    @Test func forecastMatchesTheHarvest() throws {
+        let engine = try Engine.calm()
+        for seed in 1...3 {
+            // Play a few AI rounds to get a varied economy, then compare forecast and harvest.
+            let record = try playAIMatch(engine: engine, seed: UInt64(seed), personalities: [:], maxTurns: 8)
+            var s = record.finalState
+            guard s.winner == nil else { continue }
+            let civ = s.activePlayer
+            let report = engine.economy(of: civ, in: s)
+            let gold = s.civs[civ]!.gold
+            s.turn = max(2, s.turn)
+            let events = engine.harvest(civ, &s)
+            guard case let .harvest(_, production, consumption, _, _, income)? = events.first else {
+                Issue.record("no harvest")
+                continue
+            }
+            #expect(report.grainProduced == production)
+            #expect(report.grainProduced - report.grainBalance == consumption)
+            #expect(report.income == income)
+            #expect(s.civs[civ]!.gold == gold + income)
+        }
+    }
+
+    @Test func supplyRoutesRunFromTheCapital() throws {
+        let engine = try Engine.bare()
+        var s = try engine.newGame(seed: 1, civilizations: ["greece"])
+        for t in ["macedonia", "thrace", "dacia"] { s.land[t]!.owner = "greece" }
+        let route = try #require(engine.supplyRoute(of: "greece", to: "dacia", in: s))
+        #expect(route.first == .land("greece"))
+        #expect(route.last == .land("dacia"))
+        #expect(engine.supplyStrain(of: "greece", at: "dacia", in: s)?.steps == route.count - 1)
+        s.land["sicilia"]!.owner = "greece"  // reachable only by sea
+        let sea = try #require(engine.supplyRoute(of: "greece", to: "sicilia", in: s))
+        #expect(sea.contains { if case .sea = $0 { true } else { false } })
+    }
+}

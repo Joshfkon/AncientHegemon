@@ -57,6 +57,8 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     `.resolveCrisis`, `Engine.attackOdds`. 126 tests. Not yet: save/resume, a tutorial, sound,
     SpriteKit animation of moves, iPhone device testing. Ship orders, the crisis sheet and
     generals' honors haven't been exercised by hand in the Simulator yet.
+  - **Logistics visible**: `Engine.economy` (EconomyReport), `supplyRoute`, `supplyStrain`,
+    `TradeRoute.path`; app header, Supply/Trade/Resources map layers, Economy section. 128 tests.
   - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
     In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
     (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).

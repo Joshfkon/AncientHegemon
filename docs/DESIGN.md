@@ -594,3 +594,11 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     game waits on a decision: pay off the claimants (gold), crown the strongest claimant (a new
     dynasty, legitimacy cost, no war), or stand firm (each claimant rises in civil war). AI
     empires still resolve these by rule.
+  - **Logistics on screen** (Josh: "I don't see grain or trade routes"): the header shows gold and
+    grain with their change per turn; map layers show supply lines from the capital (orange/red
+    where distance costs extra grain, cut-off land in red), trade routes along their real paths
+    with strait holders, and each territory's grain and resources; an Economy section breaks down
+    grain (harvest, people, armies, long supply lines, crews), gold (taxes, mines, trade), trade
+    partners, bronze and the resources within reach. Forecasts come from `Engine.economy`, which
+    runs the harvest on a scratch copy, so they match what happens. Declaring war asks first.
+  - Iron is not shown: the Bronze → Iron Age shift is still post-MVP.

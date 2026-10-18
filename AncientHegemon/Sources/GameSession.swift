@@ -22,7 +22,11 @@ struct BattleEntry: Identifiable {
 @MainActor @Observable
 final class GameSession {
     let engine: Engine
-    private(set) var state: GameState
+    private(set) var state: GameState {
+        didSet { refreshEconomy() }
+    }
+    /// The player's economy as it stands (grain, gold, trade, resources), kept current.
+    private(set) var economy: EconomyReport?
     private(set) var log: [LogLine] = []
     private(set) var battles: [BattleEntry] = []
     /// The civilization the person plays; nil when watching the AIs play each other.
@@ -63,12 +67,17 @@ final class GameSession {
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         human = civ
         if let civ { state.civs[civ]!.isHuman = true }
+        refreshEconomy()
         log = []
         battles = []
         message = nil
         replay = nil
         started = true
         if civ != nil { Task { await runAITurns() } }
+    }
+
+    private func refreshEconomy() {
+        economy = human.map { engine.economy(of: $0, in: state) }
     }
 
     func quit() {

@@ -4,6 +4,8 @@ import SwiftUI
 /// The player's realm: standings, diplomacy and generals.
 struct EmpireView: View {
     let session: GameSession
+    /// A declaration of war waiting for confirmation: breaking a peace costs legitimacy.
+    @State private var warOn: CivilizationID?
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -12,6 +14,7 @@ struct EmpireView: View {
         VStack(alignment: .leading, spacing: 14) {
             EmpireTable(state: state, engine: engine)
             if let human = session.human {
+                if let econ = session.economy { EconomyView(econ: econ, state: state, engine: engine) }
                 ruler(human)
                 diplomacy(human)
                 generals(human)
@@ -33,7 +36,8 @@ struct EmpireView: View {
     }
 
     private func diplomacy(_ human: CivilizationID) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let cost = -engine.rules.government.legitimacy.brokePeace
+        return VStack(alignment: .leading, spacing: 6) {
             Text("Diplomacy").font(.subheadline.bold())
             ForEach(state.players.filter { $0 != human && !state.civs[$0]!.eliminated }, id: \.self) { other in
                 HStack {
@@ -46,11 +50,21 @@ struct EmpireView: View {
                 }
             }
         }
+        .confirmationDialog("Break the peace with \(warOn.map { Palette.name($0, state) } ?? "")?",
+                            isPresented: Binding(get: { warOn != nil }, set: { if !$0 { warOn = nil } }),
+                            titleVisibility: .visible) {
+            Button("Declare war", role: .destructive) {
+                if let warOn { session.order(.declareWar(on: warOn)) }
+                warOn = nil
+            }
+        } message: {
+            Text("Breaking a peace costs \(cost) legitimacy and ends any trade route between you.")
+        }
     }
 
     @ViewBuilder private func diplomacyButton(_ human: CivilizationID, _ other: CivilizationID) -> some View {
         if state.atPeace(human, other) {
-            Button("Declare war") { session.order(.declareWar(on: other)) }
+            Button("Declare war") { warOn = other }
                 .buttonStyle(.bordered).tint(.red).controlSize(.mini)
         } else if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
             Button("Accept peace") { session.order(.acceptPeace(from: other)) }
@@ -87,6 +101,86 @@ struct EmpireView: View {
                         .disabled(!session.isHumanTurn)
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Where grain and gold come from and go, trade, bronze and the resources within reach.
+struct EconomyView: View {
+    let econ: EconomyReport
+    let state: GameState
+    let engine: Engine
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Economy").font(.subheadline.bold())
+            if !econ.cutOff.isEmpty {
+                Label("Cut off from the capital: \(econ.cutOff.compactMap { engine.map.territory($0)?.name }.joined(separator: ", ")). "
+                      + "No taxes or recruits there, and armies lose a unit a turn.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.red)
+            }
+            ledger("Grain", [
+                ("Harvest", econ.grainProduced),
+                ("People eat", -econ.eatenByPeople),
+                ("Armies eat", -econ.eatenByArmies),
+                ("Long supply lines", -econ.eatenByDistance),
+                ("Ships' crews", -econ.eatenAtSea),
+            ], total: ("Each turn", econ.grainBalance))
+            Text("Granary \(econ.granary) of \(econ.granaryCap)"
+                 + (econ.grainBalance < 0 ? " · empties in \(max(1, econ.granary / max(1, -econ.grainBalance) + 1)) turns, then people starve" : ""))
+                .font(.caption).foregroundStyle(econ.grainBalance < 0 ? .red : .secondary)
+            ledger("Gold", [("Taxes", econ.taxes), ("Mines", econ.mines), ("Trade", econ.trade)],
+                   total: ("Next harvest", econ.income))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Trade").font(.caption.bold())
+                if econ.tradePartners.isEmpty {
+                    Text("No routes. Make peace with empires you can reach by land or open sea.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text(econ.tradePartners.map { Palette.name($0, state) }.joined(separator: ", "))
+                        .font(.caption)
+                    Text("Each partner shares half its copper, tin, horses, timber and gold.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Resources within reach").font(.caption.bold())
+                HStack(spacing: 10) {
+                    resource("Copper", .copper); resource("Tin", .tin); resource("Horses", .horses)
+                }
+                HStack(spacing: 10) {
+                    resource("Timber", .timber); resource("Gold", .gold)
+                }
+                Text("Bronze \(econ.bronze) (+\(econ.bronzePerTurn) a turn, from copper and tin together). "
+                     + "Arms your troops: up to +\(engine.rules.battle.bronzeBonusPercent)% in battle.")
+                    .font(.caption)
+                Text("Horses limit cavalry recruits, timber limits shipbuilding, each per turn.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func resource(_ name: String, _ r: Resource) -> some View {
+        Text("\(name) \(econ.resources[r] ?? 0)").font(.caption.monospacedDigit())
+            .foregroundStyle((econ.resources[r] ?? 0) == 0 ? .secondary : .primary)
+    }
+
+    private func ledger(_ title: String, _ rows: [(String, Int)], total: (String, Int)) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption.bold())
+            ForEach(rows.filter { $0.1 != 0 }, id: \.0) { row in
+                HStack {
+                    Text(row.0).font(.caption)
+                    Spacer()
+                    Text(row.1 > 0 ? "+\(row.1)" : "\(row.1)").font(.caption.monospacedDigit())
+                }
+            }
+            HStack {
+                Text(total.0).font(.caption.bold())
+                Spacer()
+                Text(total.1 >= 0 ? "+\(total.1)" : "\(total.1)").font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(total.1 < 0 ? .red : .primary)
             }
         }
     }

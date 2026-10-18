@@ -73,9 +73,19 @@ struct EmpireTable: View {
 /// The board as painted: territories in their terrain colors, tinted by owner, with rivers,
 /// mountain peaks, the seam between the board's halves, and armies and fleets on top.
 /// Tapping a territory selects it.
+/// What the map emphasizes.
+enum MapLayer: String, CaseIterable {
+    case armies = "Armies", supply = "Supply", trade = "Trade", resources = "Resources"
+}
+
 struct MapView: View {
     let state: GameState
     let map: GameMap
+    /// Needed for the supply and trade layers.
+    var engine: Engine?
+    var layer = MapLayer.armies
+    /// Whose supply lines to show.
+    var focus: CivilizationID?
     /// The selected territory or sea.
     var selected: MapPick?
     /// Where the current selection can go: drawn with a dashed glow.
@@ -181,6 +191,12 @@ struct MapView: View {
             context.stroke(t.path(shape.polygon), with: .color(.white), lineWidth: 2.5)
         }
 
+        switch layer {
+        case .supply: drawSupply(&context, t)
+        case .trade: drawTrade(&context, t)
+        case .armies, .resources: break
+        }
+
         // Names in the board's hand lettering, then armies and fleets.
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
@@ -192,8 +208,9 @@ struct MapView: View {
                             .font(.custom("ChalkboardSE-Bold", size: 6.5))
                             .foregroundStyle(.black.opacity(0.85)),
                            at: .zero)
-            if let army = state.armies[territory.id], army.units.total > 0 {
-                // Armies sit at the middle of the land, under the name for straight-lettered ones.
+            if layer == .resources {
+                drawResources(&context, territory, at: t.point(shape.token))
+            } else if let army = state.armies[territory.id], army.units.total > 0 {
                 let c = t.point(shape.token)
                 let native = !state.isPlayer(army.owner)
                 let r: CGFloat = native ? 5.5 : 7.5
@@ -223,6 +240,101 @@ struct MapView: View {
                              at: CGPoint(x: p.x, y: p.y + 10 + CGFloat(i) * 11))
             }
         }
+    }
+}
+
+extension MapView {
+    private func point(_ node: NetworkNode, _ t: BoardTransform) -> CGPoint? {
+        switch node {
+        case .land(let id): art.territories[id].map { t.point($0.token) }
+        case .sea(let id): art.seas[id].map(t.point)
+        }
+    }
+
+    private func line(through nodes: [NetworkNode], _ t: BoardTransform) -> Path {
+        var path = Path()
+        path.addLines(nodes.compactMap { point($0, t) })
+        return path
+    }
+
+    /// The focus civ's supply network: other land dimmed, cut-off land in red, and a line from
+    /// the capital to every army, orange or red where the distance costs extra grain.
+    fileprivate func drawSupply(_ context: inout GraphicsContext, _ t: BoardTransform) {
+        guard let engine, let civ = focus else { return }
+        let pockets = engine.supplyPockets(of: civ, in: state)
+        let home = Set(pockets.first ?? [])
+        for territory in map.territories {
+            guard let shape = art.territories[territory.id] else { continue }
+            let path = t.path(shape.polygon)
+            if state.owner(of: territory.id) != civ {
+                context.fill(path, with: .color(.black.opacity(0.35)))
+            } else if !home.contains(territory.id) {
+                context.fill(path, with: .color(.red.opacity(0.45)))
+            }
+        }
+        for (territory, _) in state.armies(of: civ) where home.contains(territory) {
+            guard let route = engine.supplyRoute(of: civ, to: territory, in: state), route.count > 1 else { continue }
+            let extra = engine.supplyStrain(of: civ, at: territory, in: state)?.extraGrain ?? 0
+            let color: Color = extra == 0 ? .white : extra == 1 ? .orange : .red
+            context.stroke(line(through: route, t), with: .color(.black.opacity(0.5)),
+                           style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            context.stroke(line(through: route, t), with: .color(color),
+                           style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+        }
+        if let seat = engine.seat(of: civ, in: state), let shape = art.territories[seat] {
+            let c = t.point(shape.token)
+            context.draw(Text("♛").font(.system(size: 13, weight: .bold)).foregroundStyle(.yellow),
+                         at: CGPoint(x: c.x, y: c.y - 12))
+        }
+    }
+
+    /// Every trade route along its path, and who holds each sea strait.
+    fileprivate func drawTrade(_ context: inout GraphicsContext, _ t: BoardTransform) {
+        guard let engine else { return }
+        for territory in map.territories {
+            if let shape = art.territories[territory.id], state.owner(of: territory.id) == nil {
+                context.fill(t.path(shape.polygon), with: .color(.black.opacity(0.25)))
+            }
+        }
+        let routes = engine.tradeRoutes(in: state)
+        for route in routes {
+            let path = line(through: route.path, t)
+            context.stroke(path, with: .color(.black.opacity(0.5)),
+                           style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            context.stroke(path, with: .color(.yellow),
+                           style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round, dash: [6, 3]))
+        }
+        let tolled = Set(routes.flatMap(\.chokepoints))
+        for strait in map.chokepoints {
+            guard let link = strait.gatesSeaLink, let a = art.seas[link[0]], let b = art.seas[link[1]] else { continue }
+            let pa = t.point(a), pb = t.point(b)
+            let c = CGPoint(x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2)
+            let holder = engine.holder(of: strait, in: state)
+            let dot = Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12))
+            context.fill(dot, with: .color(holder.map { Palette.color($0, state) } ?? Color(white: 0.8)))
+            context.stroke(dot, with: .color(tolled.contains(strait.id) ? .yellow : .black), lineWidth: 1.5)
+            context.draw(Text(strait.name).font(.system(size: 6.5, weight: .semibold)).foregroundStyle(.white),
+                         at: CGPoint(x: c.x, y: c.y + 11))
+        }
+    }
+
+    /// Grain and resources on each territory, as on the board's tokens.
+    fileprivate func drawResources(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint) {
+        var parts = [Text("🌾\(territory.grain)").foregroundStyle(.black)]
+        let glyphs: [(Resource, String, Color)] = [
+            (.copper, "Cu", Color(red: 0.7, green: 0.35, blue: 0.1)), (.tin, "Sn", Color(white: 0.35)),
+            (.horses, "🐎", .black), (.timber, "🪵", .black), (.gold, "🪙", .black),
+        ]
+        for (resource, glyph, color) in glyphs {
+            if let n = territory.resources[resource], n > 0 {
+                parts.append(Text(" \(glyph)\(n)").foregroundStyle(color))
+            }
+        }
+        let label = parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 7.5, weight: .bold))
+        let size = CGSize(width: 18 + CGFloat(parts.count - 1) * 18, height: 11)
+        context.fill(Path(roundedRect: CGRect(x: c.x - size.width / 2, y: c.y - 5.5, width: size.width, height: size.height),
+                          cornerRadius: 4), with: .color(.white.opacity(0.75)))
+        context.draw(label, at: c)
     }
 }
 
