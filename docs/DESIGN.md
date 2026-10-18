@@ -485,10 +485,16 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     caution, trade, opportunism). Defaults: Greece merchant, Egypt turtle, Italia conqueror,
     Mesopotamia opportunist.
   - Deterministic, and never touches the game's RNG (its estimates use seeds derived from state).
-  - **Not yet**: ships (the AI never builds or sails), and no lookahead beyond one move.
+  - **Naval AI**: each turn it picks the most valuable coast it can't reach by land (score:
+    value − 0.7 × defenders − 0.75 × seas away), builds transports before recruiting (enough
+    for `2 × defenders + 1` units, max 8, keeping gold for a recruit), boards spare troops at the
+    nearest coast, sails one sea toward the target (avoiding enemy fleets it can't beat 1.5 to 1),
+    and lands when 4 simulated landings give at least 60% success.
+  - **Not yet**: no lookahead beyond one move; no dedicated warfleets or deliberate blockades.
 - **Changes made from the first balance runs (step 5, provisional)**:
-  - **Native garrisons**: every territory not in a starting realm holds `1 + grain ÷ 3` native
-    infantry that defend but never move or act. Without them, whoever had the most empty
+  - **Native garrisons**: every territory not in a starting realm holds `2 + grain ÷ 3` native
+    infantry that defend but never move or act (raised from 1 + grain ÷ 3 after the naval-AI
+    runs: Mesopotamia's win rate fell from 77% to 47% and games lengthened from 14 to 21 rounds). Without them, whoever had the most empty
     neighbors snowballed (Mesopotamia held 24 territories by turn 10).
   - **Starting heartlands** (replacing capital-only starts): Greece + Macedonia + Thrace,
     Egypt + Libya + Petraea, Italia + Sicilia, Mesopotamia + Persia. Greece's 2-grain capital
@@ -498,3 +504,17 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
   - **No harvest on turn 1**, so later seats don't start with a free harvest.
   - **Domination victory**: holding 60% of territories (24 of 40) wins. Placeholder for open
     question §14.5.
+- **Balance goal: shifting advantage, not equal odds** (Josh, after step 5). Some regions
+  should be stronger, as they were historically. What matters is that *who* is advantaged
+  changes with technology and events, and that an advantage can turn into a weakness. Equal
+  win rates are not the target. The aim is that each civ has eras or situations where it
+  leads. Hooks for this, for steps 6+ and the Ages:
+  - **Centrality cuts both ways**: Mesopotamia's many borders mean fast growth but also the most
+    fronts, the most generals far from the capital (civil-war risk), and first contact with
+    steppe migrations.
+  - **River-valley breadbaskets** (Egypt, Mesopotamia) are most exposed to flood and famine
+    events. **Trade hubs** are where plague spreads along routes.
+  - **Bronze → Iron Age**: tin's value collapses and iron appears everywhere, so empires
+    built on tin routes lose their edge while poorer, peripheral ones gain.
+  - The sim should measure this: who leads at different points in a game and how often the
+    lead changes, not just who wins.

@@ -33,6 +33,24 @@ import Testing
         #expect(s.territories(of: "mesopotamia").count > start + 2)
     }
 
+    @Test func aiSailsToCoastsItCannotWalkTo() throws {
+        // Greece's heartland touches few coasts by land; the AI must build ships to reach more.
+        var s = try engine.newGame(seed: 4, civilizations: ["greece"])
+        let ai = AIPlayer(engine: engine, personality: .conqueror)
+        var built = 0
+        var seaborneCaptures = 0
+        for _ in 0..<25 where s.winner == nil {
+            var landedOn: Set<TerritoryID> = []
+            for event in ai.playTurn(&s).events {
+                if case let .shipsBuilt(_, _, n) = event { built += n }
+                if case let .landed(_, _, t, _) = event { landedOn.insert(t) }
+                if case let .captured(_, t, _) = event, landedOn.contains(t) { seaborneCaptures += 1 }
+            }
+        }
+        #expect(built > 0)
+        #expect(seaborneCaptures > 0)
+    }
+
     @Test func aiBeatsAPassiveRival() throws {
         var s = try engine.newGame(seed: 3, civilizations: ["mesopotamia", "egypt"])
         let ai = AIPlayer(engine: engine, personality: .conqueror)

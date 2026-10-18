@@ -13,6 +13,10 @@ public struct CivRecord: Sendable, Equatable {
     public var defencesWon = 0
     public var defencesLost = 0
     public var rejectedCommands = 0
+    public var shipsBuilt = 0
+    public var landings = 0
+    public var navalBattlesWon = 0
+    public var navalBattlesLost = 0
 
     /// Lost at least half of a realm that once held 4+ territories.
     public var collapsed: Bool { peakTerritories >= 4 && finalTerritories * 2 <= peakTerritories }
@@ -72,6 +76,16 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 civs[c]!.turnsStarving += 1
                 civs[c]!.populationStarved += pop
                 civs[c]!.unitsDeserted += units
+            case let .shipsBuilt(c, _, count):
+                civs[c]?.shipsBuilt += count
+            case let .landed(c, _, _, _):
+                civs[c]?.landings += 1
+            case let .navalBattle(_, report):
+                let won = report.winner == .attacker
+                civs[report.attacker]?.navalBattlesWon += won ? 1 : 0
+                civs[report.attacker]?.navalBattlesLost += won ? 0 : 1
+                civs[report.defender]?.navalBattlesWon += won ? 0 : 1
+                civs[report.defender]?.navalBattlesLost += won ? 1 : 0
             case let .outOfSupply(c, _, lost):
                 civs[c]!.unitsLostToAttrition += lost
             case let .eliminated(c):

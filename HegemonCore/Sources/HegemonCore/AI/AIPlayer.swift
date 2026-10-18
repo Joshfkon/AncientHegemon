@@ -21,16 +21,19 @@ public struct AIPlayer: Sendable {
         self.personality = personality
     }
 
-    private var map: GameMap { engine.map }
-    private var rules: Rules { engine.rules }
+    var map: GameMap { engine.map }
+    var rules: Rules { engine.rules }
 
     /// Plays the active civilization's turn, including ending it.
     public func playTurn(_ state: inout GameState) -> AITurn {
         var turn = AITurn()
         let civ = state.activePlayer
         diplomacy(civ, &state, &turn)
+        let campaign = seaCampaign(civ, state)
+        if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         recruit(civ, &state, &turn)
         attack(civ, &state, &turn)
+        if let campaign { sail(civ, toward: campaign, &state, &turn) }
         fortify(civ, &state, &turn)
         chooseDefensiveFormations(civ, &state, &turn)
         issue(.endTurn, &state, &turn)
@@ -38,7 +41,7 @@ public struct AIPlayer: Sendable {
     }
 
     @discardableResult
-    private func issue(_ command: Command, _ state: inout GameState, _ turn: inout AITurn) -> Bool {
+    func issue(_ command: Command, _ state: inout GameState, _ turn: inout AITurn) -> Bool {
         guard state.winner == nil else { return false }
         do {
             turn.events += try engine.apply(command, to: &state)
@@ -50,7 +53,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// Tries a command whose failure is an expected outcome, not an AI mistake.
-    private func attempt(_ command: Command, _ state: inout GameState, _ turn: inout AITurn) -> Bool {
+    func attempt(_ command: Command, _ state: inout GameState, _ turn: inout AITurn) -> Bool {
         guard state.winner == nil, let events = try? engine.apply(command, to: &state) else { return false }
         turn.events += events
         return true
@@ -59,13 +62,13 @@ public struct AIPlayer: Sendable {
     // MARK: Assessment
 
     /// Whether another army's owner is a danger. Natives fight back but never attack.
-    private func hostile(_ civ: CivilizationID, _ other: CivilizationID?, _ state: GameState) -> Bool {
+    func hostile(_ civ: CivilizationID, _ other: CivilizationID?, _ state: GameState) -> Bool {
         guard let other, other != nativesID else { return false }
         return state.atWar(civ, other)
     }
 
     /// Enemy units on land next to a territory, optionally ignoring one neighbor.
-    private func threat(to t: TerritoryID, for civ: CivilizationID, _ state: GameState,
+    func threat(to t: TerritoryID, for civ: CivilizationID, _ state: GameState,
                         excluding skip: TerritoryID? = nil) -> Int {
         map.landNeighbors(of: t).filter { $0 != skip }.reduce(0) { total, n in
             guard let army = state.armies[n], hostile(civ, army.owner, state) else { return total }
@@ -73,15 +76,15 @@ public struct AIPlayer: Sendable {
         }
     }
 
-    private func strength(of civ: CivilizationID, _ state: GameState) -> Int {
+    func strength(of civ: CivilizationID, _ state: GameState) -> Int {
         state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
     }
 
-    private func borders(_ a: CivilizationID, _ b: CivilizationID, _ state: GameState) -> Bool {
+    func borders(_ a: CivilizationID, _ b: CivilizationID, _ state: GameState) -> Bool {
         state.territories(of: a).contains { t in map.landNeighbors(of: t).contains { state.owner(of: $0) == b } }
     }
 
-    private func readyUnits(at t: TerritoryID, _ state: GameState) -> UnitCounts {
+    func readyUnits(at t: TerritoryID, _ state: GameState) -> UnitCounts {
         guard let army = state.armies[t] else { return .zero }
         let ready = army.units - (state.moved[t] ?? .zero)
         return UnitCounts(infantry: max(0, ready.infantry), archers: max(0, ready.archers),
@@ -89,7 +92,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// Units a territory should keep at home against the enemies next to it.
-    private func garrison(_ t: TerritoryID, for civ: CivilizationID, _ state: GameState,
+    func garrison(_ t: TerritoryID, for civ: CivilizationID, _ state: GameState,
                           excluding skip: TerritoryID? = nil) -> Int {
         let t0 = threat(to: t, for: civ, state, excluding: skip)
         var keep = Int((Double(t0) * personality.caution).rounded(.up))
@@ -99,7 +102,7 @@ public struct AIPlayer: Sendable {
 
     // MARK: Diplomacy
 
-    private func diplomacy(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func diplomacy(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let mine = strength(of: civ, state)
         // While there's free land to claim, peace is cheap; once it's gone, neighbors are the
         // only way to grow.
@@ -131,7 +134,7 @@ public struct AIPlayer: Sendable {
 
     // MARK: Recruitment
 
-    private func recruit(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func recruit(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let cheapest = UnitType.allCases.map { rules.stats($0).cost }.min()!
         for _ in 0..<60 {
             guard state.civs[civ]!.gold >= cheapest else { return }
@@ -161,7 +164,7 @@ public struct AIPlayer: Sendable {
 
     /// How badly a territory wants reinforcements: threat beyond its garrison, plus a nudge
     /// toward territories with land to grab next door.
-    private func need(_ t: TerritoryID, _ civ: CivilizationID, _ state: GameState) -> Double {
+    func need(_ t: TerritoryID, _ civ: CivilizationID, _ state: GameState) -> Double {
         let own = Double(state.armies[t].map { $0.owner == civ ? $0.units.total : 0 } ?? 0)
         let danger = Double(threat(to: t, for: civ, state)) * personality.caution
         let frontier = map.landNeighbors(of: t).contains { n in
@@ -171,7 +174,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// Counters whatever the nearby enemy fields most of; otherwise keeps a balanced mix.
-    private func unitType(for t: TerritoryID, _ civ: CivilizationID, _ state: GameState) -> UnitType {
+    func unitType(for t: TerritoryID, _ civ: CivilizationID, _ state: GameState) -> UnitType {
         var near = UnitCounts.zero
         for n in map.landNeighbors(of: t) {
             if let army = state.armies[n], hostile(civ, army.owner, state) { near += army.units }
@@ -194,7 +197,7 @@ public struct AIPlayer: Sendable {
 
     // MARK: Attack
 
-    private struct Option {
+    struct Option {
         let from: TerritoryID
         let to: TerritoryID
         let units: UnitCounts
@@ -202,7 +205,7 @@ public struct AIPlayer: Sendable {
         let battle: Bool
     }
 
-    private func attack(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func attack(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         var cache: [String: Double] = [:]
         for _ in 0..<40 {
             guard state.winner == nil,
@@ -224,7 +227,7 @@ public struct AIPlayer: Sendable {
         }
     }
 
-    private func options(_ civ: CivilizationID, _ state: GameState, _ cache: inout [String: Double]) -> [Option] {
+    func options(_ civ: CivilizationID, _ state: GameState, _ cache: inout [String: Double]) -> [Option] {
         let home = Set(engine.homeNetwork(of: civ, in: state))
         var result: [Option] = []
         for (from, _) in state.armies(of: civ) {
@@ -264,7 +267,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// Picks `count` units from `ready`, sending cavalry and infantry before archers.
-    private func take(_ count: Int, from ready: UnitCounts) -> UnitCounts {
+    func take(_ count: Int, from ready: UnitCounts) -> UnitCounts {
         var left = count
         var units = UnitCounts.zero
         for type in [UnitType.infantry, .cavalry, .archers] {
@@ -276,7 +279,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// How much a territory is worth to `civ`.
-    private func value(of t: TerritoryID, for civ: CivilizationID, _ state: GameState) -> Double {
+    func value(of t: TerritoryID, for civ: CivilizationID, _ state: GameState) -> Double {
         let territory = map.territory(t)!
         let tin = engine.effectiveYield(of: .tin, for: civ, in: state)
         let copper = engine.effectiveYield(of: .copper, for: civ, in: state)
@@ -298,7 +301,7 @@ public struct AIPlayer: Sendable {
     }
 
     /// 0 for a healthy civilization, rising toward 1 as it shrinks or fights on several fronts.
-    private func weakness(_ civ: CivilizationID, _ state: GameState) -> Double {
+    func weakness(_ civ: CivilizationID, _ state: GameState) -> Double {
         let wars = state.players.filter { $0 != civ && !state.civs[$0]!.eliminated && state.atWar(civ, $0) }.count
         let land = state.territories(of: civ).count
         return min(1, Double(max(0, wars - 1)) * 0.25 + (land <= 3 ? 0.5 : 0))
@@ -306,7 +309,7 @@ public struct AIPlayer: Sendable {
 
     // MARK: Battle estimates
 
-    private func battleSetup(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
+    func battleSetup(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
                              formation: FormationID?, seed: UInt64, _ state: GameState) -> BattleSetup {
         let defender = state.armies[to]!
         let general = state.general(of: civ, at: from).flatMap { state.generalsMoved.contains($0.id) ? nil : $0 }
@@ -327,14 +330,14 @@ public struct AIPlayer: Sendable {
 
     /// Seeds for estimates, derived from the state so the AI is deterministic without touching
     /// the game's RNG.
-    private func seeds(_ state: GameState, _ salt: String) -> [UInt64] {
+    func seeds(_ state: GameState, _ salt: String) -> [UInt64] {
         var h: UInt64 = state.seed ^ (UInt64(state.turn) &* 0x9E37_79B9_7F4A_7C15)
         for byte in salt.utf8 { h = (h ^ UInt64(byte)) &* 0x100_0000_01B3 }
         var rng = SeededRNG(seed: h)
         return (0..<samples).map { _ in rng.next() }
     }
 
-    private func estimate(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
+    func estimate(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
                           formation: FormationID?, _ state: GameState) -> Double {
         let sim = BattleSimulator(rules: rules)
         let wins = seeds(state, from + to).filter { seed in
@@ -344,7 +347,7 @@ public struct AIPlayer: Sendable {
         return Double(wins) / Double(samples)
     }
 
-    private func bestFormation(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
+    func bestFormation(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
                                _ state: GameState) -> FormationID {
         rules.battle.formations.map(\.id).max { a, b in
             let pa = estimate(civ, from: from, to: to, units: units, formation: a, state)
@@ -355,7 +358,7 @@ public struct AIPlayer: Sendable {
 
     /// For each army facing an enemy stack, the formation that defends best against the
     /// strongest neighbor attacking with everything.
-    private func chooseDefensiveFormations(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func chooseDefensiveFormations(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let sim = BattleSimulator(rules: rules)
         for (t, units) in state.armies(of: civ) {
             let foes = map.landNeighbors(of: t).compactMap { n -> (TerritoryID, Army)? in
@@ -387,7 +390,7 @@ public struct AIPlayer: Sendable {
     // MARK: Fortify
 
     /// Marches idle units out of safe interior territories toward the nearest border.
-    private func fortify(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func fortify(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let owned = Set(state.territories(of: civ))
         let frontier = owned.filter { t in map.landNeighbors(of: t).contains { !owned.contains($0) } }
         var distance: [TerritoryID: Int] = [:]

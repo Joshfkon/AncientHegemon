@@ -127,6 +127,19 @@ for civ in civs {
     print(cols.joined())
 }
 
+print("")
+print("civ          ships built  landings  sea battles won")
+for civ in civs {
+    let rs = records.compactMap { $0.civs[civ] }
+    let n = max(1, rs.count)
+    let sum = { (f: (CivRecord) -> Int) in rs.map(f).reduce(0, +) }
+    let fights = sum { $0.navalBattlesWon + $0.navalBattlesLost }
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + pad(String(format: "%.1f", Double(sum(\.shipsBuilt)) / Double(n)), 11)
+          + pad(String(format: "%.1f", Double(sum(\.landings)) / Double(n)), 10)
+          + pad("\(pct(sum(\.navalBattlesWon), fights)) of \(fights)", 17))
+}
+
 var formations: [FormationID: FormationRecord] = [:]
 for r in records {
     for (f, rec) in r.formations {

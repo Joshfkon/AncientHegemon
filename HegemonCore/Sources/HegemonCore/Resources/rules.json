@@ -65,7 +65,7 @@
       }
     },
     "natives": {
-      "base": 1,
+      "base": 2,
       "grainPerUnit": 3
     },
     "realms": {
