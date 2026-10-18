@@ -982,3 +982,11 @@ of games: it is all coastline, and the Sea Peoples fall hardest on coasts.
 territory, so an all-coast Greece draws the most raids. Options are a lower per-coast weight,
 or walls counting against Sea Peoples landings; both would also help Italia and Egypt's Delta.
 
+
+### Greece is meant to be hard (Josh, after capital-only starts)
+
+Greece wins 5–7% of sim games and falls apart in 27–40%, mostly to the Sea Peoples, because it
+is all coastline. Josh accepted this as it stands: "That's just real life. It's not perfectly
+balanced. It'll just be harder to win as them." The Mycenaean palaces did burn around 1200 BC.
+No further fixes for Greece: walls against Sea Peoples landings and lighter coastal raids were
+both considered and set aside. The 10%-minimum target doesn't apply to Greece.
