@@ -92,7 +92,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 1, unitsLost: 7)))
         #expect(s.armies["dacia"]!.units.infantry == 2)
         // The home granary was untouched by Dacia's hunger.
-        #expect(s.civs["mesopotamia"]!.granary == 9)
+        #expect(s.civs["mesopotamia"]!.granary == 8)
     }
 
     @Test func recruitingNeedsHomeSupply() throws {
@@ -108,8 +108,8 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         own(&s, "mesopotamia", "dacia")  // Dacia: population 2, gold 2, cut off
         s.civs["mesopotamia"]!.gold = 0
         let events = try engine.apply(.endTurn, to: &s)
-        // Home population 6 after growth → 3 gold. Dacia's gold and people don't count.
-        #expect(events.contains { if case .harvest(_, _, _, _, _, 3) = $0 { true } else { false } })
+        // Home population 5 after growth → 2 gold. Dacia's gold and people don't count.
+        #expect(events.contains { if case .harvest(_, _, _, _, _, 2) = $0 { true } else { false } })
     }
 }
 

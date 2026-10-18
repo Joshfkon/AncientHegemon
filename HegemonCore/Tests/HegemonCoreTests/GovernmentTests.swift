@@ -236,8 +236,8 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
             Issue.record("no harvest")
             return
         }
-        // Egypt 10 → 5, plus Libya 1 and Petraea 1.
-        #expect(production == 7)
+        // Egypt 10 → 5, plus Libya 1, Petraea 1 and Syria 4.
+        #expect(production == 11)
         #expect(s.harvestPercent.isEmpty)
     }
 }

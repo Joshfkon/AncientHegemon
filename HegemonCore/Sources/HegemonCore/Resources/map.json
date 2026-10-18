@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "notes": "Transcribed from the painted board. Grain and resource values are balancing data (first-pass estimates), not the board's printed values; adjacency follows the painted borders. See docs/DESIGN.md appendix for map decisions.",
   "territories": [
     { "id": "hibernia",    "name": "Hibernia",    "terrain": "plains",    "grain": 3,  "resources": {},                                                "seas": ["atlantic"] },
@@ -33,7 +33,7 @@
     { "id": "anatolia",    "name": "Anatolia",    "terrain": "plains",    "grain": 5,  "resources": { "copper": 1, "iron": 2, "stone": 1, "gold": 1 }, "seas": ["aegean", "black_sea", "eastern_med"] },
     { "id": "cyprus",      "name": "Cyprus",      "terrain": "hills",     "grain": 2,  "resources": { "copper": 3, "wine": 1 },                        "seas": ["eastern_med"] },
     { "id": "syria",       "name": "Syria",       "terrain": "hills",     "grain": 4,  "resources": { "timber": 2, "wine": 1, "luxuries": 1 },         "seas": ["eastern_med"] },
-    { "id": "mesopotamia", "name": "Mesopotamia", "terrain": "plains",    "grain": 9,  "resources": {},                                                "seas": ["persian_gulf"], "tags": ["river_valley"] },
+    { "id": "mesopotamia", "name": "Mesopotamia", "terrain": "plains",    "grain": 8,  "resources": {},                                                "seas": ["persian_gulf"], "tags": ["river_valley"] },
     { "id": "petraea",     "name": "Petraea",     "terrain": "desert",    "grain": 1,  "resources": { "luxuries": 1 },                                 "seas": ["eastern_med", "red_sea"] },
     { "id": "egypt",       "name": "Egypt",       "terrain": "plains",    "grain": 10, "resources": { "stone": 1, "gold": 1, "luxuries": 1 },          "seas": ["eastern_med", "red_sea"], "tags": ["river_valley"] },
     { "id": "arabia",      "name": "Arabia",      "terrain": "desert",    "grain": 1,  "resources": { "gold": 1, "luxuries": 2 },                      "seas": ["red_sea", "persian_gulf"], "tags": ["barbarian_homeland"] },

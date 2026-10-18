@@ -852,3 +852,59 @@ dominations, 30 legacy, 1 trade; defences held 28–54%, against civs 7–10%.
   prestige), which is a design call for Josh.
 - **Archers attacking infantry** on open ground are now roughly even (86% before; the test
   asks for at least 40%); defending, archers still beat infantry.
+
+### Mesopotamia and Egypt (balance pass, part 3)
+
+After the defence changes Mesopotamia won 62–65% and Egypt 5–7%. Josh's aim: Mesopotamia can still
+be the strongest (about 30–40%), the others 15–30%, without slowing games or weakening defence.
+Rules version 5 and map version 2, so saves from before this change are ignored.
+
+**Changes (map and starting realms)**
+
+- **Egypt starts with Syria** (`start.realms.egypt`: Libya, Petraea, Syria). New Kingdom Egypt held
+  the Levant in the Late Bronze Age, so this is the period's map. It takes Mesopotamia's richest
+  westward target (4 grain, timber, wine) and gives Egypt a real frontier and a Mediterranean
+  trade coast, instead of two 1-grain deserts.
+- **Mesopotamia's capital grain 9 → 8** (`map.json`). It is still the second-richest land on
+  the map after Egypt's Nile (10), so the river-valley identity stays.
+
+**What was tried** (40 games each, seeds 1–40 and 101–140; Mesopotamia's wins)
+
+```
+Persia to the natives (Mesopotamia starts with one territory)    50% / 32%   games 46–48 rounds, 2–5 dominations
+  ... and Egypt loses Libya                                      75% / 55%   Egypt only gets weaker
+Persia to the natives and Egypt starts with Syria                17% / 17%   Egypt leads instead; overshoots
+Egypt starts with Syria                                          45% / 40%
+Egypt starts with Syria, Persia grain 4 → 3                      37% / 32%   Italia 10% on one set
+Egypt starts with Syria, Mesopotamia grain 9 → 8 (chosen)        32% / 32%
+```
+
+Persia to the natives worked on Mesopotamia but stalled the game: nobody else had the army to
+dominate, so most games ran to round 50. Giving Egypt Syria works the other way, by giving
+Mesopotamia a real rival next door.
+
+**Before and after** (40 games; first number seeds 1–40, second seeds 101–140)
+
+```
+                    before (5e9b244)                       after
+civ          wins       led r10    def held        wins       led r10    def held
+greece       12% / 10%   0% /  2%   39% / 54%      22% / 25%   7% /  7%   29% / 40%
+egypt         7% /  5%   7% / 10%   31% / 28%      22% / 22%  37% / 37%   26% / 24%
+italia       17% / 20%   7% / 10%   46% / 44%      22% / 20%  12% /  7%   44% / 52%
+mesopotamia  62% / 65%  67% / 75%   48% / 44%      32% / 32%  35% / 37%   32% / 42%
+
+length       41 / 42 rounds  →  38 / 43 rounds
+endings      11 / 9 dominations, 29 / 30 legacy, 0 / 1 trade  →  16 / 10 dominations, 23 / 30 legacy, 1 / 0 trade
+round-10 leader won   50% / 60%  →  50% / 57%
+```
+
+**What it means**: every civ now wins 20–32% on both seed sets. Mesopotamia is still the most
+likely winner, but Egypt and Mesopotamia now share the early lead (each leads at round 10 in
+about a third of games) and the lead moves on from there. Games are as quick or quicker, with
+more domination endings. Defences held dip a little (24–52%, from 28–54%): Mesopotamia and Egypt
+now border each other and fight more evenly matched wars. Against other civs the hold rate is
+unchanged (1–16%).
+
+**Still open**: Egypt still collapses in about 70% of games (it rises early and falls to the
+migrations), so its wins come from early dominations more than from lasting. Greece still banks
+gold in long peaceful games.

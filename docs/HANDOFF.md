@@ -102,9 +102,13 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
       civ-vs-civ battles by force ratio, and median gold/units at rounds 10/20/30.
     - **40 games**: defences held 17–27% → 31–48% (against civs 1–2% → 1–12%; the AI still only
       attacks what it expects to win); 36 → 41 rounds; dominations 19 → 11; median gold at round
-      20 down by half or more except Italia. **Mesopotamia got stronger: 52% → 62–65%.** 160 tests.
-  - **Known open issues**: Mesopotamia (needs a lever aimed at its early army); Egypt is the weak
-    civ (5–7% wins); Greece still banks gold in long peaceful games (nothing left to buy);
+      20 down by half or more except Italia. Mesopotamia got stronger: 52% → 62–65%.
+    - **Then Mesopotamia and Egypt** (DESIGN.md, "Mesopotamia and Egypt"): Egypt starts with Syria
+      (the New Kingdom's Levant) and Mesopotamia's capital grain goes 9 → 8. 40 games on two seed
+      sets: Mesopotamia 32%, Egypt, Greece and Italia 20–25% each; 38–43 rounds, 10–16
+      dominations; defences held 24–52%. Rules version 5, map version 2. 160 tests.
+  - **Known open issues**: Egypt still collapses in about 70% of games (strong early, falls to the
+    migrations); Greece still banks gold in long peaceful games (nothing left to buy);
     archers attacking infantry are roughly even now; no trade victories from the AI; the Trade
     layer's goods labels get crowded on big empires.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.

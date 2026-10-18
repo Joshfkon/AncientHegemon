@@ -373,9 +373,9 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
     @Test func crewsEatFromHome() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         s.fleets = [Fleet(sea: "persian_gulf", owner: "mesopotamia", ships: 2, cargo: UnitCounts(infantry: 1))]
-        // Production 9; people 3 + infantry 2 + crews 2 + cargo 1 = 8.
+        // Production 8; people 2 + infantry 2 + crews 2 + cargo 1 = 7.
         let events = try engine.apply(.endTurn, to: &s)
-        #expect(events.contains { if case .harvest(_, 9, 8, _, _, _) = $0 { true } else { false } })
+        #expect(events.contains { if case .harvest(_, 8, 7, _, _, _) = $0 { true } else { false } })
     }
 
     @Test func fleetsKeepACivAlive() throws {

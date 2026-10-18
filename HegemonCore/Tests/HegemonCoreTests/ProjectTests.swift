@@ -140,9 +140,10 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 
     @Test func wineSellsAndSellsBetterAbroad() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["syria"]!.owner = nil                 // without Syria, Egypt makes no wine
         let home = engine.homeNetwork(of: "greece", in: s)
         let alone = engine.wineGold("greece", home, [], s)
-        s.peace.insert(CivPair("greece", "egypt"))   // Egypt makes no wine
+        s.peace.insert(CivPair("greece", "egypt"))
         let traded = engine.wineGold("greece", home, engine.tradeRoutes(in: s), s)
         #expect(alone > 0)
         #expect(traded > alone)

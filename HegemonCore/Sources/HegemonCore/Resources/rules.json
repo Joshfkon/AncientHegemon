@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -202,7 +202,8 @@
       ],
       "egypt": [
         "libya",
-        "petraea"
+        "petraea",
+        "syria"
       ],
       "italia": [
         "sicilia"
