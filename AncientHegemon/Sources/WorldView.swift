@@ -295,9 +295,14 @@ struct MapView: View {
                             .font(.custom("ChalkboardSE-Bold", size: 6.5 * t.detail))
                             .foregroundStyle(.black.opacity(0.85)),
                            at: .zero)
-            // Zoomed in: grain, people and buildings under the name.
+            // Zoomed in: grain, people and buildings under the army token (a clear spot even
+            // where the lettering runs sideways), below its troop plate.
             if t.detail >= 1.3, layer != .resources {
-                drawInfoLine(&context, territory, at: CGPoint(x: p.x, y: p.y + 8 * t.detail))
+                let c = t.point(shape.token)
+                let k = t.detail
+                let army = (state.armies[territory.id]?.units.total ?? 0) > 0
+                let below: CGFloat = army ? 7.5 * k + (k >= 1.5 ? 8 * k + 10 : 4) + 6 * k : 0
+                drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k)
             }
             if layer == .resources {
                 drawResources(&context, territory, at: t.point(shape.token))
@@ -315,7 +320,7 @@ struct MapView: View {
                              at: c)
                 // Zoomed in, the army's make-up shows under its token.
                 if t.detail >= 1.5 {
-                    drawComposition(&context, army.units, below: CGPoint(x: c.x, y: c.y + r + 2), owner: army.owner)
+                    drawComposition(&context, army.units, below: CGPoint(x: c.x, y: c.y + r + 2), owner: army.owner, scale: t.detail)
                 }
             }
             if layer != .resources { drawBadges(&context, territory.id, at: t.point(shape.token), t) }
@@ -369,18 +374,18 @@ extension MapView {
     }
 
     /// "🌾3 👥2 🧱🌱" under a territory's name.
-    fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint) {
+    fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint, scale: CGFloat) {
         guard let engine else { return }
         let land = state.land[territory.id]
         let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph).joined()
         let text = Text("🌾\(engine.territoryYield(.grain, territory.id, state)) 👥\(state.population(of: territory.id))"
                         + (built.isEmpty ? "" : " " + built) + (land?.construction != nil ? "🏗" : ""))
-            .font(.system(size: 6.5, weight: .semibold))
+            .font(.system(size: 7.5 * scale, weight: .semibold))
             .foregroundStyle(.black.opacity(0.8))
         let resolved = context.resolve(text)
         let size = resolved.measure(in: CGSize(width: 200, height: 20))
         context.fill(Path(roundedRect: CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2,
-                                              width: size.width + 4, height: size.height), cornerRadius: 3),
+                                              width: size.width + 4, height: size.height), cornerRadius: 3 * scale),
                      with: .color(.white.opacity(0.6)))
         context.draw(resolved, at: p)
     }
@@ -596,10 +601,10 @@ extension MapView {
 
     /// Unit icons with counts, on a small plate.
     fileprivate func drawComposition(_ context: inout GraphicsContext, _ units: UnitCounts, below top: CGPoint,
-                                     owner: CivilizationID) {
+                                     owner: CivilizationID, scale: CGFloat) {
         let types = UnitType.allCases.filter { units[$0] > 0 }
         guard !types.isEmpty else { return }
-        let icon: CGFloat = 9, step: CGFloat = 20
+        let icon = 8 * scale, step = 17 * scale
         let width = CGFloat(types.count) * step + 2
         let plate = CGRect(x: top.x - width / 2, y: top.y, width: width, height: icon + 4)
         context.fill(Path(roundedRect: plate, cornerRadius: 3), with: .color(.white.opacity(0.85)))
@@ -607,7 +612,7 @@ extension MapView {
             let x = plate.minX + 2 + CGFloat(i) * step
             let box = CGRect(x: x, y: plate.minY + 2, width: icon, height: icon)
             context.fill(UnitShape(type: type).path(in: box), with: .color(.black.opacity(0.8)))
-            context.draw(Text("\(units[type])").font(.system(size: 7.5, weight: .bold)).foregroundStyle(.black),
+            context.draw(Text("\(units[type])").font(.system(size: 7 * scale, weight: .bold)).foregroundStyle(.black),
                          at: CGPoint(x: box.maxX + 2, y: box.midY), anchor: .leading)
         }
     }
