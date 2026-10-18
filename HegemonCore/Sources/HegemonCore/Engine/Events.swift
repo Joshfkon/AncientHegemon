@@ -11,9 +11,10 @@ extension Engine {
             state.civs[civ]!.plagueIncoming = false
             events += plague(civ, spreads: false, &state)
         }
-        guard Int(state.rng.next() % 100) < rules.events.chancePercent else { return events }
+        let chance = rules.events.chancePercent + rules.collapse.extraChancePercent * collapsePressure(state) / 100
+        guard Int(state.rng.next() % 100) < chance else { return events }
 
-        let weights = eventWeights(civ, state)
+        let weights = eventWeights(civ, state) + collapseWeights(civ, state)
         let total = weights.reduce(0) { $0 + $1.1 }
         guard total > 0 else { return events }
         var pick = Int(state.rng.next() % UInt64(total))
@@ -149,6 +150,9 @@ extension Engine {
             let rebels = UnitCounts(infantry: rules.start.natives.base
                                     + map.territory(target)!.grain / max(1, rules.start.natives.grainPerUnit))
             return [report(target, rebels.total)] + raid(nativesID, rebels, into: target, fallback: nil, &state)
+
+        case .seaPeoples, .drought, .earthquake, .tradeDisrupted:
+            return strikeCollapse(kind, civ, &state)
         }
     }
 
@@ -182,12 +186,12 @@ extension Engine {
     /// A non-player force (barbarians, rebels) attacks a territory. If it wins, it holds the land,
     /// which becomes unowned; if it loses, its survivors fall back to `fallback`, if any.
     func raid(_ raider: CivilizationID, _ units: UnitCounts, into t: TerritoryID, fallback: TerritoryID?,
-              _ state: inout GameState) -> [GameEvent] {
+              approach: Approach = .overland, _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
         var units = units
         let victim = state.owner(of: t)
         if let army = state.armies[t], army.owner != raider {
-            let result = fight(raider, units, general: nil, formation: nil, at: t, approach: .overland, &state)
+            let result = fight(raider, units, general: nil, formation: nil, at: t, approach: approach, &state)
             events += result.events
             units = result.survivors
             guard result.won else {

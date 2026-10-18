@@ -57,6 +57,7 @@ extension Engine {
         let income = gold.total
         state.civs[civ]!.gold += income
 
+        wearBronze(civ, &state)
         var bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
                          effectiveYield(of: .tin, for: civ, in: state, routes: routes))
         if level(.metallurgy, of: civ, in: state) >= 1 {

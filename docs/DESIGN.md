@@ -655,3 +655,22 @@ Decisions (his answers, with the details filled in):
   (infantry +10%), Composite bows (archers +15%), Tactics (+10 morale). Administration: Writing
   (+10 loyalty), Coinage (+20% taxes), Law (+1 legitimacy a turn).
 - A field appears in a civ's tree only once it has some experience or knowledge of it.
+
+### The collapse (phase 3, as built)
+
+- **Pressure** runs 0 → 100 between rounds 12 and 40. At full pressure the chance of an event each
+  turn rises from 50% to 80%, and four collapse events join the table with weights scaled by
+  pressure:
+  - **Sea Peoples** (6 per coastal territory): 3 + pressure/25 raiders (two-thirds infantry, a
+    third archers) land in a random coastal territory. If they win, they burn its buildings and
+    hold it as barbarians; if they lose, the survivors sail away.
+  - **Drought** (30, +20 with no river valley): the three richest non-river territories harvest
+    at half (river valleys go last).
+  - **Earthquake** (10, +4 per hill or mountain territory): a rugged territory loses 1 population
+    and its construction site, or one finished building.
+  - **Trade disruption** (15 per route): one trade route breaks for 3 rounds.
+- **Bronze wears** 5% a harvest (rounded up), so a stockpile melts without fresh tin.
+- **Iron arms troops** once Ironworking is known: equipment = (bronze + iron in store × weight) /
+  units, with weight 1 (2 with Steel). Iron in store doesn't wear.
+- First sims (40 games): the collapse fires at sensible rates, but half the games are already
+  decided by round 25, before it peaks. Pacing it against domination is phase 4's job.

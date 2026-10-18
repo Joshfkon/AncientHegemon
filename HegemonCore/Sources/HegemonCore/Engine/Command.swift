@@ -120,6 +120,8 @@ public struct EventReport: Codable, Sendable, Equatable {
     public let territory: TerritoryID?
     /// Population lost, units in a horde, grain percent, and so on, depending on the kind.
     public let amount: Int
+    /// The other civilization involved, e.g. the partner of a broken trade route.
+    public var partner: CivilizationID? = nil
 }
 
 public enum GameError: Error, Equatable, Sendable {

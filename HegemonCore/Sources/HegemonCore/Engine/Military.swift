@@ -190,9 +190,13 @@ extension Engine {
         if foreignArmy || foreignLand { throw GameError.badOmen }
     }
 
-    /// How well a civilization's forces are equipped with bronze, 0–100.
+    /// How well a civilization's forces are equipped, 0–100: bronze, plus iron once it knows
+    /// ironworking (steel counts it double). Iron needs no tin and doesn't wear out.
     func bronzePercent(_ civ: CivilizationID, _ state: GameState) -> Int {
+        guard let cs = state.civs[civ] else { return 0 }
         let units = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
-        return min(100, (state.civs[civ]?.bronze ?? 0) * 100 / max(1, units))
+        let metal = level(.metallurgy, of: civ, in: state)
+        let ironWeight = metal >= 3 ? rules.knowledge.effects.steelIronWeight : metal >= 2 ? 1 : 0
+        return min(100, (cs.bronze + (cs.stock[.iron] ?? 0) * ironWeight) * 100 / max(1, units))
     }
 }

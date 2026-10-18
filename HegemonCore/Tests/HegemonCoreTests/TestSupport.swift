@@ -9,6 +9,9 @@ extension Engine {
             var events = json["events"] as! [String: Any]
             events["chancePercent"] = 0
             json["events"] = events
+            var collapse = json["collapse"] as! [String: Any]
+            collapse["extraChancePercent"] = 0
+            json["collapse"] = collapse
             var gov = json["government"] as! [String: Any]
             gov["baseDeathChance"] = 0
             gov["deathChancePerYear"] = 0

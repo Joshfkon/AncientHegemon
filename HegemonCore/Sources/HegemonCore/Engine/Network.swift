@@ -171,7 +171,7 @@ extension Engine {
     /// connect through their own land and open sea lanes.
     public func tradeRoute(between a: CivilizationID, and b: CivilizationID,
                            in state: GameState) -> TradeRoute? {
-        guard state.atPeace(a, b) else { return nil }
+        guard state.atPeace(a, b), (state.disruptedRoutes[CivPair(a, b)] ?? 0) < state.turn else { return nil }
         let homeA = homeNetwork(of: a, in: state)
         let homeB = Set(homeNetwork(of: b, in: state))
         guard !homeA.isEmpty, !homeB.isEmpty else { return nil }

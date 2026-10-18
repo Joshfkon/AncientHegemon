@@ -181,6 +181,7 @@ public struct Engine: Sendable {
         } while state.civs[state.players[next]]!.eliminated
         state.activePlayerIndex = next
         if state.turn > roundBefore {
+            state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return ended }
         }

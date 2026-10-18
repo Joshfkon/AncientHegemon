@@ -77,6 +77,8 @@ public struct RulerTraitEffects: Codable, Sendable, Equatable {
 
 public enum EventKind: String, Codable, Sendable, CaseIterable {
     case famine, flood, goodHarvest, plague, goldDiscovered, badOmen, barbarians, revolt
+    // The collapse
+    case seaPeoples, drought, earthquake, tradeDisrupted
 }
 
 public struct EventWeights: Codable, Sendable, Equatable {

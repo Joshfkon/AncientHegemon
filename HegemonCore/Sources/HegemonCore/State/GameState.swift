@@ -193,6 +193,8 @@ public struct GameState: Codable, Sendable, Equatable {
     public var bonusGold: [TerritoryID: Int]
     /// Civil wars so far; numbers the rebel factions.
     public var rebellions: Int
+    /// Trade routes broken by the collapse, with the last round they stay broken.
+    public var disruptedRoutes: [CivPair: Int]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held
@@ -269,6 +271,7 @@ public struct GameState: Codable, Sendable, Equatable {
         self.harvestPercent = [:]
         self.bonusGold = [:]
         self.rebellions = 0
+        self.disruptedRoutes = [:]
         self.peaceOffers = []
     }
 

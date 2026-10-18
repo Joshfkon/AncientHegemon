@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -595,6 +595,26 @@
       "omenPerLegitimacyPoint": 1,
       "barbariansPerExposure": 20,
       "revoltPerDistantTerritory": 10
+    }
+  },
+  "collapse": {
+    "startRound": 12,
+    "peakRound": 40,
+    "extraChancePercent": 30,
+    "bronzeWearPercent": 5,
+    "seaPeoplesBase": 3,
+    "seaPeoplesPressurePerExtra": 25,
+    "droughtGrainPercent": 50,
+    "droughtTerritories": 3,
+    "earthquakePopulation": 1,
+    "disruptionRounds": 3,
+    "weights": {
+      "seaPeoplesPerCoast": 6,
+      "drought": 30,
+      "droughtNoRiver": 20,
+      "earthquake": 10,
+      "earthquakePerRugged": 4,
+      "tradeDisruptionPerRoute": 15
     }
   },
   "names": {

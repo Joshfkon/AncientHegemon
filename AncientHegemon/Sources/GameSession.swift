@@ -285,8 +285,12 @@ final class GameSession {
                 case .badOmen: "Bad omens in \(name(r.civ)): the sacred chickens refuse to eat"
                 case .barbarians: "A barbarian horde of \(r.amount) falls on \(place(r.territory))"
                 case .revolt: "\(place(r.territory)) revolts against \(name(r.civ))"
+                case .seaPeoples: "Sea Peoples, \(r.amount) strong, land in \(place(r.territory))"
+                case .drought: "Drought in \(name(r.civ)): \(r.amount) harvests wither"
+                case .earthquake: "An earthquake shakes \(place(r.territory))"
+                case .tradeDisrupted: "Trade between \(name(r.civ)) and \(name(r.partner)) breaks down for \(r.amount) rounds"
                 }
-                if r.kind == .revolt || r.kind == .barbarians { target = r.territory }
+                if [.revolt, .barbarians, .seaPeoples].contains(r.kind) { target = r.territory }
                 add(r.civ, text)
             case let .successionCrisis(civ, claimants):
                 add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")

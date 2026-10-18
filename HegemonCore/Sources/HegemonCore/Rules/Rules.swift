@@ -150,6 +150,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let projects: [ProjectKind: ProjectCost]
     public let projectEffects: ProjectEffects
     public let knowledge: KnowledgeRules
+    public let collapse: CollapseRules
     public let supply: SupplyRules
     public let trade: TradeRules
     public let ships: ShipRules
