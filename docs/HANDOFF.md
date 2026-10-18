@@ -31,7 +31,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     supply-route upkeep and a 60% domination victory (all in the DESIGN.md appendix).
   - **Naval AI added** (Josh asked for it before step 6): `AI/NavalAI.swift`. The AI builds
     transports and runs amphibious campaigns. Native garrisons raised to 2 + grain ÷ 3.
-    96 tests. Next: build step 6.
+    96 tests.
+  - **Build step 6 complete**: `Government.swift` (rulers, heirs, legitimacy, loyalty,
+    succession, coups, civil war into new rebel civs, appoint/honor generals), `Events.swift`
+    (8 geography-weighted events, barbarian raids, revolts), region tags in `map.json`, AI court
+    phase, and lead/government/event reporting in `hegemon-sim`. Tests use `Engine.calm()` /
+    `Engine.bare()` rule variants for exact-number scenarios. 114 tests.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.
@@ -41,32 +46,48 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
 - **Previous blocker**: the cloud session couldn't install a Swift toolchain. The Mac has Xcode,
   so that's resolved.
 
-## Balance findings (after the naval AI; 40 games, default personalities, shuffled seating)
+## Balance findings (after step 6; 40 games, default personalities, shuffled seating)
 
-| Civ | Wins | Eliminated | Avg land at end | Ships built / landings per game |
-|---|---|---|---|---|
-| Mesopotamia | 47% | 0% | 18.3 | 3.5 / 2.9 |
-| Italia | 12% | 0% | 6.3 | 4.2 / 2.6 |
-| Egypt | 10% | 0% | 7.2 | 3.2 / 1.6 |
-| Greece | 5% | 0% | 4.7 | 4.2 / 2.7 |
+```
+40 games, max 150 turns, 161.6s
+decided: 23/40, average length 22 turns
 
-Before the naval AI and stronger natives: Mesopotamia 77%, Greece eliminated 90% of the time,
-games about 14 rounds. Now: games average 21 rounds, and 10 of 40 hit the 150-round limit
-undecided (stalemates).
+civ          personality   wins  elim  collapse  avg land  peak  starving turns  deserted  attrition    attacks won   defences held  rejected
+greece       merchant        2%    2%       30%       3.4   7.2             8.5         7          0     93% of 230      16% of 204         0
+egypt        turtle          5%    2%       82%       4.0  10.5             9.9        15          1     97% of 450      17% of 314         0
+italia       conqueror      17%    0%       42%       6.5  10.9             7.8         9          2     94% of 503      29% of 311         0
+mesopotamia  opportunist    32%    0%       52%      11.1  17.6            10.8        14          2     97% of 807      18% of 346         0
 
-- **Josh's balance goal** (recorded in the DESIGN.md appendix): regional advantage is fine and
-  realistic. The target is advantage that *shifts* with technology and events, not equal odds.
-  Mesopotamia leading now is acceptable if step 6's events and internal strain, and later the
-  Iron Age, can turn its strengths into weaknesses.
-- **Defending almost never works** (defences hold 0–4%). The AI only attacks when it expects
-  to win, and defenders spread thin. Consider rewarding concentrated garrisons or capital defense.
-- **Formations**: the AI attacks with Hammer and Anvil and defends in Phalanx almost exclusively.
-  Skirmish Screen and Wedge are rarely worth choosing (`hegemon-sim formations`).
-- **Stalemates**: a quarter of games end undecided at 150 rounds. Step 6's succession and
-  revolts should break these up; if not, revisit the victory condition (open question §14.5).
-- Gold still piles up (no sink until step 6). The sim shuffles turn order per seed, because
-  seating mattered a lot. The app should randomize or rotate it too.
-- Suggested sim addition for step 6: track the leader at rounds 10/20/30 and count lead changes.
+lead changes per game: average 2.1, games with none  12%; the round-10 leader went on to win  69% of decided games
+civ          led at round 10   20   30   wins  rebel wins
+greece                       2%   7%  12%     2%          0%
+egypt                       17%  15%   7%     5%          0%
+italia                       2%  20%  15%    17%          0%
+mesopotamia                 57%  35%  15%    32%          0%
+rebels                       0%   0%   0%     0%
+
+per 100 turns
+civ          rulers died  civil wars  regencies  coups      famine    flood goodHarv   plague goldDisc  badOmen barbaria   revolt
+greece              13.9         0.0        0.9    0.1         6.8      0.3      6.4     15.5      6.9      3.8      4.3      0.9
+egypt                5.1         0.5        2.8    0.0        11.5      7.4      9.1     14.6      3.2      3.5      5.6      2.3
+italia              10.0         0.3        0.8    0.4         7.2      0.0      7.6     14.6      6.5      3.8      6.7      0.6
+mesopotamia          5.4         0.5        3.1    0.0         8.7      4.7      8.2     13.8      4.9      4.1     10.0      1.6
+rebel factions per game: 1.3
+```
+
+- **Advantage now shifts.** The lead changes hands about twice a game. Mesopotamia leads at
+  round 10 in 57% of games but wins 32%, and collapses (loses half its peak) in 52%: its river
+  valley brings famine and floods, and its long steppe frontier draws the most barbarian raids.
+  Italia rises late (leads at round 20 in 20% of games). Greece and Egypt are still weak.
+- **Stalemates: 17 of 40 games reach 150 rounds undecided.** Internal strain now stops runaway
+  empires, but nothing ends a long game. This needs a victory-condition decision from Josh
+  (open question §14.5), e.g. a time track ending in a prestige score.
+- Plague is the most common event (about 14 per 100 turns per civ, counting arrivals along
+  trade routes). Republic magistrates are elected old and die often, but those successions
+  are smooth.
+- Rebel factions appear about 1.3 times a game but haven't won one yet.
+- Still open from step 5: defending is weak (defences hold 16–29%), and Phalanx/Hammer and
+  Anvil dominate formations.
 
 ## Decisions already made (don't re-litigate)
 

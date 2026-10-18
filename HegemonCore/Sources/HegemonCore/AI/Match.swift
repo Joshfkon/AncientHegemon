@@ -17,6 +17,11 @@ public struct CivRecord: Sendable, Equatable {
     public var landings = 0
     public var navalBattlesWon = 0
     public var navalBattlesLost = 0
+    public var rulersDied = 0
+    public var civilWars = 0
+    public var regencies = 0
+    public var coups = 0
+    public var events: [EventKind: Int] = [:]
 
     /// Lost at least half of a realm that once held 4+ territories.
     public var collapsed: Bool { peakTerritories >= 4 && finalTerritories * 2 <= peakTerritories }
@@ -39,7 +44,24 @@ public struct MatchRecord: Sendable {
     public let turns: Int
     public let civs: [CivilizationID: CivRecord]
     public let formations: [FormationID: FormationRecord]
+    /// The civ holding the most territories at the start of each round (nil on a tie), from round 1.
+    public let leaders: [CivilizationID?]
     public let finalState: GameState
+
+    public func leader(atRound round: Int) -> CivilizationID? {
+        round >= 1 && round <= leaders.count ? leaders[round - 1] : nil
+    }
+
+    /// How often the outright leader changed hands (ties don't count as a change).
+    public var leadChanges: Int {
+        var changes = 0
+        var current: CivilizationID?
+        for leader in leaders.compactMap({ $0 }) {
+            if let c = current, c != leader { changes += 1 }
+            current = leader
+        }
+        return changes
+    }
 }
 
 /// A seeded shuffle of the turn order, so balance runs aren't skewed by who moves first.
@@ -64,18 +86,40 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
         ais[civ] = AIPlayer(engine: engine, personality: p)
     }
     var formations: [FormationID: FormationRecord] = [:]
+    var leaders: [CivilizationID?] = []
 
     while state.winner == nil, state.turn <= maxTurns {
         let civ = state.activePlayer
-        if state.activePlayerIndex == 0 { onRound?(state) }
+        if ais[civ] == nil {
+            // A faction born in civil war: an opportunist, as rebels are.
+            ais[civ] = AIPlayer(engine: engine, personality: personalities[civ] ?? .opportunist)
+            civs[civ] = CivRecord(personality: "rebel")
+        }
+        if state.activePlayerIndex == 0 {
+            onRound?(state)
+            let alive = state.players.filter { !state.civs[$0]!.eliminated }
+            let sizes = alive.map { ($0, state.territories(of: $0).count) }
+            let top = sizes.map(\.1).max() ?? 0
+            let atTop = sizes.filter { $0.1 == top }
+            leaders.append(atTop.count == 1 ? atTop[0].0 : nil)
+        }
         let turn = ais[civ]!.playTurn(&state)
-        civs[civ]!.rejectedCommands += turn.rejected.count
+        civs[civ]?.rejectedCommands += turn.rejected.count
         for event in turn.events {
             switch event {
             case let .starvation(c, pop, units):
-                civs[c]!.turnsStarving += 1
-                civs[c]!.populationStarved += pop
-                civs[c]!.unitsDeserted += units
+                civs[c]?.turnsStarving += 1
+                civs[c]?.populationStarved += pop
+                civs[c]?.unitsDeserted += units
+            case let .rulerDied(c, _, _, _):
+                civs[c]?.rulersDied += 1
+            case let .civilWar(c, _, _, _):
+                civs[c]?.civilWars += 1
+            case let .succession(c, _, outcome):
+                if outcome == .regency { civs[c]?.regencies += 1 }
+                if outcome == .coup { civs[c]?.coups += 1 }
+            case let .event(report):
+                civs[report.civ]?.events[report.kind, default: 0] += 1
             case let .shipsBuilt(c, _, count):
                 civs[c]?.shipsBuilt += count
             case let .landed(c, _, _, _):
@@ -87,9 +131,9 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 civs[report.defender]?.navalBattlesWon += won ? 0 : 1
                 civs[report.defender]?.navalBattlesLost += won ? 1 : 0
             case let .outOfSupply(c, _, lost):
-                civs[c]!.unitsLostToAttrition += lost
+                civs[c]?.unitsLostToAttrition += lost
             case let .eliminated(c):
-                civs[c]!.eliminatedOnTurn = state.turn
+                civs[c]?.eliminatedOnTurn = state.turn
             case let .battle(report):
                 let a = report.setup.attacker, d = report.setup.defender
                 let attackerWon = report.winner == .attacker
@@ -108,11 +152,11 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 break
             }
         }
-        for c in state.players {
+        for c in state.players where civs[c] != nil {
             civs[c]!.peakTerritories = max(civs[c]!.peakTerritories, state.territories(of: c).count)
         }
     }
-    for c in state.players { civs[c]!.finalTerritories = state.territories(of: c).count }
+    for c in state.players where civs[c] != nil { civs[c]!.finalTerritories = state.territories(of: c).count }
     return MatchRecord(seed: seed, winner: state.winner, turns: min(state.turn, maxTurns), civs: civs,
-                       formations: formations, finalState: state)
+                       formations: formations, leaders: leaders, finalState: state)
 }

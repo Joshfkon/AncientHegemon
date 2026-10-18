@@ -90,6 +90,10 @@ public struct Rules: Codable, Sendable, Equatable {
     public let battle: BattleRules
     public let naval: NavalRules
     public let generals: GeneralRules
+    public let government: GovernmentRules
+    public let rulerTraits: [RulerTrait: RulerTraitEffects]
+    public let events: EventRules
+    public let names: [CivilizationID: NameLists]
     public let start: StartRules
 
     public static func bundled() throws -> Rules {

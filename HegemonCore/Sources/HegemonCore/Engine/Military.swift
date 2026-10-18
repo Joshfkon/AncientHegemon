@@ -43,6 +43,10 @@ extension Engine {
         if previous != civ, state.armies[to]?.owner == civ {
             state.land[to]!.owner = civ
             events.append(.captured(civ: civ, territory: to, from: previous))
+            adjustLegitimacy(civ, rules.government.legitimacy.capture, &state)
+            if let previous, map.civilization(previous)?.capital == to {
+                adjustLegitimacy(previous, rules.government.legitimacy.capitalLost, &state)
+            }
             if let previous { events += checkElimination(previous, &state) }
             if state.winner == nil,
                state.territories(of: civ).count * 100 >= map.territories.count * rules.victory.territoryPercent {
@@ -55,7 +59,7 @@ extension Engine {
 
     /// Resolves a land battle for `to` and applies its results to the defender and the generals.
     /// The attacker's survivors are returned for the caller to place.
-    private func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, formation: FormationID?,
+    func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, formation: FormationID?,
                        at to: TerritoryID, approach: Approach, _ state: inout GameState)
         -> (won: Bool, survivors: UnitCounts, events: [GameEvent]) {
         let defender = state.armies[to]!
@@ -70,6 +74,9 @@ extension Engine {
         let report = BattleSimulator(rules: rules).resolve(setup)
         let won = report.winner == .attacker
         var events: [GameEvent] = [.battle(report)]
+        let l = rules.government.legitimacy
+        adjustLegitimacy(civ, won ? l.battleWon : l.battleLost, &state)
+        adjustLegitimacy(defender.owner, won ? l.battleLost : l.battleWon, &state)
 
         for (g, killed, victor) in [(general, report.attackerGeneralKilled, won),
                                     (defenderGeneral, report.defenderGeneralKilled, !won)] {
@@ -131,6 +138,14 @@ extension Engine {
                 state.fleets[i].cargo += units
             }
         }
+    }
+
+    /// Bad omens forbid starting a fight: entering another civ's land or any foreign army.
+    func checkOmen(_ civ: CivilizationID, attacking to: TerritoryID, _ state: GameState) throws {
+        guard state.civs[civ]?.omen == true else { return }
+        let foreignArmy = state.armies[to].map { $0.owner != civ } ?? false
+        let foreignLand = state.owner(of: to).map { $0 != civ } ?? false
+        if foreignArmy || foreignLand { throw GameError.badOmen }
     }
 
     /// How well a civilization's forces are equipped with bronze, 0–100.

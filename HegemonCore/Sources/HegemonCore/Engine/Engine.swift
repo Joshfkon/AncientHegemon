@@ -43,6 +43,10 @@ public struct Engine: Sendable {
             return try acceptPeace(from, &state)
         case let .declareWar(on):
             return try declareWar(on, &state)
+        case let .appointGeneral(territory):
+            return try appointGeneral(territory, &state)
+        case let .honorGeneral(id):
+            return try honorGeneral(id, &state)
         case .endTurn:
             return endTurn(&state)
         }
@@ -97,6 +101,7 @@ public struct Engine: Sendable {
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
         guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
         if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
+        try checkOmen(civ, attacking: to, state)
         var general: General?
         if withGeneral {
             guard let g = state.general(of: civ, at: from), !state.generalsMoved.contains(g.id) else {
@@ -135,9 +140,11 @@ public struct Engine: Sendable {
         state.civs[civ]!.eliminated = true
         var events: [GameEvent] = [.eliminated(civ: civ)]
         let alive = state.players.filter { !state.civs[$0]!.eliminated }
-        if alive.count == 1 {
-            state.winner = alive[0]
-            events.append(.victory(civ: alive[0]))
+        if alive.count <= 1 {
+            // If raiders destroyed everyone, the barbarians have the last word.
+            let winner = alive.first ?? barbariansID
+            state.winner = winner
+            events.append(.victory(civ: winner))
         }
         return events
     }
@@ -149,6 +156,7 @@ public struct Engine: Sendable {
         state.generalsMoved = []
         for i in state.fleets.indices { state.fleets[i].movedShips = 0 }
         state.civs[state.activePlayer]!.resourceUsedThisTurn = [:]
+        state.civs[state.activePlayer]!.omen = false
 
         let count = state.players.count
         var next = state.activePlayerIndex
@@ -160,12 +168,18 @@ public struct Engine: Sendable {
 
         let civ = state.activePlayer
         var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)]
-        // Nobody harvests on turn 1, so every civ starts on equal terms whatever its seat.
-        if state.turn > 1 { events += harvest(civ, &state) }
-        // A civilization with no land whose last army just starved is out of the game.
-        let out = checkElimination(civ, &state)
-        events += out
-        if !out.isEmpty, state.winner == nil { events += endTurn(&state) }
+        // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
+        // on turn 1, so every civ starts on equal terms whatever its seat.
+        if state.turn > 1 {
+            events += drawEvents(civ, &state)
+            if !state.civs[civ]!.eliminated {
+                events += harvest(civ, &state)
+                events += governmentPhase(civ, &state)
+            }
+        }
+        // A civ can fall before it moves: overrun by raiders, or its last army starved.
+        events += checkElimination(civ, &state)
+        if state.civs[civ]!.eliminated, state.winner == nil { events += endTurn(&state) }
         return events
     }
 
@@ -202,6 +216,7 @@ public struct Engine: Sendable {
         let civ = state.activePlayer
         _ = try rival(on, state)
         guard state.atPeace(civ, on) else { throw GameError.notAtPeace(on) }
+        adjustLegitimacy(civ, rules.government.legitimacy.brokePeace, &state)
         state.peace.remove(CivPair(civ, on))
         state.peaceOffers.remove(PeaceOffer(from: civ, to: on))
         state.peaceOffers.remove(PeaceOffer(from: on, to: civ))

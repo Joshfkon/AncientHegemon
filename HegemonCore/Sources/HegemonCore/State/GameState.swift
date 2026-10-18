@@ -1,5 +1,7 @@
 /// The owner of native garrisons. Not a player: natives never act, trade or make peace.
 public let nativesID: CivilizationID = "natives"
+/// The owner of barbarian hordes, which raid when a migration event strikes. Not a player.
+public let barbariansID: CivilizationID = "barbarians"
 
 /// Per-territory facts that change during a game.
 public struct TerritoryState: Codable, Sendable, Equatable {
@@ -17,6 +19,30 @@ public struct CivState: Codable, Sendable, Equatable {
     public var bronze: Int = 0
     /// Recruits of resource-limited units this turn, by resource (e.g. cavalry against horses).
     public var resourceUsedThisTurn: [Resource: Int] = [:]
+    public var government: Government = .monarchy
+    public var ruler = Ruler(name: "", age: 30, trait: .ableAdministrator)
+    /// The monarchy's heir. Republics have none.
+    public var heir: Heir?
+    /// The ruler's standing, 0–100.
+    public var legitimacy = 50
+    /// A bad omen this turn: no attacks.
+    public var omen = false
+    /// Plague arriving along a trade route: strikes at the start of this civ's next turn.
+    public var plagueIncoming = false
+    /// For civilizations born in a civil war: the realm they split from and their name.
+    public var rebelledFrom: CivilizationID?
+    public var displayName: String?
+}
+
+public struct Ruler: Codable, Sendable, Equatable {
+    public var name: String
+    public var age: Int
+    public var trait: RulerTrait
+}
+
+public struct Heir: Codable, Sendable, Equatable {
+    public var name: String
+    public var age: Int
 }
 
 /// An unordered pair of civilizations, for relations.
@@ -89,6 +115,12 @@ public struct GameState: Codable, Sendable, Equatable {
     public var peace: Set<CivPair>
     /// Outstanding peace offers, accepted by the recipient on their turn.
     public var peaceOffers: Set<PeaceOffer>
+    /// Harvest multipliers (percent) from this turn's events, used and cleared by the next harvest.
+    public var harvestPercent: [TerritoryID: Int]
+    /// Gold yields found by events, on top of the map's.
+    public var bonusGold: [TerritoryID: Int]
+    /// Civil wars so far; numbers the rebel factions.
+    public var rebellions: Int
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held
@@ -104,6 +136,7 @@ public struct GameState: Codable, Sendable, Equatable {
             land[t.id] = TerritoryState(owner: nil, population: rules.startingPopulation(grain: t.grain))
         }
         var civs: [CivilizationID: CivState] = [:]
+        var rng = SeededRNG(seed: seed)
         var armies: [TerritoryID: Army] = [:]
         var generals: [GeneralID: General] = [:]
         for id in ids {
@@ -115,14 +148,24 @@ public struct GameState: Codable, Sendable, Equatable {
                 guard land[t] != nil else { throw MapError.unknownTerritory(t, context: "start realm of '\(civ.id)'") }
                 land[t]!.owner = civ.id
             }
-            civs[civ.id] = CivState(gold: rules.start.gold, granary: rules.start.granary)
+            var cs = CivState(gold: rules.start.gold, granary: rules.start.granary)
+            let g = rules.government
+            cs.government = civ.government
+            cs.legitimacy = g.startLegitimacy
+            cs.ruler = Ruler(name: Self.pickName(rules.names[civ.id]?.rulers, &rng),
+                             age: Self.roll(g.rulerStartAge, &rng), trait: RulerTrait.allCases.randomElement(using: &rng)!)
+            if civ.government == .monarchy {
+                cs.heir = Heir(name: Self.pickName(rules.names[civ.id]?.rulers, &rng),
+                               age: max(0, cs.ruler.age - Self.roll(g.heirAgeGap, &rng)))
+            }
+            civs[civ.id] = cs
             if !rules.start.army.isEmpty {
                 armies[civ.capital] = Army(owner: civ.id, units: rules.start.army)
             }
             if let g = rules.start.generals[civ.id] {
                 let gid = "\(civ.id)-1"
                 generals[gid] = General(id: gid, name: g.name, owner: civ.id, trait: g.trait,
-                                        renown: 0, location: civ.capital)
+                                        renown: 0, location: civ.capital, loyalty: rules.government.startLoyalty)
             }
         }
 
@@ -136,7 +179,7 @@ public struct GameState: Codable, Sendable, Equatable {
         self.rulesVersion = rules.version
         self.seed = seed
         self.turn = 1
-        self.rng = SeededRNG(seed: seed)
+        self.rng = rng
         self.players = ids
         self.activePlayerIndex = 0
         self.winner = nil
@@ -148,10 +191,29 @@ public struct GameState: Codable, Sendable, Equatable {
         self.fleets = []
         self.generalsMoved = []
         self.peace = []
+        self.harvestPercent = [:]
+        self.bonusGold = [:]
+        self.rebellions = 0
         self.peaceOffers = []
     }
 
     public var activePlayer: CivilizationID { players[activePlayerIndex] }
+
+    /// A uniform pick from an inclusive `[low, high]` range.
+    static func roll(_ range: [Int], _ rng: inout SeededRNG) -> Int {
+        let low = range.first ?? 0, high = max(low, range.last ?? low)
+        return low + Int(rng.next() % UInt64(high - low + 1))
+    }
+
+    static func pickName(_ names: [String]?, _ rng: inout SeededRNG) -> String {
+        guard let names, !names.isEmpty else { return "Unnamed" }
+        return names[Int(rng.next() % UInt64(names.count))]
+    }
+
+    /// Players are civilizations with a `CivState`; natives and barbarians are not.
+    public func isPlayer(_ civ: CivilizationID?) -> Bool {
+        civ.map { civs[$0] != nil } ?? false
+    }
 
     public func atPeace(_ a: CivilizationID, _ b: CivilizationID) -> Bool {
         peace.contains(CivPair(a, b))

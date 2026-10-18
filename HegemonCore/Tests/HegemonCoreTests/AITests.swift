@@ -35,6 +35,7 @@ import Testing
 
     @Test func aiSailsToCoastsItCannotWalkTo() throws {
         // Greece's heartland touches few coasts by land; the AI must build ships to reach more.
+        let engine = try Engine.calm()
         var s = try engine.newGame(seed: 4, civilizations: ["greece"])
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         var built = 0
@@ -65,6 +66,8 @@ import Testing
     }
 
     @Test func aiKeepsItsEmpireFed() throws {
+        // Famine events aside, the AI shouldn't recruit its way into starvation.
+        let engine = try Engine.calm()
         let record = try playAIMatch(engine: engine, seed: 2, personalities: conquerors, maxTurns: 40)
         for (civ, r) in record.civs where r.eliminatedOnTurn == nil {
             #expect(r.turnsStarving * 4 <= record.turns, "\(civ) starved \(r.turnsStarving) of \(record.turns) turns")
@@ -72,13 +75,15 @@ import Testing
     }
 
     @Test func aiTurnLeavesGameRNGAlone() throws {
-        // A turn with no battles must not advance the game's RNG: estimates use their own seeds.
+        // A turn with no battles must use the game's RNG exactly as a bare end of turn does
+        // (events at the next turn's start): the AI's estimates use their own seeds.
         var s = try engine.newGame(seed: 9, civilizations: ["mesopotamia"])
         s.armies = s.armies.filter { $0.value.owner != nativesID }  // nothing to fight
-        let before = s.rng
+        var passive = s
+        try engine.apply(.endTurn, to: &passive)
         let turn = AIPlayer(engine: engine, personality: .turtle).playTurn(&s)
         #expect(!turn.events.contains { if case .battle = $0 { true } else { false } })
-        #expect(s.rng == before)
+        #expect(s.rng == passive.rng)
     }
 
     @Test func shuffledOrderIsSeededAndComplete() {

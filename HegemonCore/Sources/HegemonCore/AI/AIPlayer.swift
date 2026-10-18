@@ -29,6 +29,7 @@ public struct AIPlayer: Sendable {
         var turn = AITurn()
         let civ = state.activePlayer
         diplomacy(civ, &state, &turn)
+        court(civ, &state, &turn)
         let campaign = seaCampaign(civ, state)
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         recruit(civ, &state, &turn)
@@ -130,6 +131,31 @@ public struct AIPlayer: Sendable {
                 issue(.offerPeace(to: other), &state, &turn)
             }
         }
+    }
+
+    // MARK: Court
+
+    /// Keeps generals loyal and puts commanders at the head of large armies.
+    func court(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        let g = rules.government
+        // Honor the least loyal generals while they're still worth saving, most dangerous first.
+        let wavering = engine.livingGenerals(of: civ, state)
+            .filter { $0.loyalty < g.successionDisloyalty + 5 }
+            .sorted { ($0.loyalty, $0.id) < ($1.loyalty, $1.id) }
+        for general in wavering {
+            let cost = g.honorCost * (1 + general.renown)
+            guard state.civs[civ]!.gold >= cost + rules.stats(.infantry).cost else { break }
+            issue(.honorGeneral(general.id), &state, &turn)
+        }
+        // Appoint a general for the biggest leaderless army near the front, if affordable.
+        guard engine.livingGenerals(of: civ, state).count < engine.maxGenerals(of: civ, in: state),
+              state.civs[civ]!.gold >= g.appointCost + 2 * rules.stats(.infantry).cost else { return }
+        let home = Set(engine.homeNetwork(of: civ, in: state))
+        let led = Set(engine.livingGenerals(of: civ, state).compactMap(\.location))
+        let candidate = state.armies(of: civ)
+            .filter { home.contains($0.territory) && !led.contains($0.territory) && $0.units.total >= 4 }
+            .max { ($0.units.total, $1.territory) < ($1.units.total, $0.territory) }
+        if let candidate { issue(.appointGeneral(territory: candidate.territory), &state, &turn) }
     }
 
     // MARK: Recruitment
@@ -238,6 +264,7 @@ public struct AIPlayer: Sendable {
                 let owner = state.owner(of: to)
                 if owner == civ { continue }
                 if let owner, state.atPeace(civ, owner) { continue }
+                if (try? engine.checkOmen(civ, attacking: to, state)) == nil { continue }
                 let keep = garrison(from, for: civ, state, excluding: to)
                 guard ready.total + (state.armies[from]!.units.total - ready.total) > keep else { continue }
                 let spare = min(ready.total, state.armies[from]!.units.total - keep)

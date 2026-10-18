@@ -122,7 +122,7 @@ extension AIPlayer {
         let coasts = map.coastalTerritories(of: sea).filter { t in
             guard state.owner(of: t) != civ else { return false }
             if let owner = state.owner(of: t), state.atPeace(civ, owner) { return false }
-            return true
+            return (try? engine.checkOmen(civ, attacking: t, state)) != nil
         }
         let ranked = coasts.sorted { a, b in
             if (a == campaign.target) != (b == campaign.target) { return a == campaign.target }

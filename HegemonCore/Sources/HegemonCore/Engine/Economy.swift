@@ -13,7 +13,9 @@ extension Engine {
 
         for (i, pocket) in pockets.enumerated() {
             let isHome = i == 0
-            let production = yield(of: .grain, in: pocket)
+            let production = pocket.reduce(0) { total, t in
+                total + map.territory(t)!.grain * (state.harvestPercent[t] ?? 100) / 100
+            }
             // Ships' crews and the troops they carry are fed from home.
             let atSea = isHome ? fleetUpkeep(of: civ, state) : 0
             let consumption = grainConsumption(of: civ, in: pocket, state) + atSea
@@ -36,8 +38,10 @@ extension Engine {
                 home = (production, consumption, grown)
             }
         }
+        for t in state.territories(of: civ) { state.harvestPercent[t] = nil }
         if popLost + unitsLost > 0 {
             events.append(.starvation(civ: civ, populationLost: popLost, unitsLost: unitsLost))
+            adjustLegitimacy(civ, rules.government.legitimacy.starvation, &state)
         }
         events += attrition(civ, outside: Set(pockets.first ?? []), &state)
 
@@ -46,7 +50,9 @@ extension Engine {
         let routes = tradeRoutes(in: state)
         let tradeIncome = tradeGold(for: civ, routes)
         let taxes = homeNet.reduce(0) { $0 + state.population(of: $1) } / rules.economy.populationPerGold
-        let income = taxes + yield(of: .gold, in: homeNet) + tradeIncome
+        let mines = yield(of: .gold, in: homeNet) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
+        let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
+        let income = (taxes + mines) * (100 + administration) / 100 + tradeIncome
         state.civs[civ]!.gold += income
 
         let bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),

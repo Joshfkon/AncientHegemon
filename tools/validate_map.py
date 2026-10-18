@@ -9,6 +9,7 @@ DEFAULT = Path(__file__).resolve().parent.parent / "HegemonCore/Sources/HegemonC
 TERRAINS = {"plains", "hills", "mountains", "forest", "desert"}
 RESOURCES = {"grain", "copper", "tin", "horses", "timber", "gold"}
 CROSSINGS = {"river", "strait"}
+TAGS = {"river_valley", "barbarian_homeland"}
 
 
 def main(path):
@@ -31,6 +32,9 @@ def main(path):
         for s in t["seas"]:
             if s not in seas:
                 errors.append(f"{t['id']}: unknown sea {s}")
+        for tag in t.get("tags", []):
+            if tag not in TAGS:
+                errors.append(f"{t['id']}: unknown tag {tag}")
 
     graph = defaultdict(set)
     seen = set()

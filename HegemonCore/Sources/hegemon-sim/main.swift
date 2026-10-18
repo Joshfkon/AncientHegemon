@@ -127,6 +127,45 @@ for civ in civs {
     print(cols.joined())
 }
 
+// Who leads, and does the lead last? Rebel factions are pooled as "rebels".
+func side(_ civ: CivilizationID?) -> String? {
+    guard let civ else { return nil }
+    return civs.contains(civ) ? civ : "rebels"
+}
+let lc = records.map(\.leadChanges)
+let earlyLeaderWon = decided.filter { r in side(r.leader(atRound: 10)) == side(r.winner) }.count
+print("")
+print("lead changes per game: average \(String(format: "%.1f", Double(lc.reduce(0, +)) / Double(max(1, lc.count)))), "
+      + "games with none \(pct(lc.filter { $0 == 0 }.count, lc.count)); "
+      + "the round-10 leader went on to win \(pct(earlyLeaderWon, decided.count)) of decided games")
+print("civ          led at round 10   20   30   wins  rebel wins")
+for name in civs + ["rebels"] {
+    let cols = [10, 20, 30].map { round in
+        pad(pct(records.filter { side($0.leader(atRound: round)) == name }.count, records.count), round == 10 ? 18 : 5)
+    }
+    print(name.padding(toLength: 13, withPad: " ", startingAt: 0) + cols.joined()
+          + pad(pct(records.filter { side($0.winner) == name }.count, records.count), 7)
+          + (name == "rebels" ? "" : pad(pct(records.filter { r in
+              r.winner.map { r.finalState.civs[$0]?.rebelledFrom == name } ?? false }.count, records.count), 12)))
+}
+
+// Government and events, per 100 turns played (games differ a lot in length).
+let kinds = EventKind.allCases
+print("")
+print("per 100 turns")
+print("civ          rulers died  civil wars  regencies  coups   "
+      + kinds.map { pad(String($0.rawValue.prefix(8)), 9) }.joined())
+for civ in civs {
+    let rs = records.compactMap { $0.civs[civ] }
+    let turnsPlayed = Double(max(1, records.map(\.turns).reduce(0, +)))
+    let avg = { (f: (CivRecord) -> Int) in String(format: "%.1f", Double(rs.map(f).reduce(0, +)) * 100 / turnsPlayed) }
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + pad(avg(\.rulersDied), 11) + pad(avg(\.civilWars), 12) + pad(avg(\.regencies), 11) + pad(avg(\.coups), 7)
+          + "   " + kinds.map { k in pad(avg { $0.events[k] ?? 0 }, 9) }.joined())
+}
+let rebelFactions = records.map { r in r.finalState.players.filter { r.finalState.civs[$0]?.rebelledFrom != nil }.count }
+print("rebel factions per game: \(String(format: "%.1f", Double(rebelFactions.reduce(0, +)) / Double(max(1, records.count))))")
+
 print("")
 print("civ          ships built  landings  sea battles won")
 for civ in civs {

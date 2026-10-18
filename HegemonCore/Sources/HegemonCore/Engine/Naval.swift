@@ -94,6 +94,7 @@ extension Engine {
         guard let i = fleetIndex(civ, sea, state) else { throw GameError.noFleet(sea) }
         guard units.fits(in: state.fleets[i].cargo) else { throw GameError.insufficientUnits(territory) }
         if let owner = state.owner(of: territory), state.atPeace(civ, owner) { throw GameError.atPeace(territory) }
+        try checkOmen(civ, attacking: territory, state)
 
         state.fleets[i].cargo -= units
         let events: [GameEvent] = [.landed(civ: civ, sea: sea, territory: territory, units: units)]

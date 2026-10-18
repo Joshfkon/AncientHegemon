@@ -386,5 +386,180 @@
     "maxRenownAttackPercent": 25,
     "deathChanceOnDefeatPercent": 10,
     "deathChanceOnVictoryPercent": 3
+  },
+  "government": {
+    "startLegitimacy": 60,
+    "legitimacyDrift": 2,
+    "legitimacy": {
+      "battleWon": 2,
+      "battleLost": -3,
+      "capture": 1,
+      "capitalLost": -15,
+      "starvation": -3,
+      "brokePeace": -8,
+      "succession": -5,
+      "regency": -15,
+      "bribe": -10
+    },
+    "startLoyalty": 70,
+    "loyaltyPerRenown": 6,
+    "loyaltyPerStep": 2,
+    "loyaltyDriftDivisor": 4,
+    "generalPay": 1,
+    "unpaidLoyalty": -10,
+    "honorCost": 4,
+    "honorLoyalty": 25,
+    "appointCost": 8,
+    "territoriesPerGeneral": 6,
+    "rebellionLoyalty": 25,
+    "rebellionChancePerPoint": 3,
+    "minRebelArmy": 3,
+    "successionDisloyalty": 45,
+    "claimantLoyalty": 60,
+    "bribePerClaimant": 10,
+    "minSmoothLegitimacy": 35,
+    "coupRenown": 4,
+    "coupLoyalty": 50,
+    "rulerStartAge": [28, 45],
+    "heirAgeGap": [18, 26],
+    "electedAge": [40, 55],
+    "adultAge": 16,
+    "heirBirthChance": 15,
+    "deathAge": 40,
+    "baseDeathChance": 1,
+    "deathChancePerYear": 1
+  },
+  "rulerTraits": {
+    "ableAdministrator": {
+      "incomePercent": 20
+    },
+    "pious": {
+      "legitimacyPerTurn": 1
+    },
+    "cruel": {
+      "loyaltyTarget": 10,
+      "legitimacyPerTurn": -1
+    },
+    "weak": {
+      "loyaltyTarget": -15
+    }
+  },
+  "events": {
+    "chancePercent": 50,
+    "famineGrainPercent": 50,
+    "goodHarvestGrainPercent": 200,
+    "floodPopulation": 2,
+    "plaguePopulationPercent": 20,
+    "plagueTerritories": 3,
+    "plagueRulerDeathPercent": 10,
+    "plagueSpreadPercent": 50,
+    "barbarianBase": 3,
+    "barbarianTurnsPerExtra": 8,
+    "revoltDistance": 5,
+    "weights": {
+      "famine": 10,
+      "famineRiverValley": 30,
+      "faminePressure": 20,
+      "flood": 30,
+      "goodHarvest": 10,
+      "goodHarvestRiverValley": 20,
+      "plague": 3,
+      "plaguePerRoute": 3,
+      "goldDiscovered": 5,
+      "goldPerHill": 2,
+      "omenPerLegitimacyPoint": 1,
+      "barbariansPerExposure": 20,
+      "revoltPerDistantTerritory": 10
+    }
+  },
+  "names": {
+    "greece": {
+      "rulers": [
+        "Pericles",
+        "Cleisthenes",
+        "Themistocles",
+        "Aristides",
+        "Cimon",
+        "Alcibiades",
+        "Nicias",
+        "Demosthenes"
+      ],
+      "generals": [
+        "Leonidas",
+        "Brasidas",
+        "Xenophon",
+        "Lysander",
+        "Epaminondas",
+        "Pelopidas",
+        "Iphicrates",
+        "Chabrias"
+      ]
+    },
+    "egypt": {
+      "rulers": [
+        "Ahmose",
+        "Amenhotep",
+        "Hatshepsut",
+        "Ramesses",
+        "Seti",
+        "Merneptah",
+        "Horemheb",
+        "Tutankhamun"
+      ],
+      "generals": [
+        "Djehuty",
+        "Paser",
+        "Nebamun",
+        "Amenemheb",
+        "Userhat",
+        "Paramessu",
+        "Kaemwaset",
+        "Mahu"
+      ]
+    },
+    "italia": {
+      "rulers": [
+        "Brutus",
+        "Publicola",
+        "Cincinnatus",
+        "Camillus",
+        "Valerius",
+        "Manlius",
+        "Cornelius",
+        "Aemilius"
+      ],
+      "generals": [
+        "Scipio",
+        "Marcellus",
+        "Regulus",
+        "Duilius",
+        "Flamininus",
+        "Paullus",
+        "Metellus",
+        "Marius"
+      ]
+    },
+    "mesopotamia": {
+      "rulers": [
+        "Hammurabi",
+        "Ashurnasirpal",
+        "Tiglath-Pileser",
+        "Sennacherib",
+        "Esarhaddon",
+        "Ashurbanipal",
+        "Nebuchadnezzar",
+        "Nabonidus"
+      ],
+      "generals": [
+        "Ninurta",
+        "Shalmaneser",
+        "Adad",
+        "Nabu",
+        "Marduk-apla",
+        "Sin-shar",
+        "Bel-ibni",
+        "Nergal-eresh"
+      ]
+    }
   }
 }

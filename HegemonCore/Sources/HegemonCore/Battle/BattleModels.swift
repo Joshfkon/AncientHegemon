@@ -9,6 +9,8 @@ public struct General: Codable, Sendable, Equatable, Identifiable {
     public var renown: Int
     /// Where the general stands. Nil once dead.
     public var location: TerritoryID?
+    /// Loyalty to the throne, 0–100. Falls with renown and distance; low loyalty means rebellion.
+    public var loyalty = 70
 
     public var isAlive: Bool { location != nil }
 }

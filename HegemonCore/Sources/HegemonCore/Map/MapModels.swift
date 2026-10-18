@@ -15,6 +15,14 @@ public enum Resource: String, Codable, Sendable, CaseIterable, CodingKeyRepresen
     case grain, copper, tin, horses, timber, gold
 }
 
+/// Regional character that events key off (DESIGN §8).
+public enum RegionTag: String, Codable, Sendable {
+    /// Breadbaskets on great rivers: richest harvests, but famine and flood strike here.
+    case riverValley = "river_valley"
+    /// Steppe, forest and desert peoples: where barbarian migrations start.
+    case barbarianHomeland = "barbarian_homeland"
+}
+
 public enum Crossing: String, Codable, Sendable {
     case river, strait
 }
@@ -33,6 +41,9 @@ public struct Territory: Codable, Sendable, Identifiable, Hashable {
     public let resources: [Resource: Int]
     /// Sea zones this territory borders (coastline).
     public let seas: [SeaZoneID]
+    public let tags: [RegionTag]?
+
+    public func has(_ tag: RegionTag) -> Bool { tags?.contains(tag) ?? false }
 
     public var isCoastal: Bool { !seas.isEmpty }
 }

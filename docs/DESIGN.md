@@ -518,3 +518,40 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     built on tin routes lose their edge while poorer, peripheral ones gain.
   - The sim should measure this: who leads at different points in a game and how often the
     lead changes, not just who wins.
+- **Government, succession and events (build step 6, provisional; `government`, `rulerTraits`,
+  `events`, `names` in `rules.json`)**:
+  - **Rulers** age a year per turn, with a death chance of 1% plus 1% per year past 40. They die
+    of old age or plague. Traits: Able Administrator (+20% taxes and mines), Pious (+1
+    legitimacy/turn), Cruel (generals +10 loyalty, −1 legitimacy/turn), Weak (generals −15
+    loyalty). Monarchs may get an heir (15%/turn when they have none).
+  - **Legitimacy** (0–100, start 60, drifts 2/turn toward 50): battle won +2 / lost −3, capture
+    +1, capital lost −15, starvation −3, breaking a peace −8.
+  - **Generals' loyalty** moves a quarter of the way each turn toward
+    `legitimacy − 6 × renown − 2 × supply steps from the seat` (± ruler trait). Each general costs
+    1 gold a turn (unpaid: −10 loyalty). `appointGeneral` (8 gold; 1 per 6 territories, plus one)
+    and `honorGeneral` (4 × (1 + renown) gold, +25 loyalty) are gold's first real uses.
+  - **Succession**: a monarchy with an adult heir, legitimacy ≥ 35 and no claimants passes
+    smoothly (−5). Otherwise a regent rules (−15). Claimants (renowned generals under 60
+    loyalty leading an army) are bought off at 10 gold each (−10) if the treasury allows;
+    otherwise each starts a civil war. Republics elect a successor, unless a general with
+    renown ≥ 4 and loyalty < 50 seizes power and the republic becomes his monarchy. After any
+    death, generals under 45 loyalty with an army rise up.
+  - **Rebellion** can also happen any turn: a general under 25 loyalty leading 3+ units away
+    from the seat rebels with 3% chance per point below 25.
+  - **Civil war**: the general takes every territory closer to him than to the seat, with the
+    armies and generals in them, and founds a new AI civilization (an opportunist) at war with
+    the old one.
+  - **Events** (50% chance per civ per turn, weighted by geography and state):
+    famine (harvest ×½; river valleys and crowded lands), flood (river valleys lose population),
+    good harvest (×2; river valleys favored), plague (−20% population in the 3 most populous home
+    territories, 10% chance to kill the ruler, 50% chance to travel to each trade partner;
+    weighted by trade routes), gold discovered (+1 gold; hills and mountains), bad omen (no
+    attacks this turn; low legitimacy), barbarian migration (a horde of 3 + turn ÷ 8 strikes from
+    a barbarian homeland next to the civ), revolt (the most distant territory, 5+ supply steps
+    away, rises with a native garrison).
+  - **Region tags** in `map.json`: `river_valley` (Egypt, Mesopotamia) and `barbarian_homeland`
+    (Caledonia, Suebi, Venedi, Scythe, Sarmatia, Dahā, Arabia, Sahara).
+  - Barbarians that win hold the land unowned, like natives. If raiders destroy every
+    civilization, the game ends with the barbarians as "winner".
+  - Crisis prompts for the player (backing a claimant, refusing a bribe) resolve automatically
+    for now; the iOS app will surface them as decisions (step 7).
