@@ -20,12 +20,11 @@ struct BattlePlanEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            let best = odds.max { ($0.value, $1.key) < ($1.value, $0.key) }?.key
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(engine.rules.battle.formations) { f in
                         let open = engine.formationAvailable(f.id, civ, general: general, in: state)
-                        formationCard(f, open: open, best: odds.count > 1 && f.id == best)
+                        formationCard(f, open: open)
                             .onTapGesture {
                                 guard open else { return }
                                 plan.formation = f.id
@@ -61,17 +60,14 @@ struct BattlePlanEditor: View {
         }
     }
 
-    private func formationCard(_ f: Formation, open: Bool, best: Bool) -> some View {
+    private func formationCard(_ f: Formation, open: Bool) -> some View {
         let chosen = f.id == formation
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 4) {
                 if !open { Image(systemName: "lock.fill").font(.caption2) }
                 Text(f.name).font(.caption.bold()).lineLimit(1)
                 Spacer(minLength: 0)
-                if best && open {
-                    Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow)
-                        .accessibilityLabel("Best odds")
-                }
+
             }
             FormationDiagram(formation: f, units: units, depth: plan.depth)
                 .frame(height: 46)
@@ -79,10 +75,8 @@ struct BattlePlanEditor: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .lineLimit(3, reservesSpace: true)
             if open, let p = odds[f.id] {
-                let percent = Int((p * 100).rounded())
-                Text("\(percent)% to win")
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(percent >= 65 ? .green : percent >= 40 ? .orange : .red)
+                let outlook = Outlook(p)
+                Text(outlook.word).font(.caption.bold()).foregroundStyle(outlook.color)
             }
         }
         .padding(8)
@@ -228,6 +222,23 @@ struct FormationDiagram: View {
             }
         }
         return out
+    }
+}
+
+/// How a fight looks to the officers, in words rather than numbers: war is chancy, and the
+/// player shouldn't know their odds to the percent.
+struct Outlook {
+    let word: String
+    let color: Color
+
+    init(_ p: Double) {
+        switch p {
+        case 0.8...: (word, color) = ("Confident", .green)
+        case 0.6..<0.8: (word, color) = ("Favourable", .green)
+        case 0.4..<0.6: (word, color) = ("Uncertain", .orange)
+        case 0.2..<0.4: (word, color) = ("Risky", .red)
+        default: (word, color) = ("Desperate", .red)
+        }
     }
 }
 

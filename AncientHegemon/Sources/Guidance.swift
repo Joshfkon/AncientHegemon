@@ -216,7 +216,7 @@ enum Tip: String, CaseIterable {
         switch self {
         case .map: "Tap your army (the token with ★) to give it orders. Pinch to zoom; long-press any territory for a quick look."
         case .orders: "Highlighted land is where this army can go. Every army eats grain, and more the farther it is from your capital."
-        case .battle: "Pick a battle plan. Your odds are on each formation; locked plans show what would unlock them."
+        case .battle: "Pick a battle plan. Your officers judge each formation for this fight; locked plans show what would unlock them."
         case .rivals: "Arrows show what your rivals did. They stay on the map until you end your turn."
         case .collapse: "The Bronze Age is ending: Sea Peoples, droughts, earthquakes and broken trade will grow more common. Wall your coasts."
         case .knowledge: "Your people discovered something. The books button opens the knowledge tree."
@@ -239,11 +239,11 @@ struct TipBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "lightbulb.fill").foregroundStyle(.yellow)
-            Text(tip.text).font(.callout)
+            Text(tip.text).font(.callout).fixedSize(horizontal: false, vertical: true)
             Button(action: dismiss) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
         }
         .padding(10)
-        .frame(maxWidth: 400)
+        .frame(minWidth: 260, maxWidth: 400)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .shadow(radius: 6)
     }

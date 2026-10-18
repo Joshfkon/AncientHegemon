@@ -239,7 +239,7 @@ struct GameScreen: View {
     /// The attack being composed, as an arrow on the map with its odds.
     private var planned: (from: TerritoryID, to: TerritoryID, label: String?)? {
         guard case let .march(from, to)? = pending else { return nil }
-        let label = session.plannedOdds.map { "\(Int(($0 * 100).rounded()))%" }
+        let label = session.plannedOdds.map { Outlook($0).word }
         return (from, to, label)
     }
 

@@ -1034,3 +1034,14 @@ the war tech tree." Decided: gate the existing formations too.
   since few civs reach the knowledge by mid-game.
 - Also fixed on the way: the naval AI no longer builds ships whose crews the harvest can't feed,
   and brings troops home instead of leaving a too-small landing force to starve at sea.
+
+### No exact odds (Josh)
+
+"I don't like knowing the odds so specifically in advance… let's just say their numbers are roughly
+the same as ours." The player never sees a win percentage. Before an attack a **scouts' report**
+says how the numbers compare (greatly outnumber / outnumber / roughly the same / outnumbered /
+greatly outnumbered, by troop ratio), what favours the defender (walls, hills or mountains or
+forest, a river or strait crossing, a landing from the sea, a general), and the officers' outlook
+in one word from the simulated odds: Confident (80%+), Favourable (60–80), Uncertain (40–60),
+Risky (20–40), Desperate. Formation cards and the attack arrow show the same word. The AI still
+uses the exact estimate internally.

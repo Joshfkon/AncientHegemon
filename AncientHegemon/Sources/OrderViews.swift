@@ -175,15 +175,50 @@ struct OrderComposer: View {
         }
     }
 
+    /// The scouts' report: how the numbers compare, what favours the defender, and the officers'
+    /// feeling about it. Deliberately no percentages.
     private var odds: some View {
         let p = oddsByFormation[plan.formation ?? engine.rules.battle.defaultFormation] ?? oddsByFormation.values.first ?? 0
-        let percent = Int((p * 100).rounded())
-        return HStack {
-            Text("Chance of victory").font(.callout)
-            Spacer()
-            Text("\(percent)%").font(.title3.bold().monospacedDigit())
-                .foregroundStyle(percent >= 65 ? .green : percent >= 40 ? .orange : .red)
+        let outlook = Outlook(p)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Scouts' report").font(.subheadline.bold())
+                Spacer()
+                Text(outlook.word).font(.title3.bold()).foregroundStyle(outlook.color)
+            }
+            ForEach(scouting, id: \.self) { line in
+                Text("• " + line).font(.caption).foregroundStyle(.secondary)
+            }
         }
+    }
+
+    private var scouting: [String] {
+        guard let to = destination, let defender = state.armies[to] else { return [] }
+        var lines: [String] = []
+        let ours = Double(max(1, units.total)), theirs = Double(max(1, defender.units.total))
+        let ratio = ours / theirs
+        let numbers = switch ratio {
+        case ..<0.5: "They greatly outnumber us."
+        case 0.5..<0.8: "They outnumber us."
+        case 0.8...1.25: "Their numbers are roughly the same as ours."
+        case 1.25..<2: "We outnumber them."
+        default: "We greatly outnumber them."
+        }
+        lines.append(numbers)
+        let walls = engine.fortification(at: to, state)
+        if walls > 0 { lines.append("They are behind walls.") }
+        let terrain = engine.map.territory(to)!.terrain
+        if (engine.rules.battle.terrain[terrain]?.defensePercent ?? 0) > 0 {
+            lines.append("The \(terrain.rawValue) favour the defender.")
+        }
+        switch order {
+        case let .march(from, _):
+            if let crossing = engine.map.crossing(between: from, and: to) { lines.append("We must cross a \(crossing.rawValue).") }
+        case .land: lines.append("We must fight our way ashore.")
+        case .embark: break
+        }
+        if state.general(of: defender.owner, at: to) != nil { lines.append("A general leads them.") }
+        return lines
     }
 
     private func setDefaults() {
