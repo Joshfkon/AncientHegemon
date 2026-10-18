@@ -577,7 +577,7 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
   exactly the land links in `map.json`. The app paints them in the board's palette with owner
   tints. If the photo itself is added to the repo, the outlines line up with it in the same
   pixel space and it can serve as the background layer.
-  - **Open: painting vs rules.** The tracing found two places where the painting and `map.json`
-    disagree: Venedi touches Macedonia along the river on the painting but they aren't linked in
-    the rules, and the rules link Venedi to Scythe though Dacia lies between them on the
-    painting. The rules are unchanged until Josh decides.
+  - **Painting wins** (Josh): the tracing found two places where `map.json` disagreed with the
+    painting. Fixed to match it: Venedi now borders Macedonia across the river, and no longer
+    borders Scythe. Painting and rules now agree on every border. In 40 sim games afterward,
+    Mesopotamia won 60% (was 45%) and Greece 10% (was 20%); Macedonia has one more border.

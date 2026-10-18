@@ -47,7 +47,8 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     or rounds crawl (debug-built engine).
   - **Map art traced from Josh's board photo**: `tools/board_shapes.py` (hand-traced outlines in
     the photo's pixel space, with an adjacency check against `map.json`); the preview app now
-    paints the board. Two painting-vs-rules questions are open (see the DESIGN.md appendix).
+    paints the board. Painting and rules agree on every border (Venedi–Macedonia added,
+    Venedi–Scythe removed, per Josh).
     Josh's second photo shows the board with its resource tokens; reconciling `map.json`'s
     resource values against those tokens is still to do.
   - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
