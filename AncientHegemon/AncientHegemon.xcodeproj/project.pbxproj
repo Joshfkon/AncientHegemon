@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0B6840A6ABAE607241E85D31 /* clash.wav in Resources */ = {isa = PBXBuildFile; fileRef = 56A2A90E394E1F771A7B0376 /* clash.wav */; };
+		1ABCA866ED9D87E1233E4F9D /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = F40E34A4B9B83B40EDBECB72 /* coins.wav */; };
 		27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD395B564F5864E92AF2E613 /* SoundBoard.swift */; };
 		2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFEA270691335D57E5FC99 /* GameScreen.swift */; };
 		357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */; };
@@ -23,7 +24,9 @@
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
+		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
 		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
+		B234E652CC62E857DB359A86 /* click.wav in Resources */ = {isa = PBXBuildFile; fileRef = BD6DDA213A9E31B4C7C20FF7 /* click.wav */; };
 		BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */; };
 		C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8264F7FC3FCC73EAA576137C /* SaveStore.swift */; };
 		CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5ACD1C217BD355BA7B28AFB5 /* HegemonCore */; };
@@ -59,6 +62,7 @@
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		AD395B564F5864E92AF2E613 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
+		BD6DDA213A9E31B4C7C20FF7 /* click.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = click.wav; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C7087D3414E9471A080F99F9 /* horn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = horn.wav; sourceTree = "<group>"; };
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
@@ -67,7 +71,9 @@
 		D2374D4F4DD8663AC2D35069 /* victory.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = victory.wav; sourceTree = "<group>"; };
 		E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AncientHegemonApp.swift; sourceTree = "<group>"; };
 		E710095DFC58ED6E6AD23B14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F40E34A4B9B83B40EDBECB72 /* coins.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = coins.wav; sourceTree = "<group>"; };
 		FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleScreen.swift; sourceTree = "<group>"; };
+		FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = drum.wav; sourceTree = "<group>"; };
 		FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -88,7 +94,10 @@
 			children = (
 				81666E7D20EECA8701512537 /* arrows.wav */,
 				56A2A90E394E1F771A7B0376 /* clash.wav */,
+				BD6DDA213A9E31B4C7C20FF7 /* click.wav */,
+				F40E34A4B9B83B40EDBECB72 /* coins.wav */,
 				8174C96AEEC6F7CD3E672281 /* defeat.wav */,
+				FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */,
 				C7087D3414E9471A080F99F9 /* horn.wav */,
 				D2374D4F4DD8663AC2D35069 /* victory.wav */,
 			);
@@ -227,7 +236,10 @@
 				F679B7A870F692418B01A07B /* Assets.xcassets in Resources */,
 				54C9133A6A5FA07E5DBC30D9 /* arrows.wav in Resources */,
 				0B6840A6ABAE607241E85D31 /* clash.wav in Resources */,
+				B234E652CC62E857DB359A86 /* click.wav in Resources */,
+				1ABCA866ED9D87E1233E4F9D /* coins.wav in Resources */,
 				3F4DDE666430DE97564563A8 /* defeat.wav in Resources */,
+				8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */,
 				86F91473DD43BAF6EC405E67 /* horn.wav in Resources */,
 				45672360191504BA6F4B6C43 /* map_shapes.json in Resources */,
 				F38B5FFD26C968F15B7E66DD /* victory.wav in Resources */,
@@ -337,7 +349,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 5LBB8BWZB3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
@@ -364,7 +376,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 5LBB8BWZB3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
