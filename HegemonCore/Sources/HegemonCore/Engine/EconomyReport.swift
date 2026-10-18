@@ -34,7 +34,7 @@ extension Engine {
         let home = pockets.first ?? []
         let homeSet = Set(home)
         let routes = tradeRoutes(in: state)
-        let produced = home.reduce(0) { $0 + map.territory($1)!.grain * (state.harvestPercent[$1] ?? 100) / 100 }
+        let produced = home.reduce(0) { $0 + territoryYield(.grain, $1, state) * (state.harvestPercent[$1] ?? 100) / 100 }
         let people = rules.grainEaten(byPopulation: home.reduce(0) { $0 + state.population(of: $1) })
         let armies = state.armies(of: civ).filter { homeSet.contains($0.territory) }
         let base = armies.reduce(0) { $0 + rules.upkeep(of: $1.units) }

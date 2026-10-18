@@ -52,6 +52,50 @@ public struct EconomyRules: Codable, Sendable, Equatable {
     public let granaryCapTurns: Int
     /// Starvation and recruitment never take a territory below this population.
     public let minPopulation: Int
+    /// The tax rate (percent) at which taxes are `population / populationPerGold` and legitimacy
+    /// and growth are unaffected.
+    public let defaultTax: Int
+    /// Legitimacy changes by 1 a turn for every this many points the tax rate is below (+) or
+    /// above (−) the default. Above the default, growth slows in proportion.
+    public let taxLegitimacyStep: Int
+    /// Most of any stockpiled resource a civilization can hold.
+    public let stockCap: Int
+    /// Gold per unit of wine and oil produced, and extra per unit exported to a partner lacking it.
+    public let winePerGold: Int
+    public let wineExportCap: Int
+    /// Legitimacy +1 a turn per this many luxuries within reach, up to the cap.
+    public let luxuriesPerLegitimacy: Int
+    public let luxuryLegitimacyCap: Int
+}
+
+/// Building projects in territories: the "industrializing" side of the economy.
+public enum ProjectKind: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {
+    /// Supply lines through this territory cost nothing.
+    case road
+    /// The defender takes less damage here.
+    case walls
+    /// More grain.
+    case farm
+    /// More of each ore the territory already yields.
+    case mine
+    /// Trade income, and cheaper ships built here.
+    case harbor
+}
+
+public struct ProjectCost: Codable, Sendable, Equatable {
+    public let gold: Int
+    public let stone: Int
+    public let timber: Int
+    public let turns: Int
+}
+
+public struct ProjectEffects: Codable, Sendable, Equatable {
+    public let farmGrain: Int
+    public let farmRiverValleyGrain: Int
+    public let mineBonus: Int
+    public let wallsDefensePercent: Int
+    public let harborGold: Int
+    public let harborShipDiscount: Int
 }
 
 public struct SupplyRules: Codable, Sendable, Equatable {
@@ -103,6 +147,8 @@ public struct Rules: Codable, Sendable, Equatable {
     public let units: [UnitType: UnitStats]
     public let victory: VictoryRules
     public let economy: EconomyRules
+    public let projects: [ProjectKind: ProjectCost]
+    public let projectEffects: ProjectEffects
     public let supply: SupplyRules
     public let trade: TradeRules
     public let ships: ShipRules

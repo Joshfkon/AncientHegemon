@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -36,7 +36,54 @@
     "growthPerTerritory": 1,
     "populationPerGold": 2,
     "granaryCapTurns": 1,
-    "minPopulation": 1
+    "minPopulation": 1,
+    "defaultTax": 40,
+    "taxLegitimacyStep": 20,
+    "stockCap": 30,
+    "winePerGold": 1,
+    "wineExportCap": 2,
+    "luxuriesPerLegitimacy": 2,
+    "luxuryLegitimacyCap": 2
+  },
+  "projects": {
+    "road": {
+      "gold": 5,
+      "stone": 1,
+      "timber": 0,
+      "turns": 2
+    },
+    "walls": {
+      "gold": 8,
+      "stone": 3,
+      "timber": 0,
+      "turns": 3
+    },
+    "farm": {
+      "gold": 6,
+      "stone": 0,
+      "timber": 1,
+      "turns": 2
+    },
+    "mine": {
+      "gold": 6,
+      "stone": 0,
+      "timber": 2,
+      "turns": 3
+    },
+    "harbor": {
+      "gold": 8,
+      "stone": 1,
+      "timber": 2,
+      "turns": 3
+    }
+  },
+  "projectEffects": {
+    "farmGrain": 1,
+    "farmRiverValleyGrain": 2,
+    "mineBonus": 1,
+    "wallsDefensePercent": 25,
+    "harborGold": 2,
+    "harborShipDiscount": 2
   },
   "supply": {
     "outOfSupplyAttrition": 1,

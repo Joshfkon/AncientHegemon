@@ -602,3 +602,32 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     partners, bronze and the resources within reach. Forecasts come from `Engine.economy`, which
     runs the harvest on a scratch copy, so they match what happens. Declaring war asks first.
   - Iron is not shown: the Bronze → Iron Age shift is still post-MVP.
+
+## Late Bronze Age redesign (Josh, after the playable build)
+
+Josh's framing: the game covers **the end of the Bronze Age** and is **"Risk with logistics."**
+Decisions (his answers, with the details filled in):
+
+- **New resources**: **iron** (ore in the ground, useless until Metallurgy reaches ironworking,
+  then it arms troops without needing tin), **wine & oil** (sells for gold, more when exported to a
+  partner who lacks it), **luxuries** (purple dye, papyrus, ivory, incense: feed legitimacy), and
+  **stone** (builds projects). Non-grain resources now also accumulate in **stockpiles**.
+- **Technology is not chosen.** Each civ earns knowledge at a rate set by **population and wealth**.
+  It flows into **fields** in proportion to recent **experience**: naval battles and sea trade build
+  Seafaring, cavalry fighting and horses build Horsemanship, harvests build Agriculture, bronze and
+  iron ore build Metallurgy, projects and stone build Construction, battles build Warfare, trade and
+  wealth build Administration. **Contact** (a shared border or trade route) with a more advanced
+  civ passes part of their lead each turn. Fields and levels are **revealed by experience**: a
+  desert empire that never sails never sees Navigation.
+- **Taxes and investment**: a **tax slider**. Higher taxes give more gold to invest (projects,
+  armies) but slow population growth and drain legitimacy; lower taxes leave more to consumption:
+  growth and goodwill, less gold.
+- **Projects**: spend gold, stone and timber on **roads** (supply lines through them cost nothing),
+  **walls** (defense), **farms** (grain), **mines** (more ore) and **harbors** (trade income,
+  cheaper ships). They take turns to build and are captured with the land; earthquakes and raids
+  can destroy them.
+- **The collapse arc** (escalating, scripted): from round 12, pressure rises toward round 40. **Sea
+  Peoples** raid coasts from the sea, **droughts** deepen, **earthquakes** wreck buildings, and
+  **trade routes break** for several rounds at a time. **Bronze wears out** without a steady tin
+  supply; **iron** doesn't need tin. Tin-dependent palace empires crack; iron-workers endure.
+- **Trade made visible**: the map shows what goods flow along each route.

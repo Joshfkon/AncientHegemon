@@ -205,6 +205,7 @@ extension Engine {
             events.append(.generalKilled(g.id))
         }
         state.land[t]!.owner = nil
+        state.land[t]!.construction = nil
         events.append(.captured(civ: raider, territory: t, from: victim))
         if let victim {
             if map.civilization(victim)?.capital == t {

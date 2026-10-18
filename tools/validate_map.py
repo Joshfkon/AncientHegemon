@@ -7,7 +7,7 @@ from pathlib import Path
 
 DEFAULT = Path(__file__).resolve().parent.parent / "HegemonCore/Sources/HegemonCore/Resources/map.json"
 TERRAINS = {"plains", "hills", "mountains", "forest", "desert"}
-RESOURCES = {"grain", "copper", "tin", "horses", "timber", "gold"}
+RESOURCES = {"grain", "copper", "tin", "iron", "horses", "timber", "stone", "gold", "wine", "luxuries"}
 CROSSINGS = {"river", "strait"}
 TAGS = {"river_valley", "barbarian_homeland"}
 

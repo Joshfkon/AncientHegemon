@@ -49,14 +49,17 @@ public struct BattleSetup: Codable, Sendable, Equatable {
     public var terrain: Terrain
     public var approach: Approach
     public var seed: UInt64
+    /// Extra damage reduction for the defender from walls, in percent.
+    public var fortification: Int
 
     public init(attacker: BattleArmy, defender: BattleArmy, terrain: Terrain,
-                approach: Approach = .overland, seed: UInt64) {
+                approach: Approach = .overland, seed: UInt64, fortification: Int = 0) {
         self.attacker = attacker
         self.defender = defender
         self.terrain = terrain
         self.approach = approach
         self.seed = seed
+        self.fortification = fortification
     }
 }
 

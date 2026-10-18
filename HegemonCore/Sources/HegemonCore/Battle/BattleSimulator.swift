@@ -269,7 +269,7 @@ public struct BattleSimulator: Sendable {
             percents.append(100 - (b.crossingPenaltyPercent[setup.approach.rawValue] ?? 0))
         }
         var defense = targetArmy.general.flatMap { rules.generals.traits[$0.trait]?.defensePercent } ?? 0
-        if target.side == .defender { defense += terrain.defensePercent }
+        if target.side == .defender { defense += terrain.defensePercent + setup.fortification }
         percents.append(100 - defense)
         let spread = b.randomSpreadPercent
         percents.append(100 + Int(rng.next() % UInt64(2 * spread + 1)) - spread)

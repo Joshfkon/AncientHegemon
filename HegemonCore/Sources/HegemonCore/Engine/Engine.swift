@@ -50,6 +50,10 @@ public struct Engine: Sendable {
             return try appointGeneral(territory, &state)
         case let .honorGeneral(id):
             return try honorGeneral(id, &state)
+        case let .setTaxRate(rate):
+            return try setTaxRate(rate, &state)
+        case let .build(territory, project):
+            return try build(project, in: territory, &state)
         case let .resolveCrisis(choice):
             return try resolveCrisis(choice, &state)
         case .endTurn:

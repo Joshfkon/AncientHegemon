@@ -13,6 +13,17 @@ public enum Terrain: String, Codable, Sendable, CaseIterable, CodingKeyRepresent
 /// Raw resources a territory can yield. Bronze is derived (copper + tin) and is not listed here.
 public enum Resource: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {
     case grain, copper, tin, horses, timber, gold
+    /// Ore that only empires with ironworking can use.
+    case iron
+    /// Wine and olive oil: sells for gold, more when exported.
+    case wine
+    /// Purple dye, papyrus, ivory, incense: feed legitimacy.
+    case luxuries
+    /// Builds projects.
+    case stone
+
+    /// Resources that pile up in a civilization's stores for building and arming.
+    public static let stockpiled: [Resource] = [.stone, .timber, .iron]
 }
 
 /// Regional character that events key off (DESIGN §8).

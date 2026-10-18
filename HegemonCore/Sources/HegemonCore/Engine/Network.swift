@@ -122,15 +122,21 @@ extension Engine {
     /// Land borders count 1; sailing counts 1 per sea zone plus 1 to land.
     public func supplyDistances(of civ: CivilizationID, in state: GameState) -> [TerritoryID: Int] {
         guard let seat = seat(of: civ, in: state) else { return [:] }
+        // 0-1 breadth-first search: entering a territory with a road is free.
         var steps: [NetworkNode: Int] = [.land(seat): 0]
-        var queue: [NetworkNode] = [.land(seat)]
-        var i = 0
-        while i < queue.count {
-            let node = queue[i]
-            i += 1
-            for next in neighbors(of: node, through: [civ], travelers: [civ], in: state) where steps[next] == nil {
-                steps[next] = steps[node]! + 1
-                queue.append(next)
+        var deque: [NetworkNode] = [.land(seat)]
+        var head = 0
+        while head < deque.count {
+            let node = deque[head]
+            head += 1
+            for next in neighbors(of: node, through: [civ], travelers: [civ], in: state) {
+                var cost = 1
+                if case .land(let t) = next, state.land[t]?.improvements.contains(.road) == true { cost = 0 }
+                let d = steps[node]! + cost
+                if d < steps[next] ?? .max {
+                    steps[next] = d
+                    if cost == 0 { deque.insert(next, at: head) } else { deque.append(next) }
+                }
             }
         }
         var result: [TerritoryID: Int] = [:]
@@ -207,19 +213,17 @@ extension Engine {
     /// trade partner's. Grain is not traded; it feeds each network locally.
     public func effectiveYield(of resource: Resource, for civ: CivilizationID, in state: GameState,
                                routes: [TradeRoute]? = nil) -> Int {
-        let own = yield(of: resource, in: homeNetwork(of: civ, in: state))
+        let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {
             let partner = $1.partner(of: civ)
-            return $0 + yield(of: resource, in: homeNetwork(of: partner, in: state)) / rules.trade.shareDivisor
+            return $0 + yield(of: resource, in: homeNetwork(of: partner, in: state), state) / rules.trade.shareDivisor
         }
         return own + shared
     }
 
-    public func yield(of resource: Resource, in territories: [TerritoryID]) -> Int {
-        territories.reduce(0) { total, id in
-            let t = map.territory(id)!
-            return total + (resource == .grain ? t.grain : t.resources[resource] ?? 0)
-        }
+    /// Total yield of a resource across territories, counting farms and mines.
+    public func yield(of resource: Resource, in territories: [TerritoryID], _ state: GameState) -> Int {
+        territories.reduce(0) { $0 + territoryYield(resource, $1, state) }
     }
 }

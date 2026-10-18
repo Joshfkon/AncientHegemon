@@ -49,7 +49,8 @@ extension Engine {
         guard t.seas.contains(sea) else { throw GameError.notCoastal(territory, sea) }
         guard homeNetwork(of: civ, in: state).contains(territory) else { throw GameError.outOfSupply(territory) }
         guard !blockaded(sea, for: [civ], in: state) else { throw GameError.blockaded(sea) }
-        let cost = rules.ships.cost * count
+        let discount = state.land[territory]?.improvements.contains(.harbor) == true ? rules.projectEffects.harborShipDiscount : 0
+        let cost = max(1, rules.ships.cost - discount) * count
         let gold = state.civs[civ]!.gold
         guard gold >= cost else { throw GameError.insufficientGold(needed: cost, available: gold) }
         let resource = rules.ships.requires

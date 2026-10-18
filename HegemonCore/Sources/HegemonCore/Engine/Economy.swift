@@ -14,7 +14,7 @@ extension Engine {
         for (i, pocket) in pockets.enumerated() {
             let isHome = i == 0
             let production = pocket.reduce(0) { total, t in
-                total + map.territory(t)!.grain * (state.harvestPercent[t] ?? 100) / 100
+                total + territoryYield(.grain, t, state) * (state.harvestPercent[t] ?? 100) / 100
             }
             // Ships' crews and the troops they carry are fed from home.
             let atSea = isHome ? fleetUpkeep(of: civ, state) : 0
@@ -23,7 +23,9 @@ extension Engine {
             var grown = 0
 
             if production >= consumption {
-                grown = grow(pocket, surplus: production - consumption, &state)
+                // High taxes leave less for families to grow on.
+                let forGrowth = (production - consumption) * growthPercent(civ, state) / 100
+                grown = grow(pocket, surplus: forGrowth, &state)
                 granary = min(granary + production - consumption - grown,
                               production * rules.economy.granaryCapTurns)
             } else {
@@ -48,6 +50,8 @@ extension Engine {
         // Income, trade and bronze come from the home network only.
         let homeNet = pockets.first ?? []
         let routes = tradeRoutes(in: state)
+        stockpile(civ, routes, &state)
+        events += progressConstruction(civ, &state)
         let gold = income(of: civ, homeNet, routes, state)
         let tradeIncome = gold.trade
         let income = gold.total
@@ -71,10 +75,13 @@ extension Engine {
     /// Gold a civilization takes in per turn, by source.
     func income(of civ: CivilizationID, _ homeNet: [TerritoryID], _ routes: [TradeRoute], _ state: GameState)
         -> (taxes: Int, mines: Int, trade: Int, total: Int) {
-        let taxes = homeNet.reduce(0) { $0 + state.population(of: $1) } / rules.economy.populationPerGold
-        let mines = yield(of: .gold, in: homeNet) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
+        let e = rules.economy
+        let population = homeNet.reduce(0) { $0 + state.population(of: $1) }
+        let taxes = population * state.civs[civ]!.taxRate / max(1, e.populationPerGold * e.defaultTax)
+        let mines = yield(of: .gold, in: homeNet, state) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
         let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
-        let trade = tradeGold(for: civ, routes)
+        let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
+            + harborGold(civ, homeNet, routes, state)
         return (taxes, mines, trade, (taxes + mines) * (100 + administration) / 100 + trade)
     }
 

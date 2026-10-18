@@ -28,6 +28,10 @@ public enum Command: Codable, Sendable, Equatable {
     case appointGeneral(territory: TerritoryID)
     /// Shower a general with honors: costs gold (more for famous ones), restores loyalty.
     case honorGeneral(GeneralID)
+    /// Set the tax rate (0–100, in steps of 10).
+    case setTaxRate(Int)
+    /// Start a project in an owned home territory. Costs are paid up front.
+    case build(territory: TerritoryID, project: ProjectKind)
     /// Decide a contested succession (only offered to human rulers).
     case resolveCrisis(CrisisChoice)
     /// End the active player's turn.
@@ -70,6 +74,10 @@ public enum GameEvent: Codable, Sendable, Equatable {
     /// A general rose up: `rebel` is the new civilization, holding `territories`.
     case civilWar(civ: CivilizationID, rebel: CivilizationID, general: GeneralID, territories: [TerritoryID])
     case generalAppointed(civ: CivilizationID, general: GeneralID)
+    case taxRateSet(civ: CivilizationID, rate: Int)
+    case projectStarted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
+    case projectCompleted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
+    case projectDestroyed(territory: TerritoryID, project: ProjectKind)
     case generalHonored(GeneralID)
     case generalsUnpaid(civ: CivilizationID, count: Int)
     case event(EventReport)
@@ -150,4 +158,8 @@ public enum GameError: Error, Equatable, Sendable {
     /// A succession crisis must be resolved first.
     case crisisPending
     case noCrisis
+    case invalidTaxRate
+    /// Already built, or something is being built there.
+    case projectUnavailable(TerritoryID, ProjectKind)
+    case insufficientStock(Resource, needed: Int, available: Int)
 }

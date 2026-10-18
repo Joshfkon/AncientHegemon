@@ -92,12 +92,26 @@ extension AIPlayer {
             guard let fleet = state.fleet(of: civ, in: sea), fleet.cargo.total > 0 || fleet.ships > 0 else { continue }
             let ready = fleet.ships - fleet.movedShips
             guard ready > 0, fleet.cargo.total <= ready * capacity else { continue }
-            let dist = seaDistances(to: campaign.landingSeas, ships: ready, civ, state)
+            // Too weak to land: go back to a port with spare troops instead of idling at sea.
+            let ports = portSeas(civ, state)
+            let goal = fleet.cargo.total < campaign.force && !ports.contains(sea) && !ports.isEmpty
+                ? ports : campaign.landingSeas
+            let dist = seaDistances(to: goal, ships: ready, civ, state)
             guard let here = dist[sea], here > 0,
                   let next = map.seaNeighbors(of: sea).filter({ dist[$0] == here - 1 }).min() else { continue }
             guard issue(.moveFleet(from: sea, to: next, ships: ready, cargo: fleet.cargo), &state, &turn) else { continue }
             if state.fleet(of: civ, in: next) != nil { _ = land(civ, from: next, campaign, &state, &turn) }
         }
+    }
+
+    /// Seas next to home coasts where troops beyond their garrisons are ready to board.
+    private func portSeas(_ civ: CivilizationID, _ state: GameState) -> Set<SeaZoneID> {
+        var seas: Set<SeaZoneID> = []
+        for t in engine.homeNetwork(of: civ, in: state) where state.armies[t]?.owner == civ {
+            let spare = min(readyUnits(at: t, state).total, state.armies[t]!.units.total - garrison(t, for: civ, state) - 1)
+            if spare > 0 { seas.formUnion(map.seas(bordering: t)) }
+        }
+        return seas
     }
 
     /// Boards ready troops beyond their garrisons from coasts on `sea`, up to the force size.

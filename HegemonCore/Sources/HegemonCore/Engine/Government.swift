@@ -49,7 +49,8 @@ extension Engine {
         let cs = state.civs[civ]!
         let drift = cs.legitimacy < 50 ? min(g.legitimacyDrift, 50 - cs.legitimacy)
             : -min(g.legitimacyDrift, cs.legitimacy - 50)
-        adjustLegitimacy(civ, drift + (rules.rulerTraits[cs.ruler.trait]?.legitimacyPerTurn ?? 0), &state)
+        adjustLegitimacy(civ, drift + (rules.rulerTraits[cs.ruler.trait]?.legitimacyPerTurn ?? 0)
+                         + taxAndLuxuryLegitimacy(civ, state), &state)
 
         // Generals are paid, and their loyalty moves toward what the throne commands.
         let distances = supplyDistances(of: civ, in: state)

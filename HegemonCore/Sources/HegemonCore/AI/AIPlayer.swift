@@ -29,11 +29,13 @@ public struct AIPlayer: Sendable {
         var turn = AITurn()
         let civ = state.activePlayer
         diplomacy(civ, &state, &turn)
+        setTaxes(civ, &state, &turn)
         court(civ, &state, &turn)
         let campaign = seaCampaign(civ, state)
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         recruit(civ, &state, &turn)
         attack(civ, &state, &turn)
+        invest(civ, &state, &turn)
         if let campaign { sail(civ, toward: campaign, &state, &turn) }
         fortify(civ, &state, &turn)
         chooseDefensiveFormations(civ, &state, &turn)
@@ -166,9 +168,11 @@ public struct AIPlayer: Sendable {
             guard state.civs[civ]!.gold >= cheapest else { return }
             let home = engine.homeNetwork(of: civ, in: state)
             // Don't raise more mouths than the home granary can carry for a few turns.
-            let production = engine.yield(of: .grain, in: home)
+            let production = engine.yield(of: .grain, in: home, state)
             let eaten = engine.grainConsumption(of: civ, in: home, state) + engine.fleetUpkeep(of: civ, state)
-            guard eaten + 1 <= production + state.civs[civ]!.granary / 4 else { return }
+            // Leave room for supply lines to lengthen as the army marches out.
+            let margin = state.totalUnits(of: civ).total / 4
+            guard eaten + 1 + margin <= production + state.civs[civ]!.granary / 4 else { return }
 
             let spots = home.filter { t in
                 state.population(of: t) - 1 >= rules.economy.minPopulation

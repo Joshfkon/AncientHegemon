@@ -37,6 +37,15 @@ public struct Victory: Codable, Sendable, Equatable {
 public struct TerritoryState: Codable, Sendable, Equatable {
     public var owner: CivilizationID?
     public var population: Int
+    /// Finished projects. They stay when the land changes hands.
+    public var improvements: Set<ProjectKind> = []
+    /// A project under way, lost if the land changes hands.
+    public var construction: Construction?
+}
+
+public struct Construction: Codable, Sendable, Equatable {
+    public let kind: ProjectKind
+    public var turnsLeft: Int
 }
 
 /// Per-civilization facts that change during a game.
@@ -66,6 +75,10 @@ public struct CivState: Codable, Sendable, Equatable {
     public var displayName: String?
     /// Played by a person: succession crises wait for their decision instead of resolving.
     public var isHuman = false
+    /// Percent of the people's wealth taken in taxes.
+    public var taxRate = 40
+    /// Stockpiled stone, timber and iron.
+    public var stock: [Resource: Int] = [:]
     /// A contested succession awaiting the human ruler's decision. Nothing else can be ordered
     /// until it is resolved.
     public var crisis: SuccessionCrisis?
@@ -207,6 +220,7 @@ public struct GameState: Codable, Sendable, Equatable {
             let g = rules.government
             cs.government = civ.government
             cs.legitimacy = g.startLegitimacy
+            cs.taxRate = rules.economy.defaultTax
             cs.ruler = Ruler(name: Self.pickName(rules.names[civ.id]?.rulers, &rng),
                              age: Self.roll(g.rulerStartAge, &rng), trait: RulerTrait.allCases.randomElement(using: &rng)!)
             if civ.government == .monarchy {

@@ -42,6 +42,7 @@ extension Engine {
         let previous = state.land[to]!.owner
         if previous != civ, state.armies[to]?.owner == civ {
             state.land[to]!.owner = civ
+            state.land[to]!.construction = nil
             events.append(.captured(civ: civ, territory: to, from: previous))
             adjustLegitimacy(civ, rules.government.legitimacy.capture, &state)
             if let previous, map.civilization(previous)?.capital == to {
@@ -69,7 +70,8 @@ extension Engine {
             defender: BattleArmy(civ: defender.owner, units: defender.units,
                                  formation: defender.formation ?? rules.battle.defaultFormation,
                                  general: defenderGeneral, bronzePercent: bronzePercent(defender.owner, state)),
-            terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next())
+            terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next(),
+            fortification: fortification(at: to, state))
         let report = BattleSimulator(rules: rules).resolve(setup)
         let won = report.winner == .attacker
         var events: [GameEvent] = [.battle(report)]
@@ -139,6 +141,11 @@ extension Engine {
         }
     }
 
+    /// Damage reduction walls give a territory's defenders.
+    func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
+        state.land[territory]?.improvements.contains(.walls) == true ? rules.projectEffects.wallsDefensePercent : 0
+    }
+
     /// The chance an attack succeeds, estimated by running the battle several times with seeds
     /// derived from the state (the game's RNG is untouched). For the UI to show before attacking.
     public func attackOdds(_ civ: CivilizationID, units: UnitCounts, into to: TerritoryID,
@@ -169,7 +176,8 @@ extension Engine {
                                      formation: defender.formation ?? rules.battle.defaultFormation,
                                      general: state.general(of: defender.owner, at: to),
                                      bronzePercent: bronzePercent(defender.owner, state)),
-                terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next()))
+                terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next(),
+                fortification: fortification(at: to, state)))
             if report.winner == .attacker { wins += 1 }
         }
         return Double(wins) / Double(samples)
