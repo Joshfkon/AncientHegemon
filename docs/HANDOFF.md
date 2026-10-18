@@ -131,6 +131,19 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
 - **Previous blocker**: the cloud session couldn't install a Swift toolchain. The Mac has Xcode,
   so that's resolved.
 
+## Releasing to TestFlight
+
+- Signing: automatic, team `5LBB8BWZB3`, bundle ID `com.joshuakonstantinos.ancienthegemon`
+  (in `AncientHegemon/project.yml`; run `xcodegen` there after changing it). The icon is a
+  placeholder (bronze shield on Aegean blue) in `Resources/Assets.xcassets`. Export compliance is
+  answered in the Info.plist (`ITSAppUsesNonExemptEncryption = NO`).
+- Josh creates the app record once in App Store Connect (My Apps → + → New App, that bundle ID).
+- Each build: bump `CURRENT_PROJECT_VERSION` in `project.yml`, run `xcodegen`, then in Xcode
+  Product → Archive → Distribute App → TestFlight & App Store. Or from the command line:
+  `xcodebuild … -configuration Release -destination 'generic/platform=iOS' archive`, then
+  `xcodebuild -exportArchive` with `method app-store-connect` (and `destination upload` to send it).
+- A local archive and App Store export both succeed (checked 2026-10-18).
+
 ## Balance findings (after step 6; 40 games, default personalities, shuffled seating)
 
 ```

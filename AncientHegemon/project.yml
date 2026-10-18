@@ -30,3 +30,9 @@ targets:
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 5LBB8BWZB3
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The game uses no encryption beyond what iOS provides, so uploads skip the export question.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.strategy-games
+        INFOPLIST_KEY_UIRequiresFullScreen: YES

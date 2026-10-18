@@ -19,6 +19,7 @@
 		D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */; };
 		D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90545C84FE5971D4416409AA /* OrderViews.swift */; };
 		E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */; };
+		F679B7A870F692418B01A07B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E710095DFC58ED6E6AD23B14 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
 		D0154D70203F3EB68C8F8532 /* HegemonCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HegemonCore; path = ../HegemonCore; sourceTree = SOURCE_ROOT; };
 		E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AncientHegemonApp.swift; sourceTree = "<group>"; };
+		E710095DFC58ED6E6AD23B14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -95,6 +97,7 @@
 		F437369A8B03AE5D329AEE2C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				E710095DFC58ED6E6AD23B14 /* Assets.xcassets */,
 				7E7B5FD5E53683B4C70351A3 /* map_shapes.json */,
 			);
 			path = Resources;
@@ -133,6 +136,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					A7D089A5C2CF4618AD3DC15B = {
+						DevelopmentTeam = 5LBB8BWZB3;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -164,6 +168,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F679B7A870F692418B01A07B /* Assets.xcassets in Resources */,
 				45672360191504BA6F4B6C43 /* map_shapes.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,9 +266,13 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5LBB8BWZB3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.strategy-games";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -284,9 +293,13 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5LBB8BWZB3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hegemon;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.strategy-games";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
