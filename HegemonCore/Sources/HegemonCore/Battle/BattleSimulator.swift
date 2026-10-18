@@ -25,6 +25,7 @@ public struct BattleSimulator: Sendable {
         var disordered = false
         /// Stands on a wing of its formation (outer columns), for a flanking march.
         var onWing = false
+        var levy = false
     }
 
     // MARK: Land battle
@@ -182,20 +183,23 @@ public struct BattleSimulator: Sendable {
         default: winner = .defender
         }
         var survivors: [BattleSide: UnitCounts] = [.attacker: .zero, .defender: .zero]
+        var levyLeft = 0
         for block in blocks where block.status != .destroyed {
-            survivors[block.side]![block.type] += units(block)
+            if block.levy { levyLeft += units(block) } else { survivors[block.side]![block.type] += units(block) }
         }
         let loser: BattleSide = winner == .attacker ? .defender : .attacker
         for type in UnitType.allCases {
             survivors[loser]![type] -= survivors[loser]![type] * b.pursuitPercent / 100
         }
+        if loser == .defender { levyLeft -= levyLeft * b.pursuitPercent / 100 }
 
         let attackerKilled = generalDies(setup.attacker.general, won: winner == .attacker, &rng)
         let defenderKilled = generalDies(setup.defender.general, won: winner == .defender, &rng)
         return BattleReport(setup: setup, impassable: terrain.impassable, frames: frames, winner: winner,
                             rounds: round, attackerSurvivors: survivors[.attacker]!,
                             defenderSurvivors: survivors[.defender]!,
-                            attackerGeneralKilled: attackerKilled, defenderGeneralKilled: defenderKilled)
+                            attackerGeneralKilled: attackerKilled, defenderGeneralKilled: defenderKilled,
+                            defenderLevySurvivors: levyLeft)
     }
 
     // MARK: Deployment
@@ -237,6 +241,21 @@ public struct BattleSimulator: Sendable {
                 blocks.append(Block(id: firstID + blocks.count, side: side, type: type,
                                     position: boardPoint(slot, side), hp: hp, maxHp: hp, morale: morale,
                                     onWing: slot.col == 0 || slot.col == Self.size - 1))
+            }
+        }
+        // The levy: townsfolk in a block or two, wherever there's room, shakier than soldiers.
+        if army.levy > 0 {
+            let n = min(2, army.levy)
+            let preferred = (formation.slots[.infantry] ?? []) + b.fallbackSlots
+            for k in 0..<n {
+                let count = army.levy / n + (k < army.levy % n ? 1 : 0)
+                guard let slot = preferred.first(where: { !taken.contains($0) }) else { break }
+                taken.insert(slot)
+                let hp = count * b.hpPerUnit
+                blocks.append(Block(id: firstID + blocks.count, side: side, type: .infantry,
+                                    position: boardPoint(slot, side), hp: hp, maxHp: hp,
+                                    morale: morale - b.levy.moralePenalty,
+                                    onWing: slot.col == 0 || slot.col == Self.size - 1, levy: true))
             }
         }
         return blocks
@@ -314,8 +333,14 @@ public struct BattleSimulator: Sendable {
         var percents = [b.matchupPercent[attacker.type]![target.type]!]
         if attacker.type == .archers, !ranged { percents.append(b.archerMeleePercent) }
         if attacker.type == .cavalry, !ranged, !attacker.charged { percents.append(100 + b.chargeBonusPercent) }
-        percents.append(100 + (terrain.unitPercent[attacker.type] ?? 0) + (army.unitPercent[attacker.type] ?? 0))
-        percents.append(100 + b.bronzeBonusPercent * army.bronzePercent / 100)
+        if attacker.levy {
+            // Farmers with spears: no drill, no bronze.
+            percents.append(b.levy.damagePercent)
+            percents.append(100 + (terrain.unitPercent[attacker.type] ?? 0))
+        } else {
+            percents.append(100 + (terrain.unitPercent[attacker.type] ?? 0) + (army.unitPercent[attacker.type] ?? 0))
+            percents.append(100 + b.bronzeBonusPercent * army.bronzePercent / 100)
+        }
         if let g = army.general {
             let fx = rules.generals.traits[g.trait]
             percents.append(100 + (fx?.attackPercent ?? 0) + (fx?.unitPercent?[attacker.type] ?? 0)
@@ -350,7 +375,7 @@ public struct BattleSimulator: Sendable {
 
     private func snapshot(_ block: Block) -> BlockSnapshot {
         BlockSnapshot(id: block.id, side: block.side, type: block.type, position: block.position,
-                      units: units(block), morale: max(0, block.morale), status: block.status)
+                      units: units(block), morale: max(0, block.morale), status: block.status, levy: block.levy)
     }
 
     // MARK: Naval battle (auto-resolve only)

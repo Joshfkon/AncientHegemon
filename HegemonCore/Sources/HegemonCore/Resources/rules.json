@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -491,6 +491,13 @@
       }
     ],
     "defaultFormation": "phalanx",
+    "levy": {
+      "populationPerUnit": 3,
+      "maxUnits": 3,
+      "minPopulation": 2,
+      "damagePercent": 50,
+      "moralePenalty": 30
+    },
     "plans": {
       "formationRequires": {
         "hammer_and_anvil": { "field": "horsemanship", "level": 1, "trait": "cavalryCommander" },

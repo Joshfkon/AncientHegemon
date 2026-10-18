@@ -405,7 +405,7 @@ extension MapView {
     /// The player's territories by danger: hostile troops within reach against the garrison.
     fileprivate func drawThreats(_ context: inout GraphicsContext, _ t: BoardTransform) {
         guard let me = focus else { return }
-        let threats = ThreatMap(for: me, in: state, map: map)
+        let threats = ThreatMap(for: me, in: state, map: map, engine: engine)
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
             let path = t.path(shape.polygon)

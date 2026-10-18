@@ -240,7 +240,7 @@ private struct BlockView: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 6)
-            .fill(color)
+            .fill(block.levy ? color.opacity(0.55) : color)
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 1) {
@@ -259,7 +259,11 @@ private struct BlockView: View {
                 }
                 .padding(4)
             }
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.black.opacity(0.5), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.black.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: block.levy ? [3, 2] : [])))
+            .overlay(alignment: .top) {
+                if block.levy { Text("militia").font(.system(size: 7, weight: .bold)).foregroundStyle(.white).padding(.top, 1) }
+            }
             .keyframeAnimator(initialValue: HitState(), trigger: hit) { view, value in
                 view
                     .offset(x: value.shake)

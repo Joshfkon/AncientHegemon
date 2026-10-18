@@ -1,11 +1,9 @@
 import HegemonCore
 import SwiftUI
 
-/// The player's realm: standings, diplomacy and generals.
+/// The player's realm: standings, economy, ruler and generals.
 struct EmpireView: View {
     let session: GameSession
-    /// A declaration of war waiting for confirmation: breaking a peace costs legitimacy.
-    @State private var warOn: CivilizationID?
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -21,7 +19,6 @@ struct EmpireView: View {
                 }
                 KnowledgeView(civ: human, state: state, engine: engine)
                 ruler(human)
-                diplomacy(human)
                 generals(human)
             }
         }
@@ -37,48 +34,6 @@ struct EmpireView: View {
                 Text("Heir: \(heir.name), \(heir.age)\(heir.age < engine.rules.government.adultAge ? " (a child)" : "")")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }
-    }
-
-    private func diplomacy(_ human: CivilizationID) -> some View {
-        let cost = -engine.rules.government.legitimacy.brokePeace
-        return VStack(alignment: .leading, spacing: 6) {
-            Text("Diplomacy").font(.subheadline.bold())
-            ForEach(state.players.filter { $0 != human && !state.civs[$0]!.eliminated }, id: \.self) { other in
-                HStack {
-                    Circle().fill(Palette.color(other, state)).frame(width: 8, height: 8)
-                    Text(Palette.name(other, state)).font(.callout).lineLimit(1)
-                    Text(state.atPeace(human, other) ? "peace" : "war")
-                        .font(.caption).foregroundStyle(state.atPeace(human, other) ? .green : .red)
-                    Spacer()
-                    diplomacyButton(human, other)
-                }
-            }
-        }
-        .confirmationDialog("Break the peace with \(warOn.map { Palette.name($0, state) } ?? "")?",
-                            isPresented: Binding(get: { warOn != nil }, set: { if !$0 { warOn = nil } }),
-                            titleVisibility: .visible) {
-            Button("Declare war", role: .destructive) {
-                if let warOn { session.order(.declareWar(on: warOn)) }
-                warOn = nil
-            }
-        } message: {
-            Text("Breaking a peace costs \(cost) legitimacy and ends any trade route between you.")
-        }
-    }
-
-    @ViewBuilder private func diplomacyButton(_ human: CivilizationID, _ other: CivilizationID) -> some View {
-        if state.atPeace(human, other) {
-            Button("Declare war") { warOn = other }
-                .buttonStyle(.bordered).tint(.red).controlSize(.mini)
-        } else if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
-            Button("Accept peace") { session.order(.acceptPeace(from: other)) }
-                .buttonStyle(.borderedProminent).controlSize(.mini)
-        } else if state.peaceOffers.contains(PeaceOffer(from: human, to: other)) {
-            Text("offered").font(.caption).foregroundStyle(.secondary)
-        } else {
-            Button("Offer peace") { session.order(.offerPeace(to: other)) }
-                .buttonStyle(.bordered).controlSize(.mini)
         }
     }
 

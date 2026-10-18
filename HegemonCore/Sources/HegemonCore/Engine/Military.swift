@@ -5,6 +5,39 @@ enum Origin {
 }
 
 extension Engine {
+    /// Militia that would rise to defend `territory` for its owner: a share of the people, if
+    /// enough live there. Only empires raise levies; native land has its garrisons.
+    public func levy(at territory: TerritoryID, _ state: GameState) -> Int {
+        guard let owner = state.owner(of: territory), state.isPlayer(owner) else { return 0 }
+        let l = rules.battle.levy
+        let people = state.population(of: territory)
+        guard people >= l.minPopulation else { return 0 }
+        return min(l.maxUnits, people / max(1, l.populationPerUnit))
+    }
+
+    /// Who defends `territory` against `civ`, and with what: the garrison if it's hostile, plus
+    /// the levy if the land belongs to the garrison's empire (or is undefended land of an empire).
+    /// Nil when nobody would fight.
+    public func defenders(of territory: TerritoryID, against civ: CivilizationID, _ state: GameState)
+        -> (owner: CivilizationID, army: Army, levy: Int)? {
+        let garrison = state.armies[territory].flatMap { $0.owner != civ ? $0 : nil }
+        let landOwner = state.owner(of: territory)
+        let owner = garrison?.owner ?? landOwner
+        guard let owner, owner != civ else { return nil }
+        let levy = landOwner == owner ? self.levy(at: territory, state) : 0
+        if garrison == nil && levy == 0 { return nil }
+        return (owner, garrison ?? Army(owner: owner, units: .zero), levy)
+    }
+
+    /// The defending side of a battle for `territory` as it would fight.
+    public func defendingArmy(of territory: TerritoryID, against civ: CivilizationID, _ state: GameState) -> BattleArmy? {
+        guard let d = defenders(of: territory, against: civ, state) else { return nil }
+        var army = battleArmy(d.owner, d.army.units, plan: d.army.plan,
+                              general: state.general(of: d.owner, at: territory), state)
+        army.levy = d.levy
+        return army
+    }
+
     /// Units (and optionally a general) entering `to`, by land or from the sea. Fights the army
     /// there if it belongs to an enemy, then occupies and captures the territory if they won.
     func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
@@ -14,7 +47,7 @@ extension Engine {
         var units = units
         var general = general
 
-        if let defender = state.armies[to]?.owner, defender != civ {
+        if defenders(of: to, against: civ, state) != nil {
             let result = fight(civ, units, general: general, plan: plan, at: to,
                                approach: approach, &state)
             events += result.events
@@ -62,12 +95,12 @@ extension Engine {
     func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
                        at to: TerritoryID, approach: Approach, _ state: inout GameState)
         -> (won: Bool, survivors: UnitCounts, events: [GameEvent]) {
-        let defender = state.armies[to]!
+        let d = defenders(of: to, against: civ, state)!
+        let defender = d.army
         let defenderGeneral = state.general(of: defender.owner, at: to)
         let setup = BattleSetup(
             attacker: battleArmy(civ, units, plan: plan, general: general, state),
-            defender: battleArmy(defender.owner, defender.units, plan: defender.plan,
-                                 general: defenderGeneral, state),
+            defender: defendingArmy(of: to, against: civ, state)!,
             terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next(),
             fortification: fortification(at: to, state))
         let report = BattleSimulator(rules: rules).resolve(setup)
@@ -90,9 +123,16 @@ extension Engine {
             }
         }
 
+        // The levy's dead are the land's people.
+        let fallen = d.levy - report.defenderLevySurvivors
+        if fallen > 0 {
+            state.land[to]!.population = max(rules.economy.minPopulation, state.population(of: to) - fallen)
+        }
         if won {
             state.armies[to] = nil
-            events += retreat(defender.owner, report.defenderSurvivors, from: to, &state)
+            if !report.defenderSurvivors.isEmpty {
+                events += retreat(defender.owner, report.defenderSurvivors, from: to, &state)
+            }
         } else if report.defenderSurvivors.isEmpty {
             state.armies[to] = nil
         } else {
@@ -155,7 +195,7 @@ extension Engine {
                            depth: LineDepth = .deep, stratagem: Stratagem? = nil,
                            general: General? = nil, amphibious: Bool = false,
                            samples: Int = 12, in state: GameState) -> Double? {
-        guard let defender = state.armies[to], defender.owner != civ, !units.isEmpty else { return nil }
+        guard let defending = defendingArmy(of: to, against: civ, state), !units.isEmpty else { return nil }
         let approach: Approach
         if amphibious {
             approach = .amphibious
@@ -175,8 +215,7 @@ extension Engine {
             let report = sim.resolve(BattleSetup(
                 attacker: battleArmy(civ, units, plan: BattlePlan(formation: formation, depth: depth, stratagem: stratagem),
                                      general: general, state),
-                defender: battleArmy(defender.owner, defender.units, plan: defender.plan,
-                                     general: state.general(of: defender.owner, at: to), state),
+                defender: defending,
                 terrain: map.territory(to)!.terrain, approach: approach, seed: rng.next(),
                 fortification: fortification(at: to, state)))
             if report.winner == .attacker { wins += 1 }

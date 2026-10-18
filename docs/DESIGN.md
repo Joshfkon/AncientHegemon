@@ -1045,3 +1045,27 @@ forest, a river or strait crossing, a landing from the sea, a general), and the 
 in one word from the simulated odds: Confident (80%+), Favourable (60–80), Uncertain (40–60),
 Risky (20–40), Desperate. Formation cards and the attack arrow show the same word. The AI still
 uses the exact estimate internally.
+
+### The levy (Josh: "if you're attacked you should be able to raise an army from your population, even if they're low skill")
+
+Turns are sequential, so the player can't act while a rival attacks; the levy rises by itself.
+- When an empire's land is attacked, its people take up arms beside any garrison: **1 militiaman
+  per 3 people, at most 3**, where at least 2 live (`battle.levy` in rules.json). Native and
+  unclaimed land has its own garrisons and raises no levy.
+- Militia fight as infantry blocks marked *militia*: **half damage**, **30 less morale**, and no
+  bronze or knowledge bonuses.
+- Every militiaman who falls is a person lost from that territory; survivors go home and don't
+  join the army.
+- Empty land of an empire with people in it is no longer taken by walking in: the levy fights.
+- The AI knows: its attack options, battle estimates, landings and defensive planning all count
+  the levy.
+- Sims (80 games, two seed sets): first tried 1 per 2 people up to 4; Mesopotamia's populous river
+  valley made it 40–45% wins. At 1 per 3 up to 3: Egypt 30–37%, Mesopotamia 32–35%, Italia 27%,
+  Greece 2–7%; about 45 rounds a game.
+
+### Diplomacy tab (Josh)
+
+A "Rivals" tab (headed Diplomacy; the toolbar's people button opens it) with a card per rival:
+war or peace and the action (offer peace / accept / declare war, with confirmation), land, troops
+and prestige, the ruler and how secure they are, whether they border you and where, and any trade
+route with the goods each side receives and tolls paid. The Empire tab is renamed Realm.

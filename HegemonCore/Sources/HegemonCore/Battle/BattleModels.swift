@@ -38,11 +38,13 @@ public struct BattleArmy: Codable, Sendable, Equatable {
     public var morale: Int
     public var depth: LineDepth
     public var stratagem: Stratagem?
+    /// Militia raised from the population of the land being defended.
+    public var levy: Int
 
     public init(civ: CivilizationID, units: UnitCounts, formation: FormationID,
                 general: General? = nil, bronzePercent: Int = 0,
                 unitPercent: [UnitType: Int] = [:], morale: Int = 0,
-                depth: LineDepth = .deep, stratagem: Stratagem? = nil) {
+                depth: LineDepth = .deep, stratagem: Stratagem? = nil, levy: Int = 0) {
         self.civ = civ
         self.units = units
         self.formation = formation
@@ -52,6 +54,7 @@ public struct BattleArmy: Codable, Sendable, Equatable {
         self.morale = morale
         self.depth = depth
         self.stratagem = stratagem
+        self.levy = levy
     }
 }
 
@@ -102,6 +105,8 @@ public struct BlockSnapshot: Codable, Sendable, Equatable {
     public let units: Int
     public let morale: Int
     public let status: BlockStatus
+    /// Townsfolk raised to defend their home: weak, and not part of the standing army.
+    public let levy: Bool
 }
 
 public struct BattleStrike: Codable, Sendable, Equatable {
@@ -130,6 +135,8 @@ public struct BattleReport: Codable, Sendable, Equatable {
     public let defenderSurvivors: UnitCounts
     public let attackerGeneralKilled: Bool
     public let defenderGeneralKilled: Bool
+    /// Militia who came home; the rest of the levy fell.
+    public let defenderLevySurvivors: Int
 
     public var attackerLosses: UnitCounts { setup.attacker.units - attackerSurvivors }
     public var defenderLosses: UnitCounts { setup.defender.units - defenderSurvivors }

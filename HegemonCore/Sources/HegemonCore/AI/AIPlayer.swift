@@ -281,7 +281,7 @@ public struct AIPlayer: Sendable {
                 let spare = min(ready.total, state.armies[from]!.units.total - keep)
                 guard spare > 0 else { continue }
 
-                if let defender = state.armies[to], defender.owner != civ {
+                if let defender = engine.defenders(of: to, against: civ, state) {
                     let units = take(spare, from: ready)
                     let key = "\(from)>\(to)>\(units.infantry),\(units.archers),\(units.cavalry)"
                     // Judge the attack in the army's formation, without any defensive stratagem
@@ -352,7 +352,6 @@ public struct AIPlayer: Sendable {
 
     func battleSetup(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
                              plan: BattlePlan, seed: UInt64, _ state: GameState) -> BattleSetup {
-        let defender = state.armies[to]!
         let general = state.general(of: civ, at: from).flatMap { state.generalsMoved.contains($0.id) ? nil : $0 }
         let approach: Approach = switch map.crossing(between: from, and: to) {
         case .river: .river
@@ -361,8 +360,7 @@ public struct AIPlayer: Sendable {
         }
         return BattleSetup(
             attacker: engine.battleArmy(civ, units, plan: plan, general: general, state),
-            defender: engine.battleArmy(defender.owner, defender.units, plan: defender.plan,
-                                        general: state.general(of: defender.owner, at: to), state),
+            defender: engine.defendingArmy(of: to, against: civ, state)!,
             terrain: map.territory(to)!.terrain, approach: approach, seed: seed,
             fortification: engine.fortification(at: to, state))
     }
@@ -428,7 +426,9 @@ public struct AIPlayer: Sendable {
                 seeds(state, "def" + t + (plan.formation ?? "") + plan.depth.rawValue + (plan.stratagem?.rawValue ?? "")).filter { seed in
                     var setup = BattleSetup(
                         attacker: engine.battleArmy(enemy.owner, enemy.units, plan: enemy.plan, general: nil, state),
-                        defender: engine.battleArmy(civ, units, plan: plan, general: general, state),
+                        defender: { var a = engine.battleArmy(civ, units, plan: plan, general: general, state)
+                                    a.levy = engine.levy(at: t, state)
+                                    return a }(),
                         terrain: map.territory(t)!.terrain, seed: seed,
                         fortification: engine.fortification(at: t, state))
                     if map.crossing(between: from, and: t) == .river { setup.approach = .river }

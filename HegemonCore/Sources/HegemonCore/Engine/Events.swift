@@ -191,7 +191,7 @@ extension Engine {
         var events: [GameEvent] = []
         var units = units
         let victim = state.owner(of: t)
-        if let army = state.armies[t], army.owner != raider {
+        if defenders(of: t, against: raider, state) != nil {
             let result = fight(raider, units, general: nil, plan: BattlePlan(), at: t, approach: approach, &state)
             events += result.events
             units = result.survivors

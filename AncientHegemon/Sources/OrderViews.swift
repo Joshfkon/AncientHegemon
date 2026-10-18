@@ -62,7 +62,7 @@ struct OrderComposer: View {
     }
 
     private var isBattle: Bool {
-        destination.flatMap { state.armies[$0] }.map { $0.owner != human } ?? false
+        destination.map { engine.defenders(of: $0, against: human, state) != nil } ?? false
     }
 
     private var general: General? {
@@ -162,11 +162,12 @@ struct OrderComposer: View {
         }
         VStack(alignment: .leading, spacing: 2) {
             Text("\(t.terrain.rawValue.capitalized)\(crossing)").font(.caption).foregroundStyle(.secondary)
-            if let defender = state.armies[to], defender.owner != human {
+            if let d = engine.defenders(of: to, against: human, state) {
                 HStack(spacing: 6) {
-                    Text("Defended by \(Palette.name(defender.owner, state)):")
-                    UnitRow(units: defender.units, size: 12)
-                    if let f = defender.formation, f != engine.rules.battle.defaultFormation {
+                    Text("Defended by \(Palette.name(d.owner, state)):")
+                    if d.army.units.total > 0 { UnitRow(units: d.army.units, size: 12) }
+                    if d.levy > 0 { Text("+ \(d.levy) militia") }
+                    if let f = d.army.formation, f != engine.rules.battle.defaultFormation {
                         Text("in \(engine.rules.battle.formation(f)?.name ?? "")")
                     }
                 }
@@ -193,9 +194,11 @@ struct OrderComposer: View {
     }
 
     private var scouting: [String] {
-        guard let to = destination, let defender = state.armies[to] else { return [] }
+        guard let to = destination, let d = engine.defenders(of: to, against: human, state) else { return [] }
+        let defender = d.army
         var lines: [String] = []
-        let ours = Double(max(1, units.total)), theirs = Double(max(1, defender.units.total))
+        // Militia count for half: they're many but they're farmers.
+        let ours = Double(max(1, units.total)), theirs = Double(max(1, defender.units.total)) + Double(d.levy) / 2
         let ratio = ours / theirs
         let numbers = switch ratio {
         case ..<0.5: "They greatly outnumber us."
@@ -205,6 +208,9 @@ struct OrderComposer: View {
         default: "We greatly outnumber them."
         }
         lines.append(numbers)
+        if d.levy > 0 {
+            lines.append(defender.units.total == 0 ? "No soldiers, but the people will take up arms." : "The people will take up arms beside them.")
+        }
         let walls = engine.fortification(at: to, state)
         if walls > 0 { lines.append("They are behind walls.") }
         let terrain = engine.map.territory(to)!.terrain

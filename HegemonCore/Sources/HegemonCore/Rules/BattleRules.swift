@@ -92,6 +92,7 @@ public struct BattleRules: Codable, Sendable, Equatable {
     public let formations: [Formation]
     public let defaultFormation: FormationID
     public let plans: BattlePlanRules
+    public let levy: LevyRules
 
     public func formation(_ id: FormationID) -> Formation? {
         formations.first { $0.id == id }
@@ -133,6 +134,19 @@ public struct BattlePlanRules: Codable, Sendable, Equatable {
     public let feignedRetreatRounds: Int
     /// Less arrow damage for infantry in a shield wall, in percent.
     public let shieldWallArrowPercent: Int
+}
+
+/// The levy: when land is attacked, its people take up arms beside the garrison.
+public struct LevyRules: Codable, Sendable, Equatable {
+    /// One militiaman per this many people…
+    public let populationPerUnit: Int
+    /// …up to this many, and only where at least `minPopulation` live.
+    public let maxUnits: Int
+    public let minPopulation: Int
+    /// Militia hit this hard (percent of an infantryman)…
+    public let damagePercent: Int
+    /// …and start with this much less morale.
+    public let moralePenalty: Int
 }
 
 public struct NavalRules: Codable, Sendable, Equatable {

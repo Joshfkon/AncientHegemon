@@ -49,7 +49,9 @@ struct QuickLookCard: View {
                     Text(home ? (engine.supplyStrain(of: human, at: id, in: state).map { "In supply, \($0.steps) steps from the capital" } ?? "In supply")
                               : "⚠️ Cut off from your capital")
                         .font(.caption).foregroundStyle(home ? .secondary : Color.orange)
-                    let threat = ThreatMap(for: human, in: state, map: engine.map).threat[id] ?? 0
+                    let levy = engine.levy(at: id, state)
+                    if levy > 0 { Text("If attacked, its people raise \(levy) militia").font(.caption).foregroundStyle(.secondary) }
+                    let threat = ThreatMap(for: human, in: state, map: engine.map, engine: engine).threat[id] ?? 0
                     if threat > 0 { Text("⚔︎ \(threat) hostile troops could strike here next turn").font(.caption).foregroundStyle(.red) }
                 } else {
                     let reach = engine.map.landNeighbors(of: id).reduce(0) { total, n in

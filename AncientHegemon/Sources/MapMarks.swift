@@ -61,14 +61,15 @@ struct ThreatMap {
     let threat: [TerritoryID: Int]
     let garrison: [TerritoryID: Int]
 
-    init(for civ: CivilizationID, in state: GameState, map: GameMap) {
+    init(for civ: CivilizationID, in state: GameState, map: GameMap, engine: Engine? = nil) {
         var threat: [TerritoryID: Int] = [:]
         var garrison: [TerritoryID: Int] = [:]
         func hostile(_ other: CivilizationID) -> Bool {
             other != civ && (!state.isPlayer(other) ? other == barbariansID : state.atWar(civ, other))
         }
         for t in state.territories(of: civ) {
-            garrison[t] = state.armies[t].map { $0.owner == civ ? $0.units.total : 0 } ?? 0
+            garrison[t] = (state.armies[t].map { $0.owner == civ ? $0.units.total : 0 } ?? 0)
+                + (engine.map { $0.levy(at: t, state) } ?? 0)
             var n = 0
             for neighbor in map.landNeighbors(of: t) {
                 if let a = state.armies[neighbor], hostile(a.owner) { n += a.units.total }

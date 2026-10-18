@@ -27,7 +27,7 @@ struct GameScreen: View {
     @State private var idleIndex = 0
 
     enum PanelTab: String, CaseIterable {
-        case orders = "Orders", empire = "Empire", log = "Chronicle"
+        case orders = "Orders", empire = "Realm", diplomacy = "Rivals", log = "Chronicle"
     }
 
     private var engine: Engine { session.engine }
@@ -286,6 +286,7 @@ struct GameScreen: View {
             }
         }
         .padding(10)
+        .fixedSize()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
@@ -293,6 +294,7 @@ struct GameScreen: View {
         HStack(spacing: 4) {
             if session.human != nil {
                 toolButton("Empire", "building.columns.fill") { open(.empire) }
+                toolButton("Diplomacy", "person.2.fill") { open(.diplomacy) }
                 toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
             }
             toolButton("Chronicle", "scroll.fill") { open(.log) }
@@ -412,6 +414,7 @@ struct GameScreen: View {
                 switch tab {
                 case .orders: orders
                 case .empire: EmpireView(session: session)
+                case .diplomacy: DiplomacyView(session: session)
                 case .log: ChronicleView(session: session)
                 }
                 }

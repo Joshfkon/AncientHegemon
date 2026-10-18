@@ -304,7 +304,7 @@ final class GameSession {
                 let won = report.winner == .attacker
                 add(won ? a.civ : d.civ,
                     "Battle of \(place(target)): \(name(a.civ)) (\(a.units.total)) \(won ? "beat" : "repulsed by") "
-                    + "\(name(d.civ)) (\(d.units.total)) in \(report.rounds) rounds", at: target)
+                    + "\(name(d.civ)) (\(d.units.total + d.levy)) in \(report.rounds) rounds", at: target)
                 if let t = target {
                     nextID += 1
                     let entry = BattleEntry(id: nextID, round: round, territory: t, report: report)

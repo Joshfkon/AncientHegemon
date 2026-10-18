@@ -55,6 +55,7 @@ extension AIPlayer {
             let dist = seaDistances(to: landing, ships: 1, civ, state)
             guard let steps = ports.compactMap({ dist[$0] }).min() else { continue }
             let defenders = state.armies[t.id].map { $0.owner == civ ? 0 : $0.units.total } ?? 0
+                + (state.owner(of: t.id) != civ ? engine.levy(at: t.id, state) : 0)
             let score = value(of: t.id, for: civ, state) * personality.aggression
                 - Double(defenders) * 0.7 - Double(steps) * 0.75
             let force = min(8, defenders * 2 + 1)
@@ -159,7 +160,7 @@ extension AIPlayer {
             return a < b
         }
         for t in ranked {
-            if let defender = state.armies[t], defender.owner != civ {
+            if engine.defenders(of: t, against: civ, state) != nil {
                 guard landingOdds(civ, cargo, sea: sea, to: t, state) >= 0.6 else { continue }
             }
             return issue(.land(sea: sea, territory: t, units: cargo), &state, &turn)
@@ -169,13 +170,11 @@ extension AIPlayer {
 
     private func landingOdds(_ civ: CivilizationID, _ units: UnitCounts, sea: SeaZoneID, to: TerritoryID,
                              _ state: GameState) -> Double {
-        let defender = state.armies[to]!
         let sim = BattleSimulator(rules: rules)
         let wins = seeds(state, "land" + sea + to).filter { seed in
             sim.resolve(BattleSetup(
                 attacker: engine.battleArmy(civ, units, formation: nil, general: nil, state),
-                defender: engine.battleArmy(defender.owner, defender.units, plan: defender.plan,
-                                            general: state.general(of: defender.owner, at: to), state),
+                defender: engine.defendingArmy(of: to, against: civ, state)!,
                 terrain: map.territory(to)!.terrain, approach: .amphibious, seed: seed,
                 fortification: engine.fortification(at: to, state))).winner == .attacker
         }.count
