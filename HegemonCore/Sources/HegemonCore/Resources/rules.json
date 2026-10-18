@@ -17,7 +17,18 @@
     }
   },
   "victory": {
-    "territoryPercent": 60
+    "territoryPercent": 60,
+    "roundLimit": 50,
+    "decisiveBefore": 30,
+    "tradeRoundsHeld": 5,
+    "majorLegacyMargin": 150,
+    "prestige": {
+      "perTerritory": 10,
+      "perPopulation": 1,
+      "goldDivisor": 2,
+      "legitimacyDivisor": 2,
+      "capitalHeld": 20
+    }
   },
   "economy": {
     "populationPerGrain": 2,

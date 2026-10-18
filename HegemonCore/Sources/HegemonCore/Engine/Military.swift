@@ -50,8 +50,7 @@ extension Engine {
             if let previous { events += checkElimination(previous, &state) }
             if state.winner == nil,
                state.territories(of: civ).count * 100 >= map.territories.count * rules.victory.territoryPercent {
-                state.winner = civ
-                events.append(.victory(civ: civ))
+                events += declareVictory(civ, .domination, &state)
             }
         }
         return events

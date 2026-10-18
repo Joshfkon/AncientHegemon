@@ -3,6 +3,36 @@ public let nativesID: CivilizationID = "natives"
 /// The owner of barbarian hordes, which raid when a migration event strikes. Not a player.
 public let barbariansID: CivilizationID = "barbarians"
 
+/// The ways to win.
+public enum VictoryKind: String, Codable, Sendable {
+    /// Held the required share of the map.
+    case domination
+    /// Held every sea chokepoint while trading with every rival, for long enough.
+    case trade
+    /// Highest prestige when the round limit ran out.
+    case legacy
+    /// Every rival was destroyed.
+    case lastStanding
+}
+
+/// How convincing a win was.
+public enum VictoryGrade: String, Codable, Sendable, Comparable {
+    case minor, major, decisive
+
+    public static func < (a: Self, b: Self) -> Bool {
+        let order: [Self] = [.minor, .major, .decisive]
+        return order.firstIndex(of: a)! < order.firstIndex(of: b)!
+    }
+}
+
+public struct Victory: Codable, Sendable, Equatable {
+    public let kind: VictoryKind
+    public let grade: VictoryGrade
+    public let round: Int
+    /// Every civilization, best first: survivors by prestige, then the fallen, last to fall first.
+    public let standings: [CivilizationID]
+}
+
 /// Per-territory facts that change during a game.
 public struct TerritoryState: Codable, Sendable, Equatable {
     public var owner: CivilizationID?
@@ -15,6 +45,8 @@ public struct CivState: Codable, Sendable, Equatable {
     /// Stored grain, drawn on when consumption exceeds production.
     public var granary: Int
     public var eliminated: Bool = false
+    /// The round this civ fell, for the final standings.
+    public var eliminatedOnRound: Int?
     /// Stockpiled bronze, made each turn from copper and tin.
     public var bronze: Int = 0
     /// Recruits of resource-limited units this turn, by resource (e.g. cavalry against horses).
@@ -102,6 +134,10 @@ public struct GameState: Codable, Sendable, Equatable {
     public var players: [CivilizationID]
     public var activePlayerIndex: Int
     public var winner: CivilizationID?
+    /// How the game was won, once it is.
+    public var victory: Victory?
+    /// Consecutive rounds each civ has held the conditions for a trade victory.
+    public var tradeHold: [CivilizationID: Int]
     public var land: [TerritoryID: TerritoryState]
     public var civs: [CivilizationID: CivState]
     public var armies: [TerritoryID: Army]
@@ -183,6 +219,8 @@ public struct GameState: Codable, Sendable, Equatable {
         self.players = ids
         self.activePlayerIndex = 0
         self.winner = nil
+        self.victory = nil
+        self.tradeHold = [:]
         self.land = land
         self.civs = civs
         self.armies = armies

@@ -121,3 +121,61 @@ import Testing
         #expect(!events.contains(.eliminated(civ: nativesID)))
     }
 }
+
+@Suite struct VictoryKindTests {
+    let engine = try! Engine.bare()
+
+    @Test func legacyAtTheRoundLimit() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
+        for t in ["persia", "media", "armenia", "syria", "taurus", "arabia"] { s.land[t]!.owner = "mesopotamia" }
+        s.turn = engine.rules.victory.roundLimit
+        s.activePlayerIndex = 1
+        try engine.apply(.endTurn, to: &s)
+        #expect(s.winner == "mesopotamia")
+        #expect(s.victory?.kind == .legacy)
+        #expect(s.victory?.grade == .major)  // seven territories against Greece's lone capital
+        #expect(s.victory?.standings == ["mesopotamia", "greece"])
+        #expect(engine.prestige(of: "mesopotamia", in: s) > engine.prestige(of: "greece", in: s))
+    }
+
+    @Test func narrowLegacyIsMinor() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "mesopotamia"])
+        s.turn = engine.rules.victory.roundLimit
+        s.activePlayerIndex = 1
+        try engine.apply(.endTurn, to: &s)
+        #expect(s.victory?.kind == .legacy)
+        #expect(s.victory?.grade == .minor)
+    }
+
+    @Test func tradeVictoryAfterHoldingTheStraits() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        for t in ["baetica", "mauretania", "thrace", "anatolia", "sicilia"] { s.land[t]!.owner = "greece" }
+        s.peace.insert(CivPair("greece", "egypt"))
+        #expect(engine.meetsTradeConditions("greece", in: s))
+        for _ in 0..<(2 * engine.rules.victory.tradeRoundsHeld) where s.winner == nil {
+            try engine.apply(.endTurn, to: &s)
+        }
+        #expect(s.winner == "greece")
+        #expect(s.victory?.kind == .trade)
+        #expect(s.victory?.grade == .decisive)
+    }
+
+    @Test func tradeNeedsEveryRival() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt", "italia"])
+        for t in ["baetica", "mauretania", "thrace", "anatolia", "sicilia"] { s.land[t]!.owner = "greece" }
+        s.peace.insert(CivPair("greece", "egypt"))
+        #expect(!engine.meetsTradeConditions("greece", in: s))
+    }
+
+    @Test func dominationIsGraded() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "greece"])
+        let needed = (engine.map.territories.count * engine.rules.victory.territoryPercent + 99) / 100
+        for t in engine.map.territories.map(\.id).filter({ $0 != "media" && s.owner(of: $0) == nil }).prefix(needed - 2) {
+            s.land[t]!.owner = "mesopotamia"
+        }
+        s.turn = engine.rules.victory.decisiveBefore + 1
+        try engine.apply(.move(from: "mesopotamia", to: "media", units: UnitCounts(infantry: 1)), to: &s)
+        #expect(s.victory?.kind == .domination)
+        #expect(s.victory?.grade == .major)
+    }
+}

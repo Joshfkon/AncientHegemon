@@ -14,9 +14,28 @@ public struct UnitStats: Codable, Sendable, Equatable {
     public let requires: Resource?
 }
 
+public struct PrestigeRules: Codable, Sendable, Equatable {
+    public let perTerritory: Int
+    public let perPopulation: Int
+    /// Prestige gains 1 per this much gold in the treasury.
+    public let goldDivisor: Int
+    public let legitimacyDivisor: Int
+    /// Bonus for still holding your own capital.
+    public let capitalHeld: Int
+}
+
 public struct VictoryRules: Codable, Sendable, Equatable {
-    /// Holding this share of all territories wins the game (domination).
+    /// Holding this share of all territories wins (domination).
     public let territoryPercent: Int
+    /// If nobody has won by the end of this round, the highest prestige wins (legacy).
+    public let roundLimit: Int
+    /// Domination or trade victories before this round are decisive.
+    public let decisiveBefore: Int
+    /// Rounds a civ must hold every sea chokepoint while trading with every rival (trade victory).
+    public let tradeRoundsHeld: Int
+    /// A legacy win is major when the winner's prestige is at least this percent of the runner-up's.
+    public let majorLegacyMargin: Int
+    public let prestige: PrestigeRules
 }
 
 public struct EconomyRules: Codable, Sendable, Equatable {

@@ -135,7 +135,7 @@ final class GameSession {
                 case .famine: "Famine in \(place(r.territory))"
                 case .flood: "Floods in \(place(r.territory))" + (r.amount > 0 ? " (−\(r.amount) people)" : "")
                 case .goodHarvest: "Bumper harvest in \(place(r.territory))"
-                case .plague: "Plague in \(name(r.civ)) (−\(r.amount) people)"
+                case .plague: "Plague in \(name(r.civ))" + (r.amount > 0 ? " (−\(r.amount) people)" : "")
                 case .goldDiscovered: "Gold found in \(place(r.territory))"
                 case .badOmen: "Bad omens in \(name(r.civ)): the sacred chickens refuse to eat"
                 case .barbarians: "A barbarian horde of \(r.amount) falls on \(place(r.territory))"

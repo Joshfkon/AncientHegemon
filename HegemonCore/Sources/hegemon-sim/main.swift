@@ -101,6 +101,9 @@ print("")
 print("\(games) games, max \(maxTurns) turns, \(String(format: "%.1f", elapsed))s")
 print("decided: \(decided.count)/\(games)"
       + (decided.isEmpty ? "" : ", average length \(decided.map(\.turns).reduce(0, +) / decided.count) turns"))
+let endings = Dictionary(grouping: records.compactMap(\.finalState.victory)) { "\($0.grade.rawValue) \($0.kind.rawValue)" }
+print("how games end: " + endings.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
+      .map { "\($0.0) \($0.1)" }.joined(separator: ", "))
 print("")
 print("civ          personality   wins  elim  collapse  avg land  peak  starving turns  deserted  attrition    attacks won   defences held  rejected")
 for civ in civs {

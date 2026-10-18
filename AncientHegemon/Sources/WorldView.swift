@@ -4,41 +4,42 @@ import SwiftUI
 struct WorldView: View {
     let session: GameSession
 
+    /// Landscape: the map takes the left, the empires and chronicle the right.
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        MapView(state: session.state, map: session.engine.map)
-                            .frame(width: 820, height: 440)
-                    }
-                    .background(Color(red: 0.80, green: 0.88, blue: 0.95))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+        HStack(spacing: 0) {
+            MapView(state: session.state, map: session.engine.map)
+                .aspectRatio(MapLayout.aspectRatio, contentMode: .fit)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(red: 0.80, green: 0.88, blue: 0.95))
 
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(title).font(.headline)
                     controls
-                    EmpireTable(state: session.state)
+                    if let victory = session.state.victory {
+                        VictoryBanner(victory: victory, state: session.state, engine: session.engine)
+                    }
+                    EmpireTable(state: session.state, engine: session.engine)
                     chronicle
                 }
-                .padding(.horizontal, 12)
+                .padding(12)
             }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
+            .frame(width: 300)
+            .background(Color(.systemBackground))
         }
     }
 
     private var title: String {
-        if let winner = session.state.winner {
-            return "\(Palette.name(winner, session.state)) wins · round \(session.state.turn)"
-        }
-        return "Round \(session.state.turn) · seed \(session.seed)"
+        let limit = session.engine.rules.victory.roundLimit
+        return "Round \(session.state.turn) of \(limit) · seed \(session.seed)"
     }
 
     private var controls: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Button {
                 session.playing.toggle()
             } label: {
-                Label(session.playing ? "Pause" : "Play", systemImage: session.playing ? "pause.fill" : "play.fill")
+                Image(systemName: session.playing ? "pause.fill" : "play.fill")
             }
             .buttonStyle(.borderedProminent)
             .disabled(session.isOver)
@@ -46,64 +47,101 @@ struct WorldView: View {
             Button {
                 Task { await session.playRound() }
             } label: {
-                Label("Round", systemImage: "forward.frame.fill")
+                Image(systemName: "forward.frame.fill")
             }
             .buttonStyle(.bordered)
             .disabled(session.busy || session.playing || session.isOver)
 
-            Spacer()
             if session.busy { ProgressView() }
+            Spacer()
             Button("New game") { session.newGame() }
                 .buttonStyle(.bordered)
         }
+        .controlSize(.small)
     }
 
     private var chronicle: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Chronicle").font(.headline)
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Chronicle").font(.subheadline.bold())
             if session.log.isEmpty {
-                Text("Press Play to let the four empires fight it out.")
-                    .foregroundStyle(.secondary)
+                Text("Press play to let the four empires fight it out.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             ForEach(session.log.prefix(80)) { line in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(line.round)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                        .frame(width: 26, alignment: .trailing)
-                    Circle().fill(Palette.color(line.civ, session.state)).frame(width: 8, height: 8)
-                    Text(line.text).font(.callout)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(line.round)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                        .frame(width: 20, alignment: .trailing)
+                    Circle().fill(Palette.color(line.civ, session.state)).frame(width: 7, height: 7)
+                    Text(line.text).font(.caption)
                 }
             }
         }
-        .padding(.bottom, 24)
     }
 }
 
-/// Each empire at a glance: land, armies, treasury, standing and ruler.
-struct EmpireTable: View {
+/// How the game was won, and how everyone finished.
+struct VictoryBanner: View {
+    let victory: Victory
     let state: GameState
+    let engine: Engine
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
-            GridRow {
-                Text("Empire"); Text("Land"); Text("Army"); Text("Gold"); Text("Legit."); Text("Ruler")
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(victory.grade.rawValue.capitalized) \(kindName) Victory")
+                .font(.title3.bold())
+            Text("\(Palette.name(victory.standings[0], state)), round \(victory.round)")
+                .font(.subheadline)
+            ForEach(Array(victory.standings.enumerated()), id: \.offset) { place, civ in
+                HStack(spacing: 6) {
+                    Text("\(place + 1).").font(.caption.monospacedDigit()).frame(width: 18, alignment: .trailing)
+                    Circle().fill(Palette.color(civ, state)).frame(width: 7, height: 7)
+                    Text(Palette.name(civ, state)).font(.caption)
+                    Spacer()
+                    Text(state.civs[civ]?.eliminated == true ? "fallen" : "\(engine.prestige(of: civ, in: state))")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
             }
-            .font(.caption.bold())
+        }
+        .padding(10)
+        .background(Palette.color(victory.standings[0], state).opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var kindName: String {
+        switch victory.kind {
+        case .domination: "Domination"
+        case .trade: "Trade"
+        case .legacy: "Legacy"
+        case .lastStanding: "Conquest"
+        }
+    }
+}
+
+/// Each empire at a glance, by prestige: land, armies, treasury, legitimacy.
+struct EmpireTable: View {
+    let state: GameState
+    let engine: Engine
+
+    var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 4) {
+            GridRow {
+                Text("Empire"); Text("Land"); Text("Army"); Text("Gold"); Text("Legit"); Text("Prest.")
+            }
+            .font(.caption2.bold())
             .foregroundStyle(.secondary)
-            ForEach(state.players, id: \.self) { civ in
+            ForEach(engine.standings(in: state), id: \.self) { civ in
                 let cs = state.civs[civ]!
                 GridRow {
-                    HStack(spacing: 6) {
-                        Circle().fill(Palette.color(civ, state)).frame(width: 10, height: 10)
+                    HStack(spacing: 4) {
+                        Circle().fill(Palette.color(civ, state)).frame(width: 8, height: 8)
                         Text(Palette.name(civ, state)).lineLimit(1)
                     }
                     Text("\(state.territories(of: civ).count)")
                     Text("\(state.totalUnits(of: civ).total)")
                     Text("\(cs.gold)")
                     Text("\(cs.legitimacy)")
-                    Text("\(cs.ruler.name), \(cs.ruler.age)\(cs.government == .republic ? " ⚖︎" : " ♛")")
-                        .lineLimit(1)
+                    Text("\(engine.prestige(of: civ, in: state))")
                 }
-                .font(.callout.monospacedDigit())
+                .font(.caption.monospacedDigit())
                 .opacity(cs.eliminated ? 0.35 : 1)
             }
         }

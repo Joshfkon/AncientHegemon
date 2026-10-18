@@ -555,3 +555,18 @@ Map data lives in `HegemonCore/Sources/HegemonCore/Resources/map.json` and is ch
     civilization, the game ends with the barbarians as "winner".
   - Crisis prompts for the player (backing a claimant, refusing a bribe) resolve automatically
     for now; the iOS app will surface them as decisions (step 7).
+- **Victory (Josh, after step 6; answers open question §14.5)**: several ways to win, each
+  graded, like Civilization. Values under `victory` in `rules.json`.
+  - **Domination**: hold 60% of territories (24 of 40).
+  - **Trade**: hold all three sea chokepoints (Gibraltar, Bosporus, Sicilian strait) while
+    trading with every surviving rival, for 5 consecutive rounds. It needs peace with everyone.
+  - **Legacy**: if nobody has won by the end of round 50, the highest prestige wins. Prestige =
+    10 × territories + population + gold ÷ 2 + legitimacy ÷ 2 + 20 for holding your capital.
+    (Josh's idea: "whoever has the most gold by turn X", generalized.)
+  - **Last standing**: every rival destroyed.
+  - **Grades**: decisive (domination or trade before round 30, or last standing), major
+    (domination or trade later, or a legacy win with ≥ 1.5× the runner-up's prestige), minor
+    (a narrower legacy win). The end screen ranks every empire: survivors by prestige, then
+    the fallen, last to fall first.
+- **Landscape on the phone** (Josh, replacing "portrait-first"): the map is wider than tall, so
+  the game is landscape-only, with the map on the left and the panels on the right.

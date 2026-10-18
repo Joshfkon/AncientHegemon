@@ -42,7 +42,13 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     AI-vs-AI game round by round on a schematic placeholder map (approximate lon/lat
     positions in `MapLayout.swift`), shows each empire's land, army, gold, legitimacy and
     ruler, keeps a chronicle, and replays any battle on the 5×5 board. SwiftUI Canvas only so
-    far; no human player, no painted-board art, no SpriteKit yet.
+    far; no human player, no painted-board art, no SpriteKit yet. Landscape layout; shows the
+    victory banner and final standings. Build with `-configuration Release` for the Simulator,
+    or rounds crawl (debug-built engine).
+  - **Victory conditions added**: domination, trade, legacy and last-standing wins, graded.
+    In 40 sim games every game ends by round 50 (average 34): 20 decisive domination, 17 legacy
+    (9 minor, 8 major), 3 major domination, no trade wins (the AI doesn't pursue them yet).
+    Wins: Mesopotamia 45%, Italia 22%, Greece 20%, Egypt 10%. 119 tests.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.
@@ -98,7 +104,9 @@ rebel factions per game: 1.3
 ## Decisions already made (don't re-litigate)
 
 - **Platform**: native iOS, Swift. SwiftUI for menus/HUD, SpriteKit for the map and battles.
-  iOS 17+. Portrait-first.
+  iOS 17+. **Landscape** (changed from portrait-first after the preview app).
+- **Victory**: domination, trade or legacy (prestige at round 50), each graded decisive / major /
+  minor, with final standings. See the DESIGN.md appendix.
 - **Single-player vs. AI from day one.** 1 human vs. 1–3 AI empires. No online multiplayer in MVP.
 - **Player makes Risk-sized decisions; the world simulates the rest.** Player: recruit, move /
   attack, pick a battle formation template, answer occasional crisis prompts. Automatic: supply,

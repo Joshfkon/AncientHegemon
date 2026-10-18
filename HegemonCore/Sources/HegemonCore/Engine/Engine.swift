@@ -138,13 +138,18 @@ public struct Engine: Sendable {
         guard !state.civs[civ]!.eliminated, state.territories(of: civ).isEmpty,
               state.armies(of: civ).isEmpty, state.fleets(of: civ).isEmpty else { return [] }
         state.civs[civ]!.eliminated = true
+        state.civs[civ]!.eliminatedOnRound = state.turn
         var events: [GameEvent] = [.eliminated(civ: civ)]
         let alive = state.players.filter { !state.civs[$0]!.eliminated }
         if alive.count <= 1 {
             // If raiders destroyed everyone, the barbarians have the last word.
-            let winner = alive.first ?? barbariansID
-            state.winner = winner
-            events.append(.victory(civ: winner))
+            if let last = alive.first {
+                events += declareVictory(last, .lastStanding, &state)
+            } else {
+                // Raiders destroyed everyone: the barbarians have the last word.
+                state.winner = barbariansID
+                events.append(.victory(civ: barbariansID))
+            }
         }
         return events
     }
@@ -159,12 +164,17 @@ public struct Engine: Sendable {
         state.civs[state.activePlayer]!.omen = false
 
         let count = state.players.count
+        let roundBefore = state.turn
         var next = state.activePlayerIndex
         repeat {
             next = (next + 1) % count
             if next == 0 { state.turn += 1 }
         } while state.civs[state.players[next]]!.eliminated
         state.activePlayerIndex = next
+        if state.turn > roundBefore {
+            let ended = roundVictoryChecks(&state)
+            if !ended.isEmpty { return ended }
+        }
 
         let civ = state.activePlayer
         var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)]

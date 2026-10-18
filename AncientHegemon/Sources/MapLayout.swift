@@ -26,6 +26,7 @@ enum MapLayout {
 
     static let lonRange = (-14.0, 57.0)
     static let latRange = (23.0, 61.0)
+    static let aspectRatio = (lonRange.1 - lonRange.0) / (latRange.1 - latRange.0) * 0.8
 
     static func point(lon: Double, lat: Double, in size: CGSize) -> CGPoint {
         CGPoint(x: (lon - lonRange.0) / (lonRange.1 - lonRange.0) * size.width,

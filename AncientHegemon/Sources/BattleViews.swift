@@ -59,17 +59,21 @@ struct BattleReplayView: View {
     private var report: BattleReport { entry.report }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                header
-                board
-                    .aspectRatio(1, contentMode: .fit)
-                    .padding(.horizontal, 8)
-                controls
-                if frame == report.frames.count - 1 { outcome }
+        HStack(spacing: 16) {
+            board
+                .aspectRatio(1, contentMode: .fit)
+                .padding(8)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    header
+                    controls
+                    if frame == report.frames.count - 1 { outcome }
+                }
+                .padding(.vertical)
             }
-            .padding()
+            .frame(width: 300)
         }
+        .padding(.horizontal)
         .navigationTitle(map.territory(entry.territory)?.name ?? "Battle")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: playing) {
