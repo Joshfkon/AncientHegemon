@@ -370,43 +370,43 @@ struct TerritoryPanel: View {
         }
         if home {
             Text("Recruit").font(.subheadline.bold())
-            HStack {
+            Text("Each soldier costs gold and one of this land's people (👥 \(state.population(of: territory)) here). Cavalry also need a horse: each horse you have lets you raise one cavalry a turn.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(spacing: 6) {
                 ForEach(UnitType.allCases, id: \.self) { type in
+                    let stats = engine.rules.stats(type)
                     let allowance = engine.recruitAllowance(type, for: human, in: state)
                     let blocked = (allowance?.left ?? 1) == 0
                     Button {
-                        if blocked, let r = engine.rules.stats(type).requires {
+                        if blocked, let r = stats.requires {
                             NotificationCenter.default.post(name: .showResource, object: r)
                         } else {
                             session.order(.recruit(territory: territory, unit: type, count: 1))
                         }
                     } label: {
-                        VStack(spacing: 0) {
-                            HStack(spacing: 3) {
-                                UnitIcon(type: type).frame(width: 14, height: 14)
-                                Text("+ \(type.rawValue.capitalized)").font(.caption.bold())
+                        HStack(spacing: 8) {
+                            UnitIcon(type: type).frame(width: 20, height: 20)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("Raise \(type.rawValue)").font(.callout.bold())
+                                if let allowance, let r = stats.requires {
+                                    Text(blocked ? "No \(r.rawValue): tap to see where"
+                                                 : "\(MapView.glyph(r)) \(allowance.left) left this turn")
+                                        .font(.caption2)
+                                        .multilineTextAlignment(.leading)
+                                        .foregroundStyle(blocked ? .orange : .secondary)
+                                }
                             }
-                            Text("\(engine.rules.stats(type).cost) gold").font(.caption2)
-                            if let allowance, let r = engine.rules.stats(type).requires {
-                                Text("\(MapView.glyph(r)) \(allowance.left) left")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(blocked ? .orange : .secondary)
-                            }
+                            Spacer(minLength: 4)
+                            Text("\(stats.cost) 🪙 · 1 👥" + (stats.requires.map { " · 1 \(MapView.glyph($0))" } ?? ""))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.primary)
                         }
-                        .opacity(blocked ? 0.6 : 1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .opacity(blocked ? 0.7 : 1)
                     }
                     .buttonStyle(.bordered)
                 }
-            }
-            if let a = engine.recruitAllowance(.cavalry, for: human, in: state), a.perTurn == 0 {
-                Button {
-                    NotificationCenter.default.post(name: .showResource, object: Resource.horses)
-                } label: {
-                    Label("No horses: see where to get them", systemImage: "info.circle")
-                }
-                .font(.caption)
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
             }
             if army != nil, state.general(of: human, at: territory) == nil {
                 Button("Appoint a general (\(engine.rules.government.appointCost) gold)") {
