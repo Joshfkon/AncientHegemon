@@ -8,8 +8,11 @@ struct BattleReplayView: View {
     let map: GameMap
     /// Start playing as soon as the replay opens (for battles just fought).
     var autoplay = false
+    /// Whose side the player is on, for the closing horn call.
+    var perspective: CivilizationID?
     @State private var frame = 0
     @State private var playing = false
+    @AppStorage(SoundBoard.enabledKey) private var soundOn = true
 
     private var report: BattleReport { entry.report }
     /// The frame on screen, always a valid index.
@@ -33,7 +36,24 @@ struct BattleReplayView: View {
         .padding(.horizontal)
         .navigationTitle(map.territory(entry.territory)?.name ?? "Battle")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { if autoplay { playing = true } }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { soundOn.toggle() } label: {
+                    Image(systemName: soundOn ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                }
+                .accessibilityLabel(soundOn ? "Mute" : "Sound on")
+            }
+        }
+        .onAppear {
+            if autoplay {
+                SoundBoard.shared.play(.horn, volume: 0.7)
+                playing = true
+            }
+        }
+        .onChange(of: shown) { old, new in
+            if new == old + 1 { announce(report.frames[new]) }
+            if new == report.frames.count - 1, new != old { finale() }
+        }
         .task(id: playing) {
             guard playing else { return }
             if frame >= report.frames.count - 1 { frame = 0 }
@@ -44,6 +64,24 @@ struct BattleReplayView: View {
             }
             playing = false
         }
+    }
+
+    /// Sound and a jolt for a round of fighting, as hard as the blows.
+    private func announce(_ frame: BattleFrame) {
+        guard !frame.strikes.isEmpty else { return }
+        let ranged = frame.strikes.filter(\.ranged).reduce(0) { $0 + $1.damage }
+        let melee = frame.strikes.filter { !$0.ranged }.reduce(0) { $0 + $1.damage }
+        let scale = Float(max(1, report.setup.attacker.units.total + report.setup.defender.units.total) * 6)
+        if ranged > 0 { SoundBoard.shared.play(.arrows, volume: 0.4 + Float(ranged) / scale) }
+        if melee > 0 { SoundBoard.shared.play(.clash, volume: 0.4 + Float(melee) / scale) }
+        Feedback.impact(CGFloat(ranged + melee) / CGFloat(scale) * 3)
+    }
+
+    private func finale() {
+        let won = report.winner == .attacker ? report.setup.attacker.civ : report.setup.defender.civ
+        let good = perspective.map { $0 == won } ?? true
+        SoundBoard.shared.play(good ? .victory : .defeat, volume: 0.8)
+        if perspective != nil { Feedback.outcome(good) }
     }
 
     private var header: some View {
@@ -66,8 +104,7 @@ struct BattleReplayView: View {
                 Circle().fill(Palette.color(army.civ, state)).frame(width: 9, height: 9)
                 Text(Palette.name(army.civ, state)).font(.headline)
             }
-            Text("\(army.units.infantry) inf · \(army.units.archers) arc · \(army.units.cavalry) cav")
-                .font(.caption.monospacedDigit())
+            UnitRow(units: army.units, showZero: true).font(.caption)
             Text(army.formation.replacingOccurrences(of: "_", with: " ").capitalized
                  + (army.general.map { " · \($0.name)" } ?? ""))
                 .font(.caption).foregroundStyle(.secondary)
@@ -90,24 +127,26 @@ struct BattleReplayView: View {
                         .frame(width: cell, height: cell)
                         .offset(x: CGFloat(col) * cell, y: CGFloat(4 - row) * cell)
                 }
-                // Strikes this round.
-                Path { path in
-                    for strike in current.strikes {
-                        guard let a = current.blocks.first(where: { $0.id == strike.from }),
-                              let b = current.blocks.first(where: { $0.id == strike.to }) else { continue }
-                        path.move(to: center(a.position, cell))
-                        path.addLine(to: center(b.position, cell))
-                    }
-                }
-                .stroke(Color.red.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
-                // Blocks.
+                // Strikes this round, drawn from striker to target.
+                StrikeLines(lines: current.strikes.compactMap { strike in
+                    guard let a = current.blocks.first(where: { $0.id == strike.from }),
+                          let b = current.blocks.first(where: { $0.id == strike.to }) else { return nil }
+                    return (center(a.position, cell), center(b.position, cell), strike.ranged)
+                })
+                .id(shown)
+                // Blocks: they shake and flash when hit, and shrink away when destroyed.
+                let previous = shown > 0 ? report.frames[shown - 1].blocks : []
                 ForEach(current.blocks.filter { $0.status != .destroyed }, id: \.id) { block in
+                    let lost = (previous.first { $0.id == block.id }?.units ?? block.units) - block.units
                     BlockView(block: block,
                               color: Palette.color(block.side == .attacker ? report.setup.attacker.civ
-                                                   : report.setup.defender.civ, state))
+                                                   : report.setup.defender.civ, state),
+                              hit: lost > 0 ? shown : nil)
                         .frame(width: cell * 0.82, height: cell * 0.82)
+                        .overlay { if lost > 0 { LossMarker(lost: lost).id(shown) } }
                         .position(center(block.position, cell))
                         .opacity(block.status == .routed ? 0.3 : 1)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
                 }
             }
         }
@@ -147,19 +186,70 @@ struct BattleReplayView: View {
     }
 }
 
+/// Strike lines that draw themselves from striker to target: dashed arcs for arrows, solid for blows.
+private struct StrikeLines: View {
+    let lines: [(CGPoint, CGPoint, Bool)]
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            ForEach(lines.indices, id: \.self) { i in
+                let (a, b, ranged) = lines[i]
+                Path { path in
+                    path.move(to: a)
+                    if ranged {
+                        let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - abs(b.y - a.y) * 0.25 - 12)
+                        path.addQuadCurve(to: b, control: mid)
+                    } else {
+                        path.addLine(to: b)
+                    }
+                }
+                .trim(from: 0, to: progress)
+                .stroke(ranged ? Color.orange : Color.red,
+                        style: StrokeStyle(lineWidth: ranged ? 1.8 : 3, lineCap: .round, dash: ranged ? [4, 3] : []))
+                .opacity(0.85)
+            }
+        }
+        .onAppear { withAnimation(.easeOut(duration: 0.35)) { progress = 1 } }
+        .allowsHitTesting(false)
+    }
+}
+
+/// "−2" rising and fading over a block that lost units.
+private struct LossMarker: View {
+    let lost: Int
+    @State private var shown = false
+
+    var body: some View {
+        Text("−\(lost)")
+            .font(.system(size: 15, weight: .black).monospacedDigit())
+            .foregroundStyle(.white)
+            .shadow(color: .red, radius: 2)
+            .offset(y: shown ? -28 : -6)
+            .opacity(shown ? 0 : 1)
+            .onAppear { withAnimation(.easeOut(duration: 0.9).delay(0.2)) { shown = true } }
+            .allowsHitTesting(false)
+    }
+}
+
 private struct BlockView: View {
     let block: BlockSnapshot
     let color: Color
+    /// The frame in which the block was hit, to trigger its shake and flash.
+    var hit: Int?
 
     var body: some View {
         RoundedRectangle(cornerRadius: 6)
             .fill(color)
             .overlay {
-                VStack(spacing: 1) {
-                    Text(symbol).font(.system(size: 15, weight: .black))
-                    Text("\(block.units)").font(.system(size: 11, weight: .bold).monospacedDigit())
+                GeometryReader { g in
+                    VStack(spacing: 1) {
+                        UnitIcon(type: block.type, color: .white).frame(width: g.size.width * 0.5, height: g.size.width * 0.5)
+                        Text("\(block.units)").font(.system(size: max(9, g.size.width * 0.22), weight: .bold).monospacedDigit())
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .foregroundStyle(.white)
                 }
-                .foregroundStyle(.white)
             }
             .overlay(alignment: .bottom) {
                 GeometryReader { g in
@@ -170,13 +260,29 @@ private struct BlockView: View {
                 .padding(4)
             }
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.black.opacity(0.5), lineWidth: 1))
+            .keyframeAnimator(initialValue: HitState(), trigger: hit) { view, value in
+                view
+                    .offset(x: value.shake)
+                    .overlay(RoundedRectangle(cornerRadius: 6).fill(Color.red.opacity(value.flash)))
+            } keyframes: { _ in
+                KeyframeTrack(\.shake) {
+                    LinearKeyframe(0, duration: 0.2)
+                    LinearKeyframe(-4, duration: 0.05)
+                    LinearKeyframe(4, duration: 0.08)
+                    LinearKeyframe(-3, duration: 0.08)
+                    LinearKeyframe(0, duration: 0.06)
+                }
+                KeyframeTrack(\.flash) {
+                    LinearKeyframe(0, duration: 0.2)
+                    LinearKeyframe(0.5, duration: 0.05)
+                    LinearKeyframe(0, duration: 0.35)
+                }
+            }
     }
+}
 
-    private var symbol: String {
-        switch block.type {
-        case .infantry: "I"
-        case .archers: "A"
-        case .cavalry: "C"
-        }
-    }
+private struct HitState {
+    var shake: CGFloat = 0
+    var flash: Double = 0
+
 }

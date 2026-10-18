@@ -12,8 +12,11 @@ struct UnitPicker: View {
                 if available[type] > 0 {
                     Stepper(value: Binding(get: { units[type] }, set: { units[type] = $0 }),
                             in: 0...available[type]) {
-                        Text("\(type.rawValue.capitalized) \(units[type]) of \(available[type])")
-                            .font(.callout.monospacedDigit())
+                        HStack(spacing: 6) {
+                            UnitIcon(type: type).frame(width: 18, height: 18)
+                            Text("\(type.rawValue.capitalized) \(units[type]) of \(available[type])")
+                                .font(.callout.monospacedDigit())
+                        }
                     }
                 }
             }
@@ -32,6 +35,8 @@ struct OrderComposer: View {
     @State private var units = UnitCounts.zero
     @State private var withGeneral = false
     @State private var formation = ""
+    /// Chance of victory with each formation, recomputed when the force changes.
+    @State private var oddsByFormation: [FormationID: Double] = [:]
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -84,13 +89,11 @@ struct OrderComposer: View {
                 Toggle("\(general.name) leads (\(traitName(general.trait)))", isOn: $withGeneral).font(.callout)
             }
             if isBattle, case .march = order {
-                Picker("Formation", selection: $formation) {
-                    ForEach(engine.rules.battle.formations) { Text($0.name).tag($0.id) }
-                }
-                .pickerStyle(.menu)
+                Text("Battle plan").font(.subheadline.bold())
+                FormationPicker(engine: engine, units: units, selection: $formation, odds: oddsByFormation)
             }
-            if isBattle, let to = destination {
-                odds(to)
+            if isBattle, destination != nil {
+                odds
             }
             HStack {
                 Button("Cancel") { done(nil) }.buttonStyle(.bordered)
@@ -101,7 +104,26 @@ struct OrderComposer: View {
                     .disabled(units.isEmpty)
             }
         }
-        .onAppear(perform: setDefaults)
+        .onAppear {
+            setDefaults()
+            updateOdds()
+        }
+        .onChange(of: units) { _, _ in updateOdds() }
+        .onChange(of: withGeneral) { _, _ in updateOdds() }
+    }
+
+    /// Odds for every formation (landings fight in the army's standing formation).
+    private func updateOdds() {
+        guard isBattle, let to = destination else { oddsByFormation = [:]; return }
+        let from: TerritoryID? = if case let .march(f, _) = order { f } else { nil }
+        let amphibious = { if case .land = order { true } else { false } }()
+        let ids = from == nil ? [formation] : engine.rules.battle.formations.map(\.id)
+        var odds: [FormationID: Double] = [:]
+        for id in ids {
+            odds[id] = engine.attackOdds(human, units: units, into: to, from: from, formation: id,
+                                         general: withGeneral ? general : nil, amphibious: amphibious, in: state) ?? 0
+        }
+        oddsByFormation = odds
     }
 
     private var confirmLabel: String {
@@ -122,20 +144,20 @@ struct OrderComposer: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(t.terrain.rawValue.capitalized)\(crossing)").font(.caption).foregroundStyle(.secondary)
             if let defender = state.armies[to], defender.owner != human {
-                Text("Defended by \(Palette.name(defender.owner, state)): \(defender.units.infantry) inf, "
-                     + "\(defender.units.archers) arc, \(defender.units.cavalry) cav"
-                     + ((defender.formation ?? engine.rules.battle.defaultFormation) == "phalanx" ? "" :
-                        " in \(engine.rules.battle.formation(defender.formation!)?.name ?? "")"))
-                    .font(.caption)
+                HStack(spacing: 6) {
+                    Text("Defended by \(Palette.name(defender.owner, state)):")
+                    UnitRow(units: defender.units, size: 12)
+                    if let f = defender.formation, f != engine.rules.battle.defaultFormation {
+                        Text("in \(engine.rules.battle.formation(f)?.name ?? "")")
+                    }
+                }
+                .font(.caption)
             }
         }
     }
 
-    private func odds(_ to: TerritoryID) -> some View {
-        let from: TerritoryID? = if case let .march(f, _) = order { f } else { nil }
-        let p = engine.attackOdds(human, units: units, into: to, from: from, formation: formation,
-                                  general: withGeneral ? general : nil,
-                                  amphibious: { if case .land = order { true } else { false } }(), in: state) ?? 0
+    private var odds: some View {
+        let p = oddsByFormation[formation] ?? oddsByFormation.values.first ?? 0
         let percent = Int((p * 100).rounded())
         return HStack {
             Text("Chance of victory").font(.callout)
@@ -228,12 +250,10 @@ struct TerritoryPanel: View {
             Text(ready.total > 0 ? "Tap a highlighted territory to march \(ready.total) ready units, or a sea with your ships to board."
                                  : "These troops have moved this turn.")
                 .font(.caption).foregroundStyle(.secondary)
-            Picker("Formation", selection: Binding(
+            Text("Defensive plan").font(.subheadline.bold())
+            FormationPicker(engine: engine, units: army.units, selection: Binding(
                 get: { army.formation ?? engine.rules.battle.defaultFormation },
-                set: { session.order(.setFormation(territory: territory, formation: $0)) })) {
-                ForEach(engine.rules.battle.formations) { Text($0.name).tag($0.id) }
-            }
-            .pickerStyle(.menu)
+                set: { session.order(.setFormation(territory: territory, formation: $0)) }))
         }
         if home {
             Text("Recruit").font(.subheadline.bold())
@@ -243,7 +263,10 @@ struct TerritoryPanel: View {
                         session.order(.recruit(territory: territory, unit: type, count: 1))
                     } label: {
                         VStack(spacing: 0) {
-                            Text("+ \(type.rawValue.capitalized)").font(.caption.bold())
+                            HStack(spacing: 3) {
+                                UnitIcon(type: type).frame(width: 14, height: 14)
+                                Text("+ \(type.rawValue.capitalized)").font(.caption.bold())
+                            }
                             Text("\(engine.rules.stats(type).cost) gold").font(.caption2)
                         }
                     }

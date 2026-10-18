@@ -35,12 +35,29 @@ struct BoardArt: Decodable {
 struct BoardTransform {
     let scale: CGFloat
     let offset: CGPoint
+    /// How much larger to draw lettering and tokens: they grow with the zoom, but more slowly,
+    /// so zooming in spreads things out instead of just enlarging them.
+    let detail: CGFloat
 
-    init(fitting size: CGSize) {
+    /// The whole board fitted to `size`, then zoomed about the view's center and panned.
+    init(fitting size: CGSize, zoom: CGFloat = 1, pan: CGSize = .zero) {
         let f = BoardArt.frame
-        scale = min(size.width / f.width, size.height / f.height)
-        offset = CGPoint(x: (size.width - f.width * scale) / 2 - f.minX * scale,
-                         y: (size.height - f.height * scale) / 2 - f.minY * scale)
+        let fit = min(size.width / f.width, size.height / f.height)
+        let fitted = CGPoint(x: (size.width - f.width * fit) / 2 - f.minX * fit,
+                             y: (size.height - f.height * fit) / 2 - f.minY * fit)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        scale = fit * zoom
+        offset = CGPoint(x: center.x + (fitted.x - center.x) * zoom + pan.width,
+                         y: center.y + (fitted.y - center.y) * zoom + pan.height)
+        detail = zoom.squareRoot()
+    }
+
+    /// The farthest the board may be panned at a zoom: far enough to reach every edge, no further.
+    static func panLimit(_ size: CGSize, zoom: CGFloat) -> CGSize {
+        let f = BoardArt.frame
+        let fit = min(size.width / f.width, size.height / f.height)
+        return CGSize(width: max(0, (f.width * fit * zoom - size.width) / 2) + 24,
+                      height: max(0, (f.height * fit * zoom - size.height) / 2) + 24)
     }
 
     func point(_ p: [Double]) -> CGPoint {

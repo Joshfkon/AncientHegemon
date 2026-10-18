@@ -8,12 +8,16 @@ enum PendingOrder: Hashable {
     case land(sea: SeaZoneID, to: TerritoryID)
 }
 
-/// The game: the board on the left, the player's panel on the right.
+/// The game: the board fills the screen, with the player's status and controls floating over it.
+/// The panel slides in from the right when there's something to do there (a selection, an order,
+/// the empire or the chronicle) and gets out of the way otherwise.
 struct GameScreen: View {
     @Bindable var session: GameSession
     @State private var selected: MapPick?
     @State private var pending: PendingOrder?
     @State private var tab = PanelTab.orders
+    @State private var panelOpen = false
+    @State private var showKnowledge = false
     @State private var layer = MapLayer.armies
 
     enum PanelTab: String, CaseIterable {
@@ -22,49 +26,28 @@ struct GameScreen: View {
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
+    static let panelWidth: CGFloat = 320
 
     var body: some View {
-        HStack(spacing: 0) {
+        ZStack {
             MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
                     selected: selected, targets: targets, onTap: tapped)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
-                .overlay(alignment: .top) {
-                    Picker("Map", selection: $layer) {
-                        ForEach(MapLayer.allCases.filter { session.human != nil || $0 != .supply }, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 360)
-                    .padding(.top, 8)
+                .ignoresSafeArea()
+            overlays
+                .padding(.trailing, panelOpen ? Self.panelWidth : 0)
+            if panelOpen {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    panel
                 }
-                .overlay(alignment: .bottom) { legend.padding(.bottom, 8) }
-            VStack(alignment: .leading, spacing: 10) {
-                header
-                if let message = session.message {
-                    Text(message).font(.caption).foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Picker("Panel", selection: $tab) {
-                    ForEach(PanelTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                ScrollView {
-                    switch tab {
-                    case .orders: orders
-                    case .empire: EmpireView(session: session)
-                    case .log: ChronicleView(session: session)
-                    }
-                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .padding(10)
-            .frame(width: 290)
-            .background(Color(.systemBackground))
         }
+        .animation(.spring(duration: 0.3), value: panelOpen)
         .sheet(item: $session.replay) { entry in
             NavigationStack {
-                BattleReplayView(entry: entry, state: state, map: engine.map, autoplay: true)
+                BattleReplayView(entry: entry, state: state, map: engine.map, autoplay: true, perspective: session.human)
                     .id(entry.id)
                     .toolbar { Button("Done") { session.replay = nil } }
             }
@@ -72,68 +55,155 @@ struct GameScreen: View {
         .sheet(isPresented: .constant(session.crisis != nil && session.replay == nil)) {
             CrisisView(session: session).interactiveDismissDisabled()
         }
+        .sheet(isPresented: $showKnowledge) {
+            if let human = session.human {
+                NavigationStack {
+                    TechTreeView(civ: human, state: state, engine: engine)
+                        .toolbar { Button("Done") { showKnowledge = false } }
+                }
+            }
+        }
         .onChange(of: session.state.turn) { _, _ in pending = nil }
+        .onChange(of: state.victory != nil) { _, over in
+            if over { tab = .orders; panelOpen = true }
+        }
     }
 
-    // MARK: Header
+    // MARK: Floating controls
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+    private var overlays: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                status
+                Spacer(minLength: 8)
+                if !panelOpen { layerPicker }
+                Spacer(minLength: 8)
+                toolbar
+            }
+            if let message = session.message {
+                Text(message)
+                    .font(.callout)
+                    .padding(.horizontal, 12).padding(.vertical, 7)
+                    .background(.red.opacity(0.9), in: Capsule())
+                    .foregroundStyle(.white)
+                    .onTapGesture { session.message = nil }
+                    .transition(.opacity)
+            }
+            Spacer()
+            HStack(alignment: .bottom) {
+                Spacer()
+                legend
+                Spacer()
+                turnButton
+            }
+        }
+        .padding(10)
+    }
+
+    private var layerPicker: some View {
+        Picker("Map", selection: $layer) {
+            ForEach(MapLayer.allCases.filter { session.human != nil || $0 != .supply }, id: \.self) {
+                Text($0.rawValue).tag($0)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 320)
+        .padding(4)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    /// The player's empire at a glance: who, when, and the three numbers that matter.
+    private var status: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
                 if let human = session.human {
                     Circle().fill(Palette.color(human, state)).frame(width: 10, height: 10)
                     Text(Palette.name(human, state)).font(.headline)
                 } else {
                     Text("Watching").font(.headline)
                 }
-                Spacer()
                 Text("Round \(state.turn)/\(engine.rules.victory.roundLimit)")
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                Menu {
-                    Button("New game") { session.quit() }
-                } label: { Image(systemName: "ellipsis.circle") }
             }
-            if let human = session.human, let cs = state.civs[human] {
-                if let econ = session.economy {
-                    HStack(spacing: 10) {
-                        stat("Gold", "\(cs.gold)", change: econ.income, color: .orange)
-                        stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
-                        stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple)
-                    }
+            if let human = session.human, let cs = state.civs[human], let econ = session.economy {
+                HStack(spacing: 12) {
+                    stat("Gold", "\(cs.gold)", change: econ.income, color: .orange)
+                    stat("Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
+                    stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple)
                 }
-                HStack(spacing: 10) {
-                    if let econ = session.economy, !econ.cutOff.isEmpty {
-                        Label("\(econ.cutOff.count) cut off", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                    }
-                    Spacer()
-                    if session.busy {
-                        ProgressView().controlSize(.small)
-                        Text("Rivals move…").font(.caption).foregroundStyle(.secondary)
-                    } else if session.isHumanTurn {
-                        Button("End turn") {
-                            selected = nil
-                            pending = nil
-                            session.endTurn()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                    }
+                if !econ.cutOff.isEmpty {
+                    Label("\(econ.cutOff.count) cut off", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.red)
                 }
-                .font(.caption.monospacedDigit())
-            } else {
-                HStack {
-                    Button { session.playing.toggle() } label: {
-                        Image(systemName: session.playing ? "pause.fill" : "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(session.isOver)
-                    Button { Task { await session.playRound() } } label: { Image(systemName: "forward.frame.fill") }
-                        .buttonStyle(.bordered)
-                        .disabled(session.busy || session.playing || session.isOver)
-                }
-                .controlSize(.small)
             }
+        }
+        .padding(10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 4) {
+            if session.human != nil {
+                toolButton("Empire", "building.columns.fill") { open(.empire) }
+                toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
+            }
+            toolButton("Chronicle", "scroll.fill") { open(.log) }
+            Menu {
+                Button("New game", role: .destructive) { session.quit() }
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 34, height: 34)
+            }
+        }
+        .padding(4)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func toolButton(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .frame(width: 34, height: 34)
+        }
+        .accessibilityLabel(title)
+    }
+
+    @ViewBuilder private var turnButton: some View {
+        if session.human != nil {
+            if session.busy {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Rivals move…").font(.callout)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: Capsule())
+            } else if session.isHumanTurn {
+                Button {
+                    selected = nil
+                    pending = nil
+                    panelOpen = false
+                    session.endTurn()
+                } label: {
+                    Label("End turn", systemImage: "hourglass")
+                        .font(.headline)
+                        .padding(.horizontal, 6).padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .shadow(radius: 4)
+            }
+        } else {
+            HStack {
+                Button { session.playing.toggle() } label: {
+                    Image(systemName: session.playing ? "pause.fill" : "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(session.isOver)
+                Button { Task { await session.playRound() } } label: { Image(systemName: "forward.frame.fill") }
+                    .buttonStyle(.bordered)
+                    .disabled(session.busy || session.playing || session.isOver)
+            }
+            .padding(6)
+            .background(.ultraThinMaterial, in: Capsule())
         }
     }
 
@@ -149,6 +219,57 @@ struct GameScreen: View {
             Text(text).font(.caption2).foregroundStyle(.white)
                 .padding(.horizontal, 8).padding(.vertical, 4)
                 .background(.black.opacity(0.6), in: Capsule())
+        }
+    }
+
+    // MARK: Panel
+
+    private func open(_ tab: PanelTab) {
+        if panelOpen && self.tab == tab && selected == nil && pending == nil {
+            panelOpen = false
+        } else {
+            self.tab = tab
+            panelOpen = true
+        }
+    }
+
+    private func closePanel() {
+        panelOpen = false
+        selected = nil
+        pending = nil
+    }
+
+    private var panel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Picker("Panel", selection: $tab) {
+                    ForEach(PanelTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Button(action: closePanel) {
+                    Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Close")
+            }
+            ScrollView {
+                Group {
+                switch tab {
+                case .orders: orders
+                case .empire: EmpireView(session: session)
+                case .log: ChronicleView(session: session)
+                }
+                }
+                .padding(.trailing, 4)
+            }
+        }
+        .padding(12)
+        .frame(width: Self.panelWidth)
+        .frame(maxHeight: .infinity)
+        .background {
+            UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16)
+                .fill(.regularMaterial)
+                .shadow(color: .black.opacity(0.25), radius: 10)
+                .ignoresSafeArea()
         }
     }
 
@@ -178,7 +299,7 @@ struct GameScreen: View {
             if let pending, session.isHumanTurn {
                 OrderComposer(session: session, order: pending) { done in
                     self.pending = nil
-                    if let done { selected = done }
+                    if let done { selected = done } else if selected == nil { panelOpen = false }
                 }
                 .id(pending)
             } else if case .territory(let id)? = selected {
@@ -251,10 +372,16 @@ struct GameScreen: View {
                 }
             }
             tab = .orders
+            panelOpen = true
             return
         }
         pending = nil
         selected = pick == selected ? nil : pick
-        if pick != nil { tab = .orders }
+        if selected != nil {
+            tab = .orders
+            panelOpen = true
+        } else if tab == .orders {
+            panelOpen = false
+        }
     }
 }

@@ -94,13 +94,70 @@ struct MapView: View {
     var onTap: (MapPick?) -> Void = { _ in }
     private let art = BoardArt.shared
 
+    /// Pinch to zoom (about the pinch), drag to pan.
+    @State private var zoom: CGFloat = 1
+    @State private var pan: CGSize = .zero
+    @State private var pinchStart: (zoom: CGFloat, pan: CGSize)?
+    @State private var dragStart: CGSize?
+    static let maxZoom: CGFloat = 5
+
     var body: some View {
         GeometryReader { geo in
-            let t = BoardTransform(fitting: geo.size)
+            let t = BoardTransform(fitting: geo.size, zoom: zoom, pan: pan)
             Canvas { context, _ in draw(&context, t) }
                 .contentShape(Rectangle())
                 .onTapGesture { location in onTap(pick(at: location, t)) }
+                .gesture(pinch(geo.size).simultaneously(with: drag(geo.size)))
+                .overlay(alignment: .bottomLeading) {
+                    if zoom > 1.01 {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.3)) { zoom = 1; pan = .zero }
+                        } label: {
+                            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                .font(.callout.weight(.semibold))
+                                .padding(9)
+                                .background(.ultraThinMaterial, in: Circle())
+                        }
+                        .padding(10)
+                        .transition(.opacity)
+                    }
+                }
         }
+    }
+
+    private func pinch(_ size: CGSize) -> some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                let start = pinchStart ?? (zoom, pan)
+                if pinchStart == nil { pinchStart = start }
+                let newZoom = min(Self.maxZoom, max(1, start.zoom * value.magnification))
+                // Keep the point under the fingers where it is.
+                let anchor = CGPoint(x: value.startAnchor.x * size.width - size.width / 2,
+                                     y: value.startAnchor.y * size.height - size.height / 2)
+                let k = newZoom / start.zoom
+                zoom = newZoom
+                pan = clamped(CGSize(width: anchor.x - (anchor.x - start.pan.width) * k,
+                                     height: anchor.y - (anchor.y - start.pan.height) * k), size)
+            }
+            .onEnded { _ in pinchStart = nil }
+    }
+
+    private func drag(_ size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                guard pinchStart == nil, zoom > 1 else { return }
+                let start = dragStart ?? pan
+                if dragStart == nil { dragStart = start }
+                pan = clamped(CGSize(width: start.width + value.translation.width,
+                                     height: start.height + value.translation.height), size)
+            }
+            .onEnded { _ in dragStart = nil }
+    }
+
+    private func clamped(_ pan: CGSize, _ size: CGSize) -> CGSize {
+        let limit = BoardTransform.panLimit(size, zoom: zoom)
+        return CGSize(width: min(limit.width, max(-limit.width, pan.width)),
+                      height: min(limit.height, max(-limit.height, pan.height)))
     }
 
     /// Seas win when the tap is near their fleet marker; otherwise the territory under the finger.
@@ -112,7 +169,7 @@ struct MapView: View {
         // Army tokens can sit near an edge; a tap on one picks its territory.
         if let token = art.territories.min(by: { distance(t.point($0.value.token), location)
                                                   < distance(t.point($1.value.token), location) }),
-           distance(t.point(token.value.token), location) < 9 {
+           distance(t.point(token.value.token), location) < 9 * t.detail {
             return .territory(token.key)
         }
         return map.territories.first { territory in
@@ -205,7 +262,7 @@ struct MapView: View {
             lettering.translateBy(x: p.x, y: p.y)
             lettering.rotate(by: .degrees(shape.angle))
             lettering.draw(Text(territory.name.uppercased())
-                            .font(.custom("ChalkboardSE-Bold", size: 6.5))
+                            .font(.custom("ChalkboardSE-Bold", size: 6.5 * t.detail))
                             .foregroundStyle(.black.opacity(0.85)),
                            at: .zero)
             if layer == .resources {
@@ -213,15 +270,19 @@ struct MapView: View {
             } else if let army = state.armies[territory.id], army.units.total > 0 {
                 let c = t.point(shape.token)
                 let native = !state.isPlayer(army.owner)
-                let r: CGFloat = native ? 5.5 : 7.5
+                let r: CGFloat = (native ? 5.5 : 7.5) * t.detail
                 let led = state.generals.values.contains { $0.location == territory.id }
                 let badge = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
                 context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.8 : 1)))
                 context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 0.7)
                 context.draw(Text("\(army.units.total)\(led ? "★" : "")")
-                                .font(.system(size: native ? 7 : 8.5, weight: .heavy))
+                                .font(.system(size: (native ? 7 : 8.5) * t.detail, weight: .heavy))
                                 .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
                              at: c)
+                // Zoomed in, the army's make-up shows under its token.
+                if t.detail >= 1.5 {
+                    drawComposition(&context, army.units, below: CGPoint(x: c.x, y: c.y + r + 2), owner: army.owner)
+                }
             }
         }
         for (sea, label) in art.seas {
@@ -344,6 +405,24 @@ extension MapView {
         }
     }
 
+    /// Unit icons with counts, on a small plate.
+    fileprivate func drawComposition(_ context: inout GraphicsContext, _ units: UnitCounts, below top: CGPoint,
+                                     owner: CivilizationID) {
+        let types = UnitType.allCases.filter { units[$0] > 0 }
+        guard !types.isEmpty else { return }
+        let icon: CGFloat = 9, step: CGFloat = 20
+        let width = CGFloat(types.count) * step + 2
+        let plate = CGRect(x: top.x - width / 2, y: top.y, width: width, height: icon + 4)
+        context.fill(Path(roundedRect: plate, cornerRadius: 3), with: .color(.white.opacity(0.85)))
+        for (i, type) in types.enumerated() {
+            let x = plate.minX + 2 + CGFloat(i) * step
+            let box = CGRect(x: x, y: plate.minY + 2, width: icon, height: icon)
+            context.fill(UnitShape(type: type).path(in: box), with: .color(.black.opacity(0.8)))
+            context.draw(Text("\(units[type])").font(.system(size: 7.5, weight: .bold)).foregroundStyle(.black),
+                         at: CGPoint(x: box.maxX + 2, y: box.midY), anchor: .leading)
+        }
+    }
+
     static func glyph(_ r: Resource) -> String {
         switch r {
         case .grain: "🌾"
@@ -430,10 +509,12 @@ struct TerritoryCard: View {
                     .font(.caption)
             }
             if let army = state.armies[id], army.units.total > 0 {
-                Text("\(Palette.name(army.owner, state)): \(army.units.infantry) inf, \(army.units.archers) arc, "
-                     + "\(army.units.cavalry) cav"
-                     + (state.generals.values.first { $0.location == id }.map { " · \($0.name)" } ?? ""))
-                    .font(.caption)
+                HStack(spacing: 6) {
+                    Text("\(Palette.name(army.owner, state)):")
+                    UnitRow(units: army.units, size: 12)
+                    if let g = state.generals.values.first(where: { $0.location == id }) { Text("· \(g.name)") }
+                }
+                .font(.caption)
             }
         }
         .padding(10)
