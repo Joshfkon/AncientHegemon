@@ -26,6 +26,9 @@ public struct CivRecord: Sendable, Equatable {
     public var projectsDestroyed = 0
     /// Knowledge levels at the start of round 20, if the civ was alive then.
     public var knowledgeAt20: [KnowledgeField: Int]?
+    /// Gold in hand and units under arms at the start of rounds 10, 20 and 30, if it held land then.
+    public var goldAt: [Int: Int] = [:]
+    public var unitsAt: [Int: Int] = [:]
 
     /// Lost at least half of a realm that once held 4+ territories.
     public var collapsed: Bool { peakTerritories >= 4 && finalTerritories * 2 <= peakTerritories }
@@ -106,6 +109,12 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                     civs[c]!.knowledgeAt20 = Dictionary(uniqueKeysWithValues: KnowledgeField.allCases.map {
                         ($0, engine.level($0, of: c, in: state))
                     })
+                }
+            }
+            if [10, 20, 30].contains(state.turn) {
+                for c in state.players where civs[c] != nil && !state.territories(of: c).isEmpty {
+                    civs[c]!.goldAt[state.turn] = state.civs[c]!.gold
+                    civs[c]!.unitsAt[state.turn] = state.totalUnits(of: c).total
                 }
             }
             let alive = state.players.filter { !state.civs[$0]!.eliminated }

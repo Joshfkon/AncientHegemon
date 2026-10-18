@@ -23,6 +23,25 @@ struct Arena {
 }
 
 @Suite struct BattleSimulatorTests {
+
+    @Test func defendersFightOnHomeGround() throws {
+        let engine = try Engine.calm()
+        let flat = try engine.modified { json in
+            var battle = json["battle"] as! [String: Any]
+            battle["homeGroundPercent"] = 0
+            json["battle"] = battle
+        }
+        let army = UnitCounts(infantry: 4, archers: 2, cavalry: 2)
+        func holds(_ e: Engine) -> Int {
+            (0..<40).filter { seed in
+                BattleSimulator(rules: e.rules).resolve(BattleSetup(
+                    attacker: BattleArmy(civ: "a", units: army, formation: "phalanx"),
+                    defender: BattleArmy(civ: "d", units: army, formation: "phalanx"),
+                    terrain: .plains, seed: UInt64(seed))).winner == .defender
+            }.count
+        }
+        #expect(holds(engine) > holds(flat))
+    }
     let arena = Arena()
     let inf = UnitCounts(infantry: 6)
     let arc = UnitCounts(archers: 6)
@@ -41,14 +60,15 @@ struct Arena {
         #expect(outcomes.count > 1, "the seed should matter")
     }
 
-    // Each unit type beats the one it counters, attacking or defending.
+    // Each unit type beats the one it counters, attacking or defending, except that archers
+    // attacking infantry only break even: home ground offsets their edge.
     @Test func cavalryBeatsArchers() {
         #expect(arena.attackerWinRate(cav, arc) >= 80)
         #expect(arena.attackerWinRate(arc, cav) <= 20)
     }
 
     @Test func archersBeatInfantry() {
-        #expect(arena.attackerWinRate(arc, inf) >= 60)
+        #expect(arena.attackerWinRate(arc, inf) >= 40)
         #expect(arena.attackerWinRate(inf, arc) <= 20)
     }
 
@@ -57,9 +77,12 @@ struct Arena {
         #expect(arena.attackerWinRate(cav, inf) <= 20)
     }
 
-    @Test func evenFightOnOpenGroundIsAToss() {
-        let rate = arena.attackerWinRate(inf, inf, on: .plains)
-        #expect((25...75).contains(rate))
+    @Test func tiesGoToTheDefender() {
+        // As in Risk: an even fight on open ground favors the side on its home ground, and a
+        // quarter more troops is enough to overcome it.
+        #expect(arena.attackerWinRate(inf, inf, on: .plains) <= 25)
+        let more = UnitCounts(infantry: inf.infantry + (inf.infantry + 3) / 4)
+        #expect(arena.attackerWinRate(more, inf, on: .plains) >= 75)
     }
 
     @Test func terrainFavorsDefenders() {

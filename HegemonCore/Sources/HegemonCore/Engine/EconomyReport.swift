@@ -14,6 +14,8 @@ public struct EconomyReport: Sendable, Equatable {
     public var grainBalance: Int { grainProduced - eatenByPeople - eatenByArmies - eatenByDistance - eatenAtSea }
     public let granary: Int
     public let granaryCap: Int
+    /// Grain that could be bought from trade partners this turn if the harvest falls short.
+    public let grainImportCap: Int
     public let taxes: Int
     public let mines: Int
     public let trade: Int
@@ -76,6 +78,7 @@ extension Engine {
             grainProduced: produced, eatenByPeople: people, eatenByArmies: base, eatenByDistance: total - base,
             eatenAtSea: fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
             granaryCap: produced * granaryTurns(civ, state),
+            grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, income: gold.total,
             bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,
             equipmentPercent: bronzePercent(civ, state), taxRate: cs.taxRate,

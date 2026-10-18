@@ -13,6 +13,9 @@ public struct CollapseRules: Codable, Sendable, Equatable {
     /// Sea Peoples raids land `seaPeoplesBase + pressure / seaPeoplesPressurePerExtra` units.
     public let seaPeoplesBase: Int
     public let seaPeoplesPressurePerExtra: Int
+    /// On land, the migrations swell too: barbarian hordes gain `pressure / migrationPressurePerExtra`
+    /// units on top of their usual size.
+    public let migrationPressurePerExtra: Int
     /// A drought cuts the harvest of this many territories to this percent.
     public let droughtGrainPercent: Int
     public let droughtTerritories: Int
@@ -25,6 +28,8 @@ public struct CollapseRules: Codable, Sendable, Equatable {
 /// Weights at full pressure.
 public struct CollapseWeights: Codable, Sendable, Equatable {
     public let seaPeoplesPerCoast: Int
+    /// Extra barbarian-raid weight per exposure to a barbarian homeland (as in the event table).
+    public let migrationsPerExposure: Int
     public let drought: Int
     public let droughtNoRiver: Int
     public let earthquake: Int

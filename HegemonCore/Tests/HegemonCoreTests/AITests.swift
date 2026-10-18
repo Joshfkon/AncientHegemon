@@ -65,6 +65,21 @@ import Testing
         #expect(s.territories(of: "mesopotamia").count > s.territories(of: "egypt").count)
     }
 
+    @Test func richAIStartsSeveralProjectsAndKeepsAReserve() throws {
+        let engine = try Engine.bare()
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
+        for t in ["persia", "media", "armenia"] { s.land[t]!.owner = "mesopotamia" }
+        s.civs["mesopotamia"]!.gold = 60
+        s.civs["mesopotamia"]!.stock = [.stone: 30, .timber: 30]
+        let ai = AIPlayer(engine: engine, personality: .opportunist)
+        var turn = AITurn()
+        ai.invest("mesopotamia", &s, &turn)
+        let started = turn.events.filter { if case .projectStarted = $0 { true } else { false } }.count
+        #expect(started >= 2)
+        #expect(s.civs["mesopotamia"]!.gold >= ai.investmentReserve("mesopotamia", s))
+        #expect(turn.rejected.isEmpty)
+    }
+
     @Test func aiKeepsItsEmpireFed() throws {
         // Famine events aside, the AI shouldn't recruit its way into starvation.
         let engine = try Engine.calm()

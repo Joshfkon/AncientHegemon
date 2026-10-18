@@ -19,6 +19,18 @@ import Testing
         #expect(weights[.tradeDisrupted] == 0)   // and trades with nobody
     }
 
+    @Test func migrationsPressTheLandFrontiers() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
+        s.turn = 12
+        #expect(engine.collapseWeights("mesopotamia", s).isEmpty)
+        s.turn = 40
+        // Mesopotamia borders the Arabian desert, a barbarian homeland.
+        let fronts = engine.barbarianFronts("mesopotamia", s).count
+        #expect(fronts > 0)
+        let weights = Dictionary(uniqueKeysWithValues: engine.collapseWeights("mesopotamia", s))
+        #expect(weights[.barbarians] == fronts * engine.rules.collapse.weights.migrationsPerExposure)
+    }
+
     @Test func earthquakesWreckBuildings() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece"])
         s.land["greece"]!.improvements = [.walls]

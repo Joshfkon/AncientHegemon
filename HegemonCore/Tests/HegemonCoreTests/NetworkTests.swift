@@ -169,6 +169,35 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(engine.tradeGold(for: "greece", [route]) == 2)
     }
 
+    @Test func shortHarvestsBuyGrainFromPartners() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.peace.insert(CivPair("greece", "egypt"))
+        // Greece grows 2 grain; ten infantry there can't be fed from home.
+        s.armies["greece"] = Army(owner: "greece", units: UnitCounts(infantry: 10))
+        s.civs["greece"]!.granary = 0
+        s.civs["greece"]!.gold = 50
+        let t = engine.rules.trade
+        let events = engine.harvest("greece", &s)
+        // One route: the most it can buy, at the going price; the rest still go hungry.
+        #expect(events.contains(.grainImported(civ: "greece", grain: t.grainPerRoute, gold: t.grainPerRoute * t.grainPrice)))
+        #expect(events.contains { if case .starvation = $0 { true } else { false } })
+        #expect(engine.economy(of: "greece", in: s).grainImportCap == t.grainPerRoute)
+    }
+
+    @Test func noGrainImportsWithoutTradeOrGold() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.armies["greece"] = Army(owner: "greece", units: UnitCounts(infantry: 10))
+        s.civs["greece"]!.granary = 0
+        s.civs["greece"]!.gold = 50
+        var broke = s
+        broke.peace.insert(CivPair("greece", "egypt"))
+        broke.civs["greece"]!.gold = 0
+        for var state in [s, broke] {
+            let events = engine.harvest("greece", &state)
+            #expect(!events.contains { if case .grainImported = $0 { true } else { false } })
+        }
+    }
+
     @Test func landlockedPartnersDontTrade() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "mesopotamia"])
         s.peace.insert(CivPair("greece", "mesopotamia"))

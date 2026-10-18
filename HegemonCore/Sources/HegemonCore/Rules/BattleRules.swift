@@ -80,6 +80,9 @@ public struct BattleRules: Codable, Sendable, Equatable {
     /// Attack bonus for a fully bronze-equipped army (bronze stockpile ≥ army size).
     public let bronzeBonusPercent: Int
     public let crossingPenaltyPercent: [String: Int]
+    /// Damage reduction every defender gets for fighting on ground it knows and has prepared,
+    /// on top of terrain and walls.
+    public let homeGroundPercent: Int
     public let terrain: [Terrain: TerrainBattleRules]
     public let fallbackSlots: [GridPoint]
     public let formations: [Formation]

@@ -1,5 +1,5 @@
 /// The Late Bronze Age collapse: from round 12 the world gets steadily worse. Sea Peoples raid
-/// the coasts, droughts spread beyond the river valleys, earthquakes bring down walls and
+/// the coasts, migrants pour off the steppe and out of the desert, droughts spread beyond the river valleys, earthquakes bring down walls and
 /// palaces, and trade routes break. Bronze wears out unless tin keeps flowing; iron doesn't.
 extension Engine {
     /// How far the collapse has gone, 0–100.
@@ -20,6 +20,7 @@ extension Engine {
         let routes = tradeRoutes(in: state).filter { $0.involves(civ) }.count
         let full: [(EventKind, Int)] = [
             (.seaPeoples, coasts * w.seaPeoplesPerCoast),
+            (.barbarians, barbarianFronts(civ, state).count * w.migrationsPerExposure),
             (.drought, w.drought + (dry ? w.droughtNoRiver : 0)),
             (.earthquake, w.earthquake + rugged * w.earthquakePerRugged),
             (.tradeDisrupted, routes * w.tradeDisruptionPerRoute),

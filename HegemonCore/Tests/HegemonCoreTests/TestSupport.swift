@@ -39,7 +39,7 @@ extension Engine {
         try Engine(map: .bundled(), rules: .bundled()).modified(change)
     }
 
-    private func modified(_ change: (inout [String: Any]) -> Void) throws -> Engine {
+    func modified(_ change: (inout [String: Any]) -> Void) throws -> Engine {
         var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(rules)) as! [String: Any]
         change(&json)
         return Engine(map: map, rules: try Rules(json: JSONSerialization.data(withJSONObject: json)))

@@ -99,7 +99,9 @@ extension AIPlayer {
                 ? ports : campaign.landingSeas
             let dist = seaDistances(to: goal, ships: ready, civ, state)
             guard let here = dist[sea], here > 0,
-                  let next = map.seaNeighbors(of: sea).filter({ dist[$0] == here - 1 }).min() else { continue }
+                  let next = map.seaNeighbors(of: sea).filter({
+                      dist[$0] == here - 1 && engine.seaLinkOpen(sea, $0, for: [civ], in: state)
+                  }).min() else { continue }
             guard issue(.moveFleet(from: sea, to: next, ships: ready, cargo: fleet.cargo), &state, &turn) else { continue }
             if state.fleet(of: civ, in: next) != nil { _ = land(civ, from: next, campaign, &state, &turn) }
         }

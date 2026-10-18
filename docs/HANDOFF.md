@@ -87,9 +87,22 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
        lines for discoveries, projects and the collapse events. Checked in the Simulator on a
        round-26 save.
     155 tests.
-  - **Known open issues**: Mesopotamia's early lead; defenders rarely hold (about 25%); the
-    AI hoards gold (one project a turn, so 200+ gold by round 26); no trade victories; the
-    Trade layer's goods labels get crowded on big empires.
+  - **Balance pass** (DESIGN.md, "Balance pass (after phase 5)"; rules version 4):
+    - **Grain imports**: a short harvest buys grain from trade partners, 2 per route at 3 gold each.
+    - **Home ground**: defenders take 10% less damage everywhere.
+    - **Migrations swell with the collapse**: more and bigger barbarian hordes on land frontiers.
+    - **AI**: several projects a turn above a reserve, walls on threatened borders, troops raised
+      on imported grain, tax cuts when gold can't be spent, and a fleet pathing fix.
+    - **Sim**: `hegemon-sim defence` and median gold/units at rounds 10/20/30.
+    - **40 games**: Mesopotamia wins 52% → 40% (it still leads at round 10 in half the games, its
+      early blitz is mostly gone, with 13 → 3 wins by round 25, and it collapses in a third);
+      defences held 17–27% → 28–49%; median gold at round 20 down by half or more everywhere except Greece. Games run
+      longer (36 → 45 rounds) and mostly end in legacy (34 of 40). 160 tests.
+  - **Known open issues**: Egypt is now the weak civ (7% wins, collapses in 70–80% of games);
+    Greece still banks gold in long peaceful games (nothing left to buy); domination endings are
+    rare (6 of 40); battles are close to a step function; archers attacking infantry are a coin
+    flip since home ground; no trade victories from the AI; the Trade layer's goods labels get
+    crowded on big empires.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

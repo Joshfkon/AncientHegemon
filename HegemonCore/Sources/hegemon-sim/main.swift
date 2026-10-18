@@ -11,6 +11,9 @@ import HegemonCore
 //       One game, printing every civ's land, units, population, gold and grain each round.
 //   hegemon-sim formations [--seeds N]
 //       Win rates for every formation pairing, mixed armies on open ground.
+//   hegemon-sim defence [--seeds N]
+//       Attacker win rates by army size, terrain and walls: the attacker uses its best formation,
+//       the defender the formation that holds best against it.
 //
 // Build with `swift run -c release hegemon-sim ...`; debug builds are much slower.
 
@@ -47,6 +50,39 @@ if CommandLine.arguments.dropFirst().first == "formations" {
             return pad(pct(wins, seeds), 10)
         }
         print(a.padding(toLength: 18, withPad: " ", startingAt: 0) + row.joined())
+    }
+    exit(0)
+}
+
+if CommandLine.arguments.dropFirst().first == "defence" {
+    let seeds = Int(option("--seeds") ?? "60") ?? 60
+    let sim = BattleSimulator(rules: engine.rules)
+    let ids = engine.rules.battle.formations.map(\.id)
+    func army(_ n: Int) -> UnitCounts {
+        UnitCounts(infantry: n - n / 4 - n / 4, archers: n / 4, cavalry: n / 4)
+    }
+    func attackerWins(_ a: Int, _ d: Int, _ terrain: Terrain, _ walls: Int) -> Int {
+        // The defender commits to a formation first; the attacker answers it.
+        ids.map { df in
+            ids.map { af in
+                (0..<seeds).filter { seed in
+                    sim.resolve(BattleSetup(attacker: BattleArmy(civ: "a", units: army(a), formation: af),
+                                            defender: BattleArmy(civ: "d", units: army(d), formation: df),
+                                            terrain: terrain, seed: UInt64(seed), fortification: walls)).winner == .attacker
+                }.count
+            }.max()!
+        }.min()! * 100 / seeds
+    }
+    let matchups = [(4, 4), (5, 4), (6, 4), (8, 4), (6, 6), (9, 6), (12, 6)]
+    let walls = [0, engine.rules.projectEffects.wallsDefensePercent,
+                 engine.rules.projectEffects.wallsDefensePercent + engine.rules.knowledge.effects.fortificationPercent]
+    print("attacker win %, mixed armies (half infantry, a quarter each archers and cavalry), \(seeds) seeds")
+    print("terrain    walls " + matchups.map { pad("\($0.0)v\($0.1)", 6) }.joined())
+    for terrain in Terrain.allCases {
+        for w in walls {
+            print(terrain.rawValue.padding(toLength: 10, withPad: " ", startingAt: 0) + pad("\(w)%", 6)
+                  + matchups.map { pad("\(attackerWins($0.0, $0.1, terrain, w))%", 6) }.joined())
+        }
     }
     exit(0)
 }
@@ -91,7 +127,8 @@ for g in 0..<games {
     records.append(record)
     let land = record.finalState.players
         .map { "\($0) \(record.finalState.territories(of: $0).count)" }.joined(separator: ", ")
-    print("game \(g + 1)/\(games) seed \(seed): winner \(record.winner ?? "none") after \(record.turns) turns (\(land))")
+    let how = record.finalState.victory.map { " by \($0.grade.rawValue) \($0.kind.rawValue)" } ?? ""
+    print("game \(g + 1)/\(games) seed \(seed): winner \(record.winner ?? "none")\(how) after \(record.turns) turns (\(land))")
 }
 let elapsed = Date().timeIntervalSince(started)
 
@@ -168,6 +205,20 @@ for civ in civs {
 }
 let rebelFactions = records.map { r in r.finalState.players.filter { r.finalState.civs[$0]?.rebelledFrom != nil }.count }
 print("rebel factions per game: \(String(format: "%.1f", Double(rebelFactions.reduce(0, +)) / Double(max(1, records.count))))")
+
+print("")
+print("median over civs holding land then")
+print("civ          gold in hand at round 10   20   30    units at 10   20   30")
+for civ in civs {
+    let rs = records.compactMap { $0.civs[civ] }
+    func avg(_ f: (CivRecord) -> Int?) -> String {
+        let xs = rs.compactMap(f).sorted()
+        return xs.isEmpty ? "-" : String(xs[xs.count / 2])
+    }
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + [10, 20, 30].map { r in pad(avg { $0.goldAt[r] }, r == 10 ? 26 : 5) }.joined()
+          + [10, 20, 30].map { r in pad(avg { $0.unitsAt[r] }, r == 10 ? 15 : 5) }.joined())
+}
 
 print("")
 print("civ          ships built  landings  sea battles won")

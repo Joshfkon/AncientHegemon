@@ -32,7 +32,7 @@ extension Engine {
     }
 
     /// Owned territories in or next to barbarian homelands the civ doesn't hold.
-    private func barbarianFronts(_ civ: CivilizationID, _ state: GameState) -> [(homeland: TerritoryID, target: TerritoryID)] {
+    func barbarianFronts(_ civ: CivilizationID, _ state: GameState) -> [(homeland: TerritoryID, target: TerritoryID)] {
         var fronts: [(TerritoryID, TerritoryID)] = []
         for t in state.territories(of: civ) {
             if map.territory(t)!.has(.barbarianHomeland) { fronts.append((t, t)) }
@@ -127,6 +127,7 @@ extension Engine {
             guard !fronts.isEmpty else { return [] }
             let (homeland, target) = fronts[Int(state.rng.next() % UInt64(fronts.count))]
             let size = e.barbarianBase + state.turn / max(1, e.barbarianTurnsPerExtra)
+                + collapsePressure(state) / max(1, rules.collapse.migrationPressurePerExtra)
             let horde = UnitCounts(infantry: size - size / 2, cavalry: size / 2)
             var events = [report(target, size)]
             if homeland != target {

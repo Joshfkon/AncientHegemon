@@ -172,7 +172,11 @@ public struct AIPlayer: Sendable {
             let eaten = engine.grainConsumption(of: civ, in: home, state) + engine.fleetUpkeep(of: civ, state)
             // Leave room for supply lines to lengthen as the army marches out.
             let margin = state.totalUnits(of: civ).total / 4
-            guard eaten + 1 + margin <= production + state.civs[civ]!.granary / 4 else { return }
+            // Grain bought abroad counts, as far as the treasury could keep paying for it.
+            let spare = max(0, state.civs[civ]!.gold - investmentReserve(civ, state))
+            let imports = min(engine.grainImportCap(of: civ, in: state),
+                              spare / (max(1, rules.trade.grainPrice) * importTurns))
+            guard eaten + 1 + margin <= production + state.civs[civ]!.granary / 4 + imports else { return }
 
             let spots = home.filter { t in
                 state.population(of: t) - 1 >= rules.economy.minPopulation
@@ -191,6 +195,9 @@ public struct AIPlayer: Sendable {
                     || issue(.recruit(territory: spot, unit: .infantry, count: 1), &state, &turn) else { return }
         }
     }
+
+    /// Turns of grain imports the treasury must be able to pay for before the AI raises troops on them.
+    var importTurns: Int { 8 }
 
     /// How badly a territory wants reinforcements: threat beyond its garrison, plus a nudge
     /// toward territories with land to grab next door.

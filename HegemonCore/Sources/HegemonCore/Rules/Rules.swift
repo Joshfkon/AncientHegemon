@@ -115,6 +115,10 @@ public struct TradeRules: Codable, Sendable, Equatable {
     public let chokepointToll: Int
     /// A trade partner shares `yield / shareDivisor` of each non-grain resource.
     public let shareDivisor: Int
+    /// When the home harvest and granary fall short, grain is bought from trade partners:
+    /// up to this much per active route each turn, at `grainPrice` gold each.
+    public let grainPerRoute: Int
+    public let grainPrice: Int
 }
 
 public struct StartRules: Codable, Sendable, Equatable {

@@ -42,6 +42,8 @@ public enum Command: Codable, Sendable, Equatable {
 public enum GameEvent: Codable, Sendable, Equatable {
     case harvest(civ: CivilizationID, production: Int, consumption: Int, grown: Int, granary: Int, income: Int)
     case starvation(civ: CivilizationID, populationLost: Int, unitsLost: Int)
+    /// Grain bought from trade partners to cover a short harvest.
+    case grainImported(civ: CivilizationID, grain: Int, gold: Int)
     case outOfSupply(civ: CivilizationID, territory: TerritoryID, unitsLost: Int)
     case trade(civ: CivilizationID, partners: [CivilizationID], income: Int)
     case bronzeMade(civ: CivilizationID, amount: Int)

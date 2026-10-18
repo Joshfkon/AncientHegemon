@@ -6,6 +6,7 @@
 extension Engine {
     func harvest(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         let pockets = supplyPockets(of: civ, in: state)
+        let importCap = grainImportCap(of: civ, in: state)
         var events: [GameEvent] = []
         var home: (production: Int, consumption: Int, grown: Int) = (0, 0, 0)
         var popLost = 0
@@ -29,7 +30,18 @@ extension Engine {
                 granary = min(granary + production - consumption - grown,
                               production * granaryTurns(civ, state))
             } else {
-                let available = production + granary - atSea
+                var available = production + granary - atSea
+                if isHome {
+                    // The granary is drawn first; then grain is bought abroad, as far as gold allows.
+                    let short = grainConsumption(of: civ, in: pocket, state) - available
+                    let price = max(1, rules.trade.grainPrice)
+                    let bought = min(short, importCap, state.civs[civ]!.gold / price)
+                    if bought > 0 {
+                        state.civs[civ]!.gold -= bought * price
+                        available += bought
+                        events.append(.grainImported(civ: civ, grain: bought, gold: bought * price))
+                    }
+                }
                 let lost = starve(civ, pocket, toFit: available, &state)
                 popLost += lost.population
                 unitsLost += lost.units
@@ -89,6 +101,11 @@ extension Engine {
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
             + harborGold(civ, homeNet, routes, state)
         return (taxes, mines, trade, (taxes + mines) * (100 + administration) / 100 + trade)
+    }
+
+    /// Most grain a civilization can buy from its trade partners this turn.
+    public func grainImportCap(of civ: CivilizationID, in state: GameState, routes: [TradeRoute]? = nil) -> Int {
+        (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.count * rules.trade.grainPerRoute
     }
 
     func populationCap(of territory: TerritoryID) -> Int {

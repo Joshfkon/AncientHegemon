@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -160,7 +160,9 @@
   "trade": {
     "goldPerRoute": 2,
     "chokepointToll": 1,
-    "shareDivisor": 2
+    "shareDivisor": 2,
+    "grainPerRoute": 2,
+    "grainPrice": 3
   },
   "start": {
     "gold": 6,
@@ -257,6 +259,7 @@
     "breakPercent": 60,
     "pursuitPercent": 25,
     "bronzeBonusPercent": 20,
+    "homeGroundPercent": 10,
     "crossingPenaltyPercent": {
       "river": 20,
       "strait": 25,
@@ -604,12 +607,14 @@
     "bronzeWearPercent": 5,
     "seaPeoplesBase": 3,
     "seaPeoplesPressurePerExtra": 25,
+    "migrationPressurePerExtra": 20,
     "droughtGrainPercent": 50,
     "droughtTerritories": 3,
     "earthquakePopulation": 1,
     "disruptionRounds": 3,
     "weights": {
       "seaPeoplesPerCoast": 6,
+      "migrationsPerExposure": 20,
       "drought": 30,
       "droughtNoRiver": 20,
       "earthquake": 10,
