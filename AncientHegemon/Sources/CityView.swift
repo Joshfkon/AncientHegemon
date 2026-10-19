@@ -77,9 +77,9 @@ struct CityView: View {
 
     private func ledger(_ r: TerritoryReport) -> some View {
         section("Each turn") {
-            row("🌾 Grain grown", "\(r.grain)")
+            row(MapView.icon(.grain) + Text(" Grain grown"), "\(r.grain)")
             row("👥 People", "\(r.people) of \(r.peopleCap)")
-            row("🪙 Taxes", "+\(r.taxes)")
+            row(MapView.icon(.gold) + Text(" Taxes"), "+\(r.taxes)")
             if r.mines > 0 { row("⛏ Gold mines", "+\(r.mines)") }
             if r.wine > 0 { row("🍷 Wine sold", "+\(r.wine)") }
             if r.harbor > 0 { row("⚓ Harbor trade", "+\(r.harbor)") }
@@ -141,8 +141,12 @@ struct CityView: View {
     }
 
     private func row(_ name: String, _ value: String, bold: Bool = false) -> some View {
+        row(Text(name), value, bold: bold)
+    }
+
+    private func row(_ name: Text, _ value: String, bold: Bool = false) -> some View {
         HStack {
-            Text(name)
+            name
             Spacer()
             Text(value).monospacedDigit()
         }

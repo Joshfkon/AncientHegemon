@@ -76,7 +76,7 @@ struct CommandBar: View {
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
             HStack(spacing: 8) {
                 Label("\(state.population(of: id))", systemImage: "person.2.fill")
-                Text("🌾\(engine.territoryYield(.grain, id, state))")
+                (MapView.icon(.grain) + Text("\(engine.territoryYield(.grain, id, state))"))
                 if let army, army.units.total > 0 {
                     UnitRow(units: army.units, size: 12)
                 }
@@ -330,9 +330,9 @@ struct CommandBar: View {
                     Spacer()
                     Text("\(men) soldiers").font(.caption2)
                 }
-                Text("🌾 \(base + extra) grain a turn" + (extra > 0 ? " (\(base) + \(extra) carted)" : ""))
+                (MapView.icon(.grain) + Text(" \(base + extra) grain a turn" + (extra > 0 ? " (\(base) + \(extra) carted)" : "")))
                     .font(.caption.bold())
-                Text("🪙 about \(pay.formatted(.number.precision(.fractionLength(0...1)))) gold a turn in pay")
+                (MapView.icon(.gold) + Text(" about \(pay.formatted(.number.precision(.fractionLength(0...1)))) gold a turn in pay"))
                     .font(.caption.bold())
                 Group {
                     if steps == nil {

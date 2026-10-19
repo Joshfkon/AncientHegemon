@@ -38,11 +38,11 @@ struct TradeView: View {
         return VStack(alignment: .leading, spacing: 6) {
             Text("Trade brings you each turn").font(.headline)
             HStack(spacing: 14) {
-                Text("🪙 +\(gold) gold").font(.callout.bold())
+                (MapView.icon(.gold) + Text(" +\(gold) gold")).font(.callout.bold())
                 ForEach(ResourcesView.order.filter { totals[$0] != nil }, id: \.self) { res in
                     (MapView.icon(res) + Text(" +\(totals[res]!)")).font(.callout.bold())
                 }
-                if !reports.isEmpty { Text("🌾 up to \(reports.reduce(0) { $0 + $1.grainImport }) grain if the harvest fails").font(.caption) }
+                if !reports.isEmpty { (MapView.icon(.grain) + Text(" up to \(reports.reduce(0) { $0 + $1.grainImport }) grain if the harvest fails")).font(.caption) }
             }
         }
         .padding(12)

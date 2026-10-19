@@ -354,7 +354,9 @@ struct MapView: View {
             }
         }
         if case .territory(let id)? = selected, let shape = art.territories[id] {
-            context.stroke(t.path(shape.polygon), with: .color(.white), lineWidth: 2.5)
+            let path = t.path(shape.polygon)
+            context.stroke(path, with: .color(.black.opacity(0.6)), lineWidth: 5)
+            context.stroke(path, with: .color(Self.bronze), lineWidth: 2.8)
         }
 
         switch layer {
@@ -376,18 +378,7 @@ struct MapView: View {
             }
         }
 
-        // Names in the board's hand lettering, then armies and fleets.
-        // Info plates step aside for each other and for every army token.
-        var infoPlates: [CGRect] = map.territories.flatMap { territory -> [CGRect] in
-            guard let shape = art.territories[territory.id] else { return [] }
-            let c = t.point(shape.token), k = t.detail
-            let army = (state.armies[territory.id]?.units.total ?? 0) > 0
-            // The people counter sits beside the army, or in its place.
-            let people = army ? CGPoint(x: c.x - 15 * k, y: c.y + 7 * k) : c
-            var spots = [CGRect(x: people.x - 9 * k, y: people.y - 7 * k, width: 18 * k, height: 14 * k)]
-            if army { spots.append(CGRect(x: c.x - 10 * k, y: c.y - 10 * k, width: 20 * k, height: 20 * k)) }
-            return spots
-        }
+        // Names in the board's hand lettering.
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
             let p = t.point(shape.label)
@@ -398,48 +389,17 @@ struct MapView: View {
                             .font(.custom("ChalkboardSE-Bold", size: 6.5 * t.detail))
                             .foregroundStyle(.black.opacity(0.85)),
                            at: .zero)
-            // Zoomed in: grain, people and buildings under the army token (a clear spot even
-            // where the lettering runs sideways), below its troop plate.
-            if t.detail >= 1.3, layer != .resources, layer != .trade {
-                let c = t.point(shape.token)
-                let k = t.detail
-                let army = (state.armies[territory.id]?.units.total ?? 0) > 0
-                let below: CGFloat = army ? 10 * k + (k >= 1.5 ? 10 * k + 10 : 4) + 7 * k : 14 * k
-                drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k, avoiding: &infoPlates)
-            }
-            if layer == .resources {
-                drawResources(&context, territory, at: t.point(shape.token), scale: t.detail)
-            } else if let army = state.armies[territory.id], army.units.total > 0 {
-                let c = t.point(shape.token)
-                let native = !state.isPlayer(army.owner)
-                let r: CGFloat = (native ? 7.5 : 10) * t.detail
-                let led = state.generals.values.contains { $0.location == territory.id }
-                let badge = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
-                context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.8 : 1)))
-                context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 0.9)
-                context.draw(Text("\(army.units.total)\(led ? "★" : "")")
-                                .font(.system(size: (native ? 9.5 : 12) * t.detail, weight: .heavy))
-                                .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
-                             at: c)
-                // Veterans wear chevrons above the token, one per rank.
-                if let engine, engine.rank(of: army) > .green {
-                    let n = engine.rank(of: army).rawValue
-                    for i in 0..<n {
-                        var v = Path()
-                        let y = c.y - r - 2.5 * t.detail - CGFloat(i) * 2.6 * t.detail
-                        v.move(to: CGPoint(x: c.x - 4 * t.detail, y: y + 1.5 * t.detail))
-                        v.addLine(to: CGPoint(x: c.x, y: y - 1 * t.detail))
-                        v.addLine(to: CGPoint(x: c.x + 4 * t.detail, y: y + 1.5 * t.detail))
-                        context.stroke(v, with: .color(.black.opacity(0.6)), style: StrokeStyle(lineWidth: 2.6 * t.detail, lineCap: .round, lineJoin: .round))
-                        context.stroke(v, with: .color(Color(red: 0.98, green: 0.8, blue: 0.3)), style: StrokeStyle(lineWidth: 1.4 * t.detail, lineCap: .round, lineJoin: .round))
-                    }
-                }
-                // Zoomed in, the army's make-up shows under its token.
-                if t.detail >= 1.5 {
-                    drawComposition(&context, army.units, below: CGPoint(x: c.x, y: c.y + r + 2), owner: army.owner, scale: t.detail)
-                }
-            }
-            if layer != .resources, engine != nil { drawBadges(&context, territory.id, at: t.point(shape.token), t) }
+        }
+        // Each territory's plaque under its army token, then the token and its marks; the
+        // selected territory last, so its plaque sits on top.
+        let picked: TerritoryID? = if case .territory(let id)? = selected { id } else { nil }
+        for territory in map.territories.filter({ $0.id != picked }) + map.territories.filter({ $0.id == picked }) {
+            guard let shape = art.territories[territory.id] else { continue }
+            let c = t.point(shape.token)
+            let army = state.armies[territory.id].flatMap { $0.units.total > 0 ? $0 : nil }
+            drawPlaque(&context, territory, at: c, army: layer == .resources ? nil : army, t, emphasized: territory.id == picked)
+            if layer != .resources, let army { drawArmy(&context, army, at: c, in: territory.id, t) }
+            if layer != .resources, engine != nil { drawBadges(&context, territory.id, at: c, t) }
         }
         if let planned { drawPlanned(&context, planned, t) }
         for (sea, label) in art.seas {
@@ -557,36 +517,7 @@ extension MapView {
 
     /// A shield on walled land, and a warning on the player's land that's cut off from supply.
     fileprivate func drawBadges(_ context: inout GraphicsContext, _ id: TerritoryID, at c: CGPoint, _ t: BoardTransform) {
-        let land = state.land[id]
         let k = t.detail
-        let army = (state.armies[id]?.units.total ?? 0) > 0
-        // People: a round counter like the army's, beside it (or in its place).
-        let people = state.population(of: id)
-        if people > 0 {
-            let r = 6.5 * k
-            let p = army ? CGPoint(x: c.x - 15 * k, y: c.y + 7 * k) : c
-            let disc = Path(ellipseIn: CGRect(x: p.x - r * 1.25, y: p.y - r, width: r * 2.5, height: r * 2))
-            context.fill(disc, with: .color(Color(red: 0.98, green: 0.95, blue: 0.86)))
-            context.stroke(disc, with: .color(.black.opacity(0.55)), lineWidth: 0.8)
-            context.draw(Text("\(Image(systemName: "person.fill"))\(people)")
-                            .font(.system(size: 8 * k, weight: .heavy)).foregroundStyle(Color(red: 0.25, green: 0.2, blue: 0.15)),
-                         at: p)
-        }
-        // Roads, walls and harbors always, beside the token; farms, mines and works in progress
-        // too once zoomed in.
-        let always: Set<ProjectKind> = [.road, .walls, .harbor]
-        var built = ProjectKind.allCases.filter { (land?.improvements.contains($0) ?? false) && (k >= 1.3 || always.contains($0)) }
-            .map(Self.projectGlyph)
-        if land?.construction != nil, k >= 1.3 { built.append("🏗") }
-        if !built.isEmpty {
-            let label = context.resolve(Text(built.joined()).font(.system(size: 9 * k)))
-            let size = label.measure(in: CGSize(width: 200, height: 40))
-            let p = CGPoint(x: c.x + (army ? 12 : 9) * k + size.width / 2, y: c.y + 6 * k)
-            context.fill(Path(roundedRect: CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2,
-                                                  width: size.width + 4, height: size.height), cornerRadius: 3 * k),
-                         with: .color(.white.opacity(0.75)))
-            context.draw(label, at: p)
-        }
         if let me = focus, state.owner(of: id) == me, let engine,
            !engine.homeNetwork(of: me, in: state).contains(id) {
             context.draw(Text("⚠️").font(.system(size: 8.5 * k)), at: CGPoint(x: c.x - 10 * k, y: c.y - 10 * k))
@@ -612,27 +543,6 @@ extension MapView {
             context.draw(Text(Image(systemName: GreatWorksList.symbol(m))).font(.system(size: 8 * k, weight: .bold))
                             .foregroundStyle(Color(red: 0.25, green: 0.15, blue: 0.05).opacity(standing != nil ? 1 : 0.6)), at: p)
         }
-    }
-
-    /// "🌾3 + resources" under a territory's token.
-    fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint, scale: CGFloat,
-                                  avoiding placed: inout [CGRect]) {
-        guard let engine else { return }
-        var text = Text("🌾\(engine.territoryYield(.grain, territory.id, state))")
-        for r in ResourcesView.order {
-            if let n = territory.resources[r], n > 0 { text = text + Text(" ") + Self.icon(r) + Text("\(n)") }
-        }
-        text = text.font(.system(size: 9.5 * scale, weight: .bold)).foregroundStyle(.black.opacity(0.85))
-        let resolved = context.resolve(text)
-        let size = resolved.measure(in: CGSize(width: 400, height: 60))
-        // Step down past any plate already drawn here, so neighbours don't stack on each other.
-        var rect = CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2, width: size.width + 4, height: size.height)
-        for _ in 0..<4 where placed.contains(where: { $0.intersects(rect) }) {
-            rect.origin.y += size.height + 2
-        }
-        placed.append(rect)
-        context.fill(Path(roundedRect: rect, cornerRadius: 3 * scale), with: .color(.white.opacity(0.85)))
-        context.draw(resolved, at: CGPoint(x: rect.midX, y: rect.midY))
     }
 
     /// A capture: the new owner's colour floods the land, then settles.
@@ -972,32 +882,130 @@ extension MapView {
         }
     }
 
-    /// Unit icons with counts, on a small plate.
-    fileprivate func drawComposition(_ context: inout GraphicsContext, _ units: UnitCounts, below top: CGPoint,
-                                     owner: CivilizationID, scale: CGFloat) {
-        let types = UnitType.allCases.filter { units[$0] > 0 }
-        guard !types.isEmpty else { return }
-        let icon = 10 * scale, step = 22 * scale
-        let width = CGFloat(types.count) * step + 2
-        let plate = CGRect(x: top.x - width / 2, y: top.y, width: width, height: icon + 4)
-        context.fill(Path(roundedRect: plate, cornerRadius: 3), with: .color(.white.opacity(0.9)))
-        for (i, type) in types.enumerated() {
-            let x = plate.minX + 2 + CGFloat(i) * step
-            let box = CGRect(x: x, y: plate.minY + 2, width: icon, height: icon)
-            context.fill(UnitShape(type: type).path(in: box), with: .color(.black.opacity(0.8)))
-            context.draw(Text("\(units[type])").font(.system(size: 9.5 * scale, weight: .bold)).foregroundStyle(.black),
-                         at: CGPoint(x: box.maxX + 2, y: box.midY), anchor: .leading)
+    /// A resource as an inline icon, drawn in one style and tinted by what it is, readable on
+    /// parchment and on dark wood alike.
+    static func icon(_ r: Resource) -> Text {
+        Text(r.symbolIsSystem ? Image(systemName: r.symbol) : Image(r.symbol)).foregroundStyle(tint(r))
+    }
+
+    static func tint(_ r: Resource) -> Color {
+        switch r {
+        case .grain: Color(red: 0.88, green: 0.68, blue: 0.2)
+        case .copper: Color(red: 0.86, green: 0.48, blue: 0.2)
+        case .tin: Color(red: 0.62, green: 0.68, blue: 0.75)
+        case .iron: Color(red: 0.6, green: 0.5, blue: 0.5)
+        case .horses: Color(red: 0.75, green: 0.52, blue: 0.3)
+        case .timber: Color(red: 0.72, green: 0.5, blue: 0.27)
+        case .gold: Color(red: 0.98, green: 0.78, blue: 0.2)
+        case .wine: Color(red: 0.78, green: 0.25, blue: 0.4)
+        case .luxuries: Color(red: 0.35, green: 0.75, blue: 0.9)
+        case .stone: Color(red: 0.64, green: 0.64, blue: 0.62)
         }
     }
 
-    /// A resource as an inline icon: an emoji, or for the metals a drawn ingot in the metal's
-    /// colour (there are no emoji for copper or tin).
-    static func icon(_ r: Resource) -> Text {
-        switch r {
-        case .copper: Text(Image("copper.ingot")).foregroundStyle(Color(red: 0.78, green: 0.42, blue: 0.16))
-        case .tin: Text(Image("tin.ingot")).foregroundStyle(Color(red: 0.55, green: 0.6, blue: 0.66))
-        case .iron: Text(Image("iron.bloom")).foregroundStyle(Color(red: 0.36, green: 0.3, blue: 0.3))
-        default: Text(glyph(r))
+    static let bronze = Color(red: 0.84, green: 0.63, blue: 0.27)
+    static let wood = Color(red: 0.17, green: 0.11, blue: 0.07)
+    static let cream = Color(red: 0.98, green: 0.93, blue: 0.82)
+
+    /// One wood-and-bronze plaque per territory, pinned under its army token: people, then
+    /// (zoomed in, on the resources layer, or when selected) grain, resources and every
+    /// building, and the army's make-up. Zoomed out it shows people and the works that matter
+    /// most: roads, walls and harbors.
+    fileprivate func drawPlaque(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint, army: Army?,
+                                _ t: BoardTransform, emphasized: Bool) {
+        let id = territory.id
+        // Plaques grow with the zoom only so far, so close up they don't bury the land.
+        let k = min(t.detail, 1.45) * (emphasized ? 1.2 : 1)
+        let detailed = t.detail >= 1.3 || layer == .resources || emphasized
+        let land = state.land[id]
+        var items: [Text] = []
+        let people = state.population(of: id)
+        if people > 0, layer != .resources {
+            items.append(Text(Image(systemName: "person.fill")).foregroundStyle(Self.cream.opacity(0.75)) + Text("\(people)"))
+        }
+        if detailed {
+            let grain = engine?.territoryYield(.grain, id, state) ?? territory.grain
+            items.append(Self.icon(.grain) + Text("\(grain)"))
+            for r in ResourcesView.order {
+                if let n = territory.resources[r], n > 0 { items.append(Self.icon(r) + Text("\(n)")) }
+            }
+        }
+        let always: Set<ProjectKind> = [.road, .walls, .harbor]
+        let built = ProjectKind.allCases.filter { (land?.improvements.contains($0) ?? false) && (detailed || always.contains($0)) }
+        var works = built.map { Text(Image(systemName: CommandBar.projectSymbol($0))) }
+        if detailed, land?.construction != nil { works.append(Text(Image(systemName: "hammer.fill")).foregroundStyle(.orange)) }
+        if !works.isEmpty { items.append(works.dropFirst().reduce(works[0]) { $0 + Text(" ") + $1 }.foregroundStyle(Self.bronze)) }
+        let units = t.detail >= 1.5 || emphasized ? army?.units : nil
+        let types = UnitType.allCases.filter { (units?[$0] ?? 0) > 0 }
+        guard !items.isEmpty || !types.isEmpty else { return }
+
+        let line = items.isEmpty ? nil : context.resolve(
+            items.dropFirst().reduce(items[0]) { $0 + Text("  ") + $1 }
+                .font(.system(size: 9 * k, weight: .heavy, design: .rounded))
+                .foregroundStyle(Self.cream))
+        let lineSize = line?.measure(in: CGSize(width: 600, height: 80)) ?? .zero
+        let step = 21 * k, unitRow: CGFloat = types.isEmpty ? 0 : 10 * k
+        let stripe: CGFloat = 2.5 * k
+        let pad: CGFloat = 2.5 * k
+        let gap: CGFloat = line != nil && !types.isEmpty ? 2.5 * k : 0
+        // Hung from the army token, which overlaps its top edge, or centred where there's none.
+        let r: CGFloat = 10 * t.detail
+        let tuck: CGFloat = army != nil ? 3 * k : 0
+        let width = max(lineSize.width, CGFloat(types.count) * step) + 9 * k + stripe
+        let height = tuck + pad + lineSize.height + gap + unitRow + pad
+        let top = army != nil ? c.y + r - tuck : c.y - height / 2
+        let rect = CGRect(x: c.x - width / 2, y: top, width: width, height: height)
+        let plate = Path(roundedRect: rect, cornerRadius: 4 * k)
+        context.fill(plate, with: .color(Self.wood.opacity(0.95)))
+        if let owner = state.owner(of: id) {
+            var inner = context
+            inner.clip(to: plate)
+            inner.fill(Path(CGRect(x: rect.minX, y: rect.minY, width: stripe, height: rect.height)), with: .color(Palette.color(owner, state)))
+        }
+        context.stroke(plate, with: .color(Self.bronze.opacity(emphasized ? 1 : 0.85)), lineWidth: (emphasized ? 1.6 : 0.9) * k)
+        let midX = rect.midX + stripe / 2
+        var y = rect.minY + tuck + pad
+        if let line {
+            context.draw(line, at: CGPoint(x: midX, y: y + lineSize.height / 2))
+            y += lineSize.height + gap
+        }
+        // The army's make-up, as unit shapes with counts.
+        let rowWidth = CGFloat(types.count) * step
+        for (i, type) in types.enumerated() {
+            let x = midX - rowWidth / 2 + CGFloat(i) * step
+            let box = CGRect(x: x, y: y, width: 9 * k, height: 9 * k)
+            context.fill(UnitShape(type: type).path(in: box), with: .color(Self.cream.opacity(0.85)))
+            context.draw(Text("\(units![type])").font(.system(size: 9 * k, weight: .heavy, design: .rounded)).foregroundStyle(Self.cream),
+                         at: CGPoint(x: box.maxX + 2 * k, y: box.midY), anchor: .leading)
+        }
+    }
+
+    /// The army token: a disc in its owner's colour with a bronze rim, its size, a star for a
+    /// general, and chevrons for veterans.
+    fileprivate func drawArmy(_ context: inout GraphicsContext, _ army: Army, at c: CGPoint, in id: TerritoryID, _ t: BoardTransform) {
+        let native = !state.isPlayer(army.owner)
+        let r: CGFloat = (native ? 7.5 : 10) * t.detail
+        let led = state.generals.values.contains { $0.location == id }
+        let badge = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
+        context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.85 : 1)))
+        context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
+        context.stroke(badge, with: .color(native ? Color(white: 0.75) : Self.bronze), lineWidth: 1.2 * t.detail)
+        context.draw(Text("\(army.units.total)\(led ? "★" : "")")
+                        .font(.system(size: (native ? 9.5 : 12) * t.detail, weight: .heavy, design: .rounded))
+                        .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
+                     at: c)
+        // Veterans wear chevrons above the token, one per rank.
+        if let engine, engine.rank(of: army) > .green {
+            let n = engine.rank(of: army).rawValue
+            for i in 0..<n {
+                var v = Path()
+                let y = c.y - r - 2.5 * t.detail - CGFloat(i) * 2.6 * t.detail
+                v.move(to: CGPoint(x: c.x - 4 * t.detail, y: y + 1.5 * t.detail))
+                v.addLine(to: CGPoint(x: c.x, y: y - 1 * t.detail))
+                v.addLine(to: CGPoint(x: c.x + 4 * t.detail, y: y + 1.5 * t.detail))
+                context.stroke(v, with: .color(.black.opacity(0.6)), style: StrokeStyle(lineWidth: 2.6 * t.detail, lineCap: .round, lineJoin: .round))
+                context.stroke(v, with: .color(Color(red: 0.98, green: 0.8, blue: 0.3)), style: StrokeStyle(lineWidth: 1.4 * t.detail, lineCap: .round, lineJoin: .round))
+            }
         }
     }
 
@@ -1013,30 +1021,6 @@ extension MapView {
         case .wine: "🍷"
         case .luxuries: "💎"
         case .stone: "🪨"
-        }
-    }
-
-    /// Grain and resources on each territory, as on the board's tokens, and what's been built.
-    fileprivate func drawResources(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint, scale: CGFloat) {
-        var parts = [Text("🌾\(territory.grain)").foregroundStyle(.black)]
-        let metals: [Resource: Color] = [.copper: Color(red: 0.7, green: 0.35, blue: 0.1), .tin: Color(white: 0.35),
-                                         .iron: Color(red: 0.45, green: 0.2, blue: 0.2)]
-        for resource in Resource.allCases where resource != .grain {
-            if let n = territory.resources[resource], n > 0 {
-                parts.append(Text(" ") + Self.icon(resource) + Text("\(n)").foregroundStyle(metals[resource] ?? .black))
-            }
-        }
-        let label = context.resolve(parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 8.5 * scale, weight: .bold)))
-        let measured = label.measure(in: CGSize(width: 400, height: 60))
-        let size = CGSize(width: measured.width + 6 * scale, height: measured.height + 2 * scale)
-        context.fill(Path(roundedRect: CGRect(x: c.x - size.width / 2, y: c.y - size.height / 2, width: size.width, height: size.height),
-                          cornerRadius: 4 * scale), with: .color(.white.opacity(0.85)))
-        context.draw(label, at: c)
-        let land = state.land[territory.id]
-        let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph)
-            + (land?.construction == nil ? [] : ["🏗"])
-        if !built.isEmpty {
-            context.draw(Text(built.joined()).font(.system(size: 9 * scale)), at: CGPoint(x: c.x, y: c.y + size.height / 2 + 7 * scale))
         }
     }
 
@@ -1126,4 +1110,24 @@ struct VeteranBadge: View {
         .padding(.horizontal, 5).padding(.vertical, 1)
         .background(Capsule().fill(Color(red: 0.98, green: 0.85, blue: 0.45).opacity(0.5)))
     }
+}
+
+extension Resource {
+    /// The drawn icon: the game's own symbols where SF Symbols has nothing fitting.
+    var symbol: String {
+        switch self {
+        case .grain: "wheat.ear"
+        case .copper: "copper.ingot"
+        case .tin: "tin.ingot"
+        case .iron: "iron.bloom"
+        case .horses: "figure.equestrian.sports"
+        case .timber: "log.pile"
+        case .gold: "coin.stamped"
+        case .wine: "amphora"
+        case .luxuries: "diamond.fill"
+        case .stone: "stone.block"
+        }
+    }
+
+    var symbolIsSystem: Bool { self == .horses || self == .luxuries }
 }

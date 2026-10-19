@@ -738,8 +738,11 @@ struct GameScreen: View {
         case .threats: "Red: more hostile troops can reach it next turn than defend it · orange: threatened but held · ⚔︎ attackers vs garrison"
         case .supply: "Supply lines from your capital ♛ · orange/red: distance costs extra grain · red land: cut off"
         case .trade: "Trade routes between empires at peace · ▸ goods each partner receives · dots: sea straits, colored by holder"
-        case .resources: "🌾 grain · Cu copper · Sn tin · Fe iron · 🐎 horses · 🪵 timber · 🪨 stone · 🪙 gold · 🍷 wine · 💎 luxuries"
-            + " · built: 🛤 road 🧱 walls 🌱 farm ⛏ mine ⚓ harbor 🏗 underway"
+        case .resources: nil
+        }
+        if layer == .resources {
+            ([Resource.grain] + ResourcesView.order).reduce(Text("")) { t, r in t + MapView.icon(r) + Text(" \(r.rawValue)   ") }
+                .font(.caption2).foregroundStyle(.white)
         }
         if let text {
             Text(text).font(.caption2).foregroundStyle(.white)

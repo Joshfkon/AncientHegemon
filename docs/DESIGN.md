@@ -1422,3 +1422,17 @@ goals: everything here follows from how real Bronze Age empires held together or
 - It shows as 🏺 on the map and as a storehouse by the fields in the town view. The AI builds
   one at its capital when its store is full and the harvest still has grain to spare.
 - Balance (80 games): unchanged within a game or two. Rules version 17; 229 tests.
+
+### Map plaques (Josh: "the numbers and resources on the game map don't match the higher quality style… more readable? and more clearly for the territory in question")
+
+- Each territory's numbers now sit on one dark-wood plaque with a bronze rim, hung from its
+  army token (or centred where there's none), with the owner's colour as a stripe down its
+  side. It replaces the separate people counter, buildings label and white info plates, which
+  stepped aside for each other and drifted toward neighbours.
+- Detail grows with zoom: zoomed out, people plus roads, walls and harbors; zoomed in (or on
+  the Resources layer), grain, every resource and every building; closer still, or when
+  selected, the army's make-up. The plaque stops growing past a moderate zoom. The selected
+  territory gets a bronze outline and a larger plaque drawn on top.
+- Resources use one drawn icon set (new symbols for grain, timber, stone, gold and wine,
+  alongside the metal ingots), tinted per resource, in the HUD, command bar, town view, trade
+  view and the Resources legend as well as on the map.
