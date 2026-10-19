@@ -194,6 +194,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let monuments: MonumentRules
     public let patronage: PatronageRules
     public let decisions: DecisionRules
+    public let sight: SightRules
     public let throneRoom: ThroneRoomRules
     public let veterans: VeteranRules
     public let supply: SupplyRules

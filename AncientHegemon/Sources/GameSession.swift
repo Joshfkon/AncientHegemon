@@ -41,6 +41,7 @@ final class GameSession {
     private(set) var state: GameState {
         didSet {
             refreshEconomy()
+            sight = human.map { engine.sight(of: $0, in: state) }
             // Borders and prestige are recorded once a round, whoever's move began it.
             if started, state.turn != recordedTurn || (state.winner != nil && oldValue.winner == nil) {
                 recordedTurn = state.turn
@@ -48,6 +49,22 @@ final class GameSession {
             }
         }
     }
+    /// What the player can see clearly (nil when watching: everything).
+    private(set) var sight: Set<TerritoryID>?
+
+    func sees(_ t: TerritoryID) -> Bool { sight?.contains(t) ?? true }
+
+    /// Whether a rival's move happened where the player could see it (captures are news everywhere).
+    private func visible(_ mark: MapMark) -> Bool {
+        switch mark {
+        case let .march(_, from, to, _): sees(from) || sees(to)
+        case let .landing(_, _, to, _): sees(to)
+        case let .battle(at, _, _): sees(at)
+        case let .event(t, _), let .raised(t, _, _, _): sees(t)
+        case .captured, .gain: true
+        }
+    }
+
     /// The round last recorded in `history`.
     private var recordedTurn = 0
     /// The player's economy as it stands (grain, gold, trade, resources), kept current.
@@ -94,6 +111,47 @@ final class GameSession {
     var plannedOdds: Double?
     /// A short confirmation of the player's last order ("Raised 1 infantry in Egypt").
     var toast: (text: String, id: Int, bad: Bool)?
+    /// The state as the player ended their turn, to show what they gained by their next.
+    private var turnEnded: GameState?
+
+    /// Rising "+1 person", "+6 gold" and new buildings on the map as the player's turn begins.
+    private func noteGains(since old: GameState) {
+        guard let human, let now = state.civs[human], let then = old.civs[human],
+              let seat = engine.seat(of: human, in: state) else { return }
+        var gains: [MapMark] = []
+        if now.gold > then.gold { gains.append(.gain(seat, .gold(now.gold - then.gold))) }
+        if now.granary > then.granary { gains.append(.gain(seat, .grain(now.granary - then.granary))) }
+        for t in state.territories(of: human).sorted() where old.owner(of: t) == human {
+            let grown = state.population(of: t) - old.population(of: t)
+            if grown > 0 { gains.append(.gain(t, .people(grown))) }
+            let built = (state.land[t]?.improvements ?? []).subtracting(old.land[t]?.improvements ?? [])
+            for kind in ProjectKind.allCases where built.contains(kind) { gains.append(.gain(t, .built(kind))) }
+        }
+        pendingGains = gains
+    }
+
+    /// Gains wait until the news is read, so they rise where the player can see them.
+    private var pendingGains: [MapMark] = []
+    /// Where the map should look as the player's gains rise (bumped each time).
+    private(set) var gainsAt: (territory: TerritoryID, id: Int)?
+
+    func releaseGains() {
+        guard !pendingGains.isEmpty, let human, let seat = engine.seat(of: human, in: state),
+              !showReport, state.civs[human]?.decision == nil, crisis == nil else { return }
+        addGains(pendingGains)
+        pendingGains = []
+        gainsAt = (seat, (gainsAt?.id ?? 0) + 1)
+        SoundBoard.shared.play(.coins, volume: 0.35)
+    }
+
+    /// Adds gains to the map, a moment apart so they read one by one.
+    private func addGains(_ gains: [MapMark]) {
+        for (i, gain) in gains.enumerated() {
+            marks.append(gain)
+            markTimes.append(.now.addingTimeInterval(0.25 * Double(i)))
+        }
+    }
+
     /// Generals the player bought off in a succession crisis, so a later revolt can say so.
     var bribed: Set<GeneralID> = []
     /// A rival's answer to the player's latest proposal, shown on its diplomacy card for the turn.
@@ -218,6 +276,7 @@ final class GameSession {
             }
             record(events, round: before.turn, before: before, after: s)
             state = s
+            if case .endTurn = command { turnEnded = before }
             // The player's own marches glide too.
             if case .endTurn = command {} else {
                 for mark in MapMark.from(events, before: before, after: s) {
@@ -233,6 +292,7 @@ final class GameSession {
             }
             autosave()
             switch command {
+            case let .move(_, _, units, _): SoundBoard.shared.play(units.cavalry > 0 ? .gallop : .drum, volume: 0.45)
             case .recruit, .buildShips, .build, .appointGeneral, .honorGeneral: SoundBoard.shared.play(.coins, volume: 0.6)
             default: break
             }
@@ -247,6 +307,8 @@ final class GameSession {
                     let name = engine.map.territory(t)?.name ?? t
                     toast = ("\(name) is yours" + (warriors > 0 ? " · \(warriors) warriors join" : ""), (toast?.id ?? 0) + 1, false)
                     Feedback.outcome(true)
+                case let .captured(civ, t, _) where civ == human:
+                    addGains([.gain(t, .prestige(engine.rules.victory.prestige.perTerritory))])
                 case let .tribeRefused(_, t, _):
                     toast = ("\(engine.map.territory(t)?.name ?? t) refuses", (toast?.id ?? 0) + 1, true)
                     Feedback.outcome(false)
@@ -301,10 +363,13 @@ final class GameSession {
             await playOneAITurn()
             if !skipping { try? await Task.sleep(for: .seconds(pace)) }
         }
+        if let old = turnEnded { noteGains(since: old) }
+        turnEnded = nil
         // Back to the player: sum up what happened since they ended their turn.
         report = log.filter { $0.id > reportFrom }.sorted { $0.id < $1.id }
         // Only interrupt for news that touches the player; the rest waits behind the News button.
         showReport = human != nil && report.contains { $0.mine == true } && !isOver
+        if !showReport { releaseGains() }
         autosave()
     }
 
@@ -321,7 +386,7 @@ final class GameSession {
         state = after
 
         // Reveal this rival's moves one at a time, so they can be followed on the map.
-        for mark in MapMark.from(events, before: start, after: after) {
+        for mark in MapMark.from(events, before: start, after: after) where visible(mark) {
             marks.append(mark)
             markTimes.append(.now)
             if human != nil, !skipping {

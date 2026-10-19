@@ -74,16 +74,25 @@ struct CommandBar: View {
             }
             Text("\(owner.map { Palette.name($0, state) } ?? "Unclaimed") · \(t.terrain.rawValue)")
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                Label("\(state.population(of: id))", systemImage: "person.2.fill")
-                (MapView.icon(.grain) + Text("\(engine.territoryYield(.grain, id, state))"))
-                if let army, army.units.total > 0 {
-                    UnitRow(units: army.units, size: 12)
+            if session.sees(id) {
+                HStack(spacing: 8) {
+                    Label("\(state.population(of: id))", systemImage: "person.2.fill")
+                    (MapView.icon(.grain) + Text("\(engine.territoryYield(.grain, id, state))"))
+                    if let army, army.units.total > 0 {
+                        UnitRow(units: army.units, size: 12)
+                    }
                 }
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+            } else {
+                Label(army.map { engine.rumoured($0.units) } == true ? "Beyond your sight: rumour tells of a great host" : "Beyond your sight",
+                      systemImage: "eye.slash")
+                    .font(.caption.bold()).foregroundStyle(.white)
+                Text("No word of its people or armies. March or sail nearer, ally with a neighbour of it, or trade with its owner.")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.65))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .font(.caption.bold())
-            .foregroundStyle(.white)
-            if let army, army.units.total > 0, engine.rank(of: army) > .green {
+            if session.sees(id), let army, army.units.total > 0, engine.rank(of: army) > .green {
                 VeteranBadge(rank: engine.rank(of: army))
             }
             Text(hint(id)).font(.caption2).foregroundStyle(.white.opacity(0.65))
@@ -205,8 +214,9 @@ struct CommandBar: View {
                     ForEach(seas, id: \.self) { sea in
                         let mine = state.fleet(of: human, in: sea)?.ships ?? 0
                         Tile(symbol: "sailboat.fill", title: "Ship",
-                             detail: "In the \(engine.map.sea(sea)?.name ?? sea)" + (mine > 0 ? " (\(mine) there)" : ""),
-                             cost: Text("\(engine.rules.ships.cost) gold · 1 ") + MapView.icon(.timber),
+                             detail: "+1 ship carrying \(engine.shipCapacity(human, state)) troops, in the \(engine.map.sea(sea)?.name ?? sea)" + (mine > 0 ? " (\(mine) there)" : ""),
+                             cost: Text("\(engine.rules.ships.cost) gold · 1 ") + MapView.icon(.timber) + Text(" · \(engine.rules.ships.upkeep) ")
+                                + MapView.icon(.grain) + Text("/turn"),
                              enabled: allowance.left > 0 && cs.gold >= engine.rules.ships.cost) {
                             if session.order(.buildShips(territory: id, sea: sea, count: 1)) { SoundBoard.shared.play(.coins, volume: 0.6) }
                         }
@@ -217,8 +227,8 @@ struct CommandBar: View {
         if let army {
             section("Command") {
                 if home, state.general(of: human, at: id) == nil {
-                    Tile(symbol: "star.fill", title: "General", detail: "Appoint one to lead this army",
-                         cost: Text("\(engine.rules.government.appointCost) gold"), enabled: cs.gold >= engine.rules.government.appointCost) {
+                    Tile(symbol: "star.fill", title: "General", detail: "Leads this army: better battle plans, and renown as he wins",
+                         cost: Text("\(engine.rules.government.appointCost) gold · \(engine.rules.government.generalPay) gold/turn"), enabled: cs.gold >= engine.rules.government.appointCost) {
                         session.order(.appointGeneral(territory: id))
                     }
                 }
@@ -266,7 +276,7 @@ struct CommandBar: View {
             if warriors == 0 {
                 Tile(symbol: "flag.fill", title: "Empty land", detail: "March a single unit in to claim it", cost: Text(""), enabled: false) {}
             } else if engine.tribe(at: id, for: human, in: state) == nil {
-                Tile(symbol: "person.3.fill", title: "\(warriors) warriors", detail: "Your land must border theirs to send envoys",
+                Tile(symbol: "person.3.fill", title: session.sees(id) ? "\(warriors) warriors" : "A tribe", detail: "Your land must border theirs to send envoys",
                      cost: Text(""), enabled: false) {}
             } else if state.parleyed.contains(id) {
                 Tile(symbol: "hourglass", title: "Spoken with", detail: "Try again next turn, or attack", cost: Text(""), enabled: false) {}
@@ -378,11 +388,17 @@ struct CommandBar: View {
             if case let .raised(t, civ, unit, count) = m, t == id, civ == human, unit == type { return n + count }
             return n
         }
-        var cost = Text("\(stats.cost) gold · 1 👥")
+        var cost = Text("\(stats.cost) gold · 1 ") + Text(Image(systemName: "person.fill"))
         if let r = stats.requires { cost = cost + Text(" · 1 ") + MapView.icon(r) }
+        cost = cost + Text(" · \(stats.upkeep) ") + MapView.icon(.grain) + Text("/turn")
+        let role = switch type {
+        case .infantry: "strong against cavalry"
+        case .archers: "strong against infantry"
+        case .cavalry: "strong against archers, fast"
+        }
         let detail: String = if let allowance, let r = stats.requires {
-            blocked ? "No \(r.rawValue): tap to see where" : "\(allowance.left) more this turn"
-        } else { "Eats 1 grain a turn" }
+            blocked ? "No \(r.rawValue): tap to see where" : "+1 soldier, \(role) · \(allowance.left) more this turn"
+        } else { "+1 soldier, \(role)" }
         return Tile(unit: type, title: type.rawValue.capitalized, detail: detail, cost: cost,
                     enabled: blocked || (cs.gold >= stats.cost && state.population(of: id) > engine.rules.economy.minPopulation),
                     badge: raised > 0 ? "+\(raised)" : nil) {

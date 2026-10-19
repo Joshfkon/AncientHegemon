@@ -23,7 +23,14 @@ struct QuickLookCard: View {
                 Spacer()
                 Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
             }
-            Text("\(t.terrain.rawValue.capitalized) · 🌾 \(engine.territoryYield(.grain, id, state)) grain · 👥 \(state.population(of: id)) people")
+            if !session.sees(id) {
+                (Text("\(t.terrain.rawValue.capitalized) · ") + MapView.icon(.grain) + Text(" \(engine.territoryYield(.grain, id, state)) grain"))
+                    .font(.caption)
+                Label("Beyond your sight: no word of its people, armies or works", systemImage: "eye.slash")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+            (Text("\(t.terrain.rawValue.capitalized) · ") + MapView.icon(.grain) + Text(" \(engine.territoryYield(.grain, id, state)) grain · ")
+                + Text(Image(systemName: "person.fill")) + Text(" \(state.population(of: id)) people"))
                 .font(.caption)
             if let army = state.armies[id], army.units.total > 0 {
                 HStack(spacing: 6) {
@@ -42,6 +49,7 @@ struct QuickLookCard: View {
                 Text((built.map(projectName) + (land?.construction.map { ["building \(projectName($0.kind).lowercased())"] } ?? []))
                         .joined(separator: " · ") + (walls ? " (+\(engine.fortification(at: id, state))% defense)" : ""))
                     .font(.caption)
+            }
             }
             if let human = session.human {
                 if owner == human {

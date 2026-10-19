@@ -12,7 +12,7 @@ struct PatronagePicker: View {
         if let human = session.human, let cs = state.civs[human] {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Patronage").font(.headline)
-                Text("Pay \(engine.rules.patronage.gold) gold a turn to masters of one craft, and that field learns much faster. Stops by itself if the treasury runs dry.")
+                Text("\(engine.rules.patronage.gold) gold a turn → +\(engine.rules.patronage.experience) knowledge a turn in the field you fund. Stops by itself if the treasury runs dry.")
                     .font(.caption).foregroundStyle(.secondary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -80,19 +80,26 @@ struct DecisionCard: View {
 
     var body: some View {
         let (icon, title, text, yes, no) = words
+        let (gain, loss) = consequences
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: icon).font(.title2).foregroundStyle(Bronze.gradient)
                 CardTitle(text: title)
             }
             Text(text).font(.callout).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Button(no) { answer(false) }
-                    .font(.callout.bold()).foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 14).padding(.vertical, 6)
-                    .overlay(Capsule().stroke(.white.opacity(0.4)))
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Button(no) { answer(false) }
+                        .font(.callout.bold()).foregroundStyle(.white.opacity(0.85))
+                        .padding(.horizontal, 14).padding(.vertical, 6)
+                        .overlay(Capsule().stroke(.white.opacity(0.4)))
+                    Text(loss).font(.caption2.bold()).foregroundStyle(.white.opacity(0.7))
+                }
                 Spacer()
-                Button(yes) { answer(true) }.buttonStyle(BronzeButtonStyle())
+                VStack(alignment: .trailing, spacing: 3) {
+                    Button(yes) { answer(true) }.buttonStyle(BronzeButtonStyle())
+                    Text(gain).font(.caption2.bold()).foregroundStyle(Bronze.gradient)
+                }
             }
         }
         .padding(16)
@@ -103,6 +110,19 @@ struct DecisionCard: View {
     private func answer(_ accept: Bool) {
         if session.order(.decide(accept: accept)) {
             SoundBoard.shared.play(accept ? .coins : .click, volume: 0.6)
+        }
+    }
+
+    /// What each answer costs and brings, spelled out under its button.
+    private var consequences: (yes: String, no: String) {
+        let d = engine.rules.decisions
+        switch kind {
+        case let .famine(_, grain):
+            return ("−\(grain) grain · +\(d.famineLegitimacy) legitimacy", "−\(d.famineLegitimacy) legitimacy · −1 person there")
+        case let .honours(_, gold):
+            return ("−\(gold) gold · +\(engine.rules.government.honorLoyalty) loyalty", "−\(d.honoursSnubLoyalty) loyalty")
+        case let .mercenaries(warriors, gold):
+            return ("−\(gold) gold · +\(warriors) blooded infantry", "Nothing lost")
         }
     }
 

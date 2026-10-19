@@ -184,17 +184,22 @@ struct DiplomacyView: View {
     }
 
     @ViewBuilder private func action(_ human: CivilizationID, _ other: CivilizationID) -> some View {
-        if state.atPeace(human, other) {
-            Button("Declare war") { warOn = other }
-                .buttonStyle(.bordered).tint(.red).controlSize(.small).fixedSize()
-        } else if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
-            Button("Accept peace") { session.order(.acceptPeace(from: other)) }
-                .buttonStyle(.borderedProminent).tint(.green).controlSize(.small).fixedSize()
-        } else if state.peaceOffers.contains(PeaceOffer(from: human, to: other)) {
-            Text("Peace offered").font(.caption).foregroundStyle(.secondary)
-        } else {
-            Button("Offer peace") { session.order(.offerPeace(to: other)) }
-                .buttonStyle(.bordered).controlSize(.small).fixedSize()
+        VStack(alignment: .trailing, spacing: 2) {
+            if state.atPeace(human, other) {
+                Button("Declare war") { warOn = other }
+                    .buttonStyle(.bordered).tint(.red).controlSize(.small).fixedSize()
+                Text("−\(-engine.rules.government.legitimacy.brokePeace) legitimacy, ends trade").font(.caption2).foregroundStyle(.secondary)
+            } else if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
+                Button("Accept peace") { session.order(.acceptPeace(from: other)) }
+                    .buttonStyle(.borderedProminent).tint(.green).controlSize(.small).fixedSize()
+                Text("Free · trade opens, merchants see their capital").font(.caption2).foregroundStyle(.secondary)
+            } else if state.peaceOffers.contains(PeaceOffer(from: human, to: other)) {
+                Text("Peace offered").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Button("Offer peace") { session.order(.offerPeace(to: other)) }
+                    .buttonStyle(.bordered).controlSize(.small).fixedSize()
+                Text("Free · if they accept, trade opens").font(.caption2).foregroundStyle(.secondary)
+            }
         }
     }
 

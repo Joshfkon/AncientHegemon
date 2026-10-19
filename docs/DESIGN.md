@@ -1447,3 +1447,34 @@ goals: everything here follows from how real Bronze Age empires held together or
   …"), war drums, the seized land flashes and the map turns to it. If you had paid him off,
   it says "Your gold bought only a season."
 - Debug launch arguments: `-demoCrisis YES`, `-demoRebellion YES`.
+
+### Feel and clarity, Polytopia-style (Josh: "more physical feedback… one clear cost and payoff per decision")
+
+- **Armies move bodily.** A moved army's own token (bronze rim, count) marches along a curved
+  path with a step bob and a shadow; its token appears at the destination only when it arrives,
+  with a ring in its colour. Marching sounds a drum, or hoofbeats with cavalry.
+- **Captures burst**: bronze sparks and a ring from the token, on top of the colour sweep, and
+  "+N prestige" rises from land you take.
+- **Gains rise from the land** as your turn begins: "+6 gold" and "+2 grain" at the capital,
+  "+1 person" where people grew, new buildings where they were finished. They wait until the
+  news, any dilemma and any succession crisis are dealt with, then the map turns to the capital
+  and they rise one after another, fanned out side by side, with a coin sound.
+- **Every choice shows its cost and payoff before you tap**: recruits ("+1 soldier, strong
+  against cavalry"; gold, a person, grain a turn), ships (troops carried; gold, timber, grain a
+  turn), generals (gold, and pay a turn), buildings (corrected walls figure), patronage ("+12
+  knowledge a turn"), diplomacy (declaring war: −legitimacy, ends trade; peace: free, opens
+  trade), and the court's dilemmas (each answer's gains and losses under its button). Battle
+  odds stay hidden.
+
+### Limited sight (Josh: "not quite fog of war… you shouldn't see everything across the map")
+
+- The lie of the land and who holds it are common knowledge. Armies, people and works are seen
+  only in your own land and what borders it, where your armies stand and what borders them, on
+  coasts of seas your fleets sail, through your allies' eyes, and in the capitals of your trade
+  partners (merchants talk). `Engine.sight(of:in:)`.
+- Beyond sight the land is hazed; its plaque, army and buildings are hidden (resources still
+  show on the Resources layer). A host of 8 or more (`sight.rumouredArmy`) shows as a dashed
+  "?" token: rumour of a great army, not its size. Rival fleets on unwatched seas are hidden.
+  Rivals' marches, battles and raises out of sight aren't drawn; captures still are (news
+  travels). The territory panel and quick look say "Beyond your sight" and how to see further.
+- The AI still sees everything (a known simplification). Rules version 18; 234 tests.

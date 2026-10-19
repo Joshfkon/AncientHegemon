@@ -121,6 +121,10 @@ struct MapView: View {
     var spotlight: Set<TerritoryID> = []
     /// Territories that just changed hands: a sweep of the new owner's colour.
     var flashes: [TerritoryID: Date] = [:]
+    /// What the player sees clearly; elsewhere armies, people and works are hidden. Nil: all.
+    var sight: Set<TerritoryID>?
+
+    private func seen(_ t: TerritoryID) -> Bool { sight?.contains(t) ?? true }
     @State private var viewSize: CGSize = .zero
     private let art = BoardArt.shared
 
@@ -306,6 +310,14 @@ struct MapView: View {
             layer.fill(board, with: .tiledImage(Self.paper, origin: t.point([f.minX, f.minY]), scale: 0.5))
         }
 
+        // Beyond sight: a pale haze, as on maps drawn from travellers' tales.
+        if sight != nil {
+            for territory in map.territories where !seen(territory.id) {
+                guard let shape = art.territories[territory.id] else { continue }
+                context.fill(t.path(shape.polygon), with: .color(Color(red: 0.93, green: 0.89, blue: 0.78).opacity(0.42)))
+            }
+        }
+
         // Rivers and peaks, as painted.
         for river in art.rivers {
             var path = Path()
@@ -393,12 +405,28 @@ struct MapView: View {
         // Each territory's plaque under its army token, then the token and its marks; the
         // selected territory last, so its plaque sits on top.
         let picked: TerritoryID? = if case .territory(let id)? = selected { id } else { nil }
+        // Armies still on the road: their token appears where they arrive only once they get there.
+        var arriving = Set<TerritoryID>()
+        for (i, mark) in marks.enumerated() where i < markTimes.count && now.timeIntervalSince(markTimes[i]) < 0.6 {
+            switch mark {
+            case let .march(_, _, to, _), let .landing(_, _, to, _): arriving.insert(to)
+            default: break
+            }
+        }
         for territory in map.territories.filter({ $0.id != picked }) + map.territories.filter({ $0.id == picked }) {
             guard let shape = art.territories[territory.id] else { continue }
             let c = t.point(shape.token)
             let army = state.armies[territory.id].flatMap { $0.units.total > 0 ? $0 : nil }
-            drawPlaque(&context, territory, at: c, army: layer == .resources ? nil : army, t, emphasized: territory.id == picked)
-            if layer != .resources, let army { drawArmy(&context, army, at: c, in: territory.id, t) }
+            let shown = seen(territory.id) || army?.owner == focus
+            drawPlaque(&context, territory, at: c, army: layer == .resources || !shown ? nil : army, t,
+                       emphasized: territory.id == picked, hidden: !seen(territory.id))
+            if layer != .resources, let army, !arriving.contains(territory.id) {
+                if seen(territory.id) || army.owner == focus {
+                    drawArmy(&context, army, at: c, in: territory.id, t)
+                } else if let engine, engine.rumoured(army.units) {
+                    drawRumour(&context, army, at: c, t)
+                }
+            }
             if layer != .resources, engine != nil { drawBadges(&context, territory.id, at: c, t) }
         }
         if let planned { drawPlanned(&context, planned, t) }
@@ -421,7 +449,9 @@ struct MapView: View {
                                 .foregroundStyle(.white.opacity(selectedHere ? 0.95 : 0.6)),
                              at: CGPoint(x: p.x, y: p.y - 9 * t.detail))
             }
-            for (i, fleet) in state.fleets.filter({ $0.sea == sea }).enumerated() {
+            // Fleets are seen on seas that wash your sight, and your own everywhere.
+            let watched = sight == nil || map.territories.contains { $0.seas.contains(sea) && seen($0.id) }
+            for (i, fleet) in state.fleets.filter({ $0.sea == sea && (watched || $0.owner == focus) }).enumerated() {
                 let label = context.resolve(Text("⛵\(fleet.ships)\(fleet.cargo.total > 0 ? " · \(fleet.cargo.total) aboard" : "")")
                                 .font(.system(size: 9 * t.detail, weight: .bold)).foregroundStyle(.white))
                 let size = label.measure(in: CGSize(width: 300, height: 40))
@@ -558,6 +588,24 @@ extension MapView {
                 layer.clip(to: path)
                 layer.stroke(path, with: .color(.white.opacity(1 - k)), lineWidth: (4 + 18 * k) * t.detail)
             }
+            // A burst of bronze sparks from the token.
+            if e < 0.9 {
+                let c = t.point(shape.token)
+                let b = e / 0.9
+                let eased = 1 - (1 - b) * (1 - b)
+                for i in 0..<14 {
+                    let a = Double(i) / 14 * 2 * .pi + 0.2
+                    let inner = (8 + 26 * eased) * t.detail, outer = inner + (10 * (1 - b) + 3) * t.detail
+                    var ray = Path()
+                    ray.move(to: CGPoint(x: c.x + cos(a) * inner, y: c.y + sin(a) * inner))
+                    ray.addLine(to: CGPoint(x: c.x + cos(a) * outer, y: c.y + sin(a) * outer))
+                    context.stroke(ray, with: .color((i % 2 == 0 ? Self.bronze : Color(red: 1, green: 0.92, blue: 0.6)).opacity(1 - b)),
+                                   style: StrokeStyle(lineWidth: 2.4 * t.detail, lineCap: .round))
+                }
+                let r = (6 + 30 * eased) * t.detail
+                context.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
+                               with: .color(color.opacity(1 - b)), lineWidth: 2 * t.detail)
+            }
         }
     }
 
@@ -613,6 +661,7 @@ extension MapView {
                     marching(&context, from: a, to: b, progress: glide, color: Palette.color(civ, state), units: units, t)
                 } else {
                     arrow(&context, from: a, to: b, color: Palette.color(civ, state), label: "\(units)", t)
+                    arrival(&context, at: b, age: age - 0.6, color: Palette.color(civ, state), t)
                 }
             case let .landing(civ, sea, to, units):
                 guard let s = art.seas[sea].map(t.point), let b = token(to, t) else { continue }
@@ -620,6 +669,7 @@ extension MapView {
                     marching(&context, from: s, to: b, progress: glide, color: Palette.color(civ, state), units: units, t)
                 } else {
                     arrow(&context, from: s, to: b, color: Palette.color(civ, state), label: "⛵\(units)", t)
+                    arrival(&context, at: b, age: age - 0.6, color: Palette.color(civ, state), t)
                 }
             case let .battle(at, winner, _):
                 guard let c = token(at, t) else { continue }
@@ -669,6 +719,41 @@ extension MapView {
                                                                      width: 11 * t.detail, height: 11 * t.detail)),
                              with: .color(.white))
                 context.opacity = 1
+            case let .gain(id, gain):
+                // "+1 person", "+6 gold": a little plaque that rises from the land and fades.
+                guard age >= 0, age < 2.2, let c = token(id, t) else { continue }
+                let k = age / 2.2
+                let size = min(t.detail, 1.45)
+                let (icon, text): (Text, String) = switch gain {
+                case let .people(n): (Text(Image(systemName: "person.fill")).foregroundStyle(Self.cream), "+\(n)")
+                case let .gold(n): (Self.icon(.gold), "+\(n)")
+                case let .grain(n): (Self.icon(.grain), "+\(n)")
+                case let .prestige(n): (Text(Image(systemName: "crown.fill")).foregroundStyle(Self.bronze), "+\(n)")
+                case let .built(kind): (Text(Image(systemName: CommandBar.projectSymbol(kind))).foregroundStyle(Self.bronze), projectName(kind))
+                }
+                let label = context.resolve((icon + Text(" \(text)"))
+                    .font(.system(size: 11 * size, weight: .heavy, design: .rounded)).foregroundStyle(Self.cream))
+                let m = label.measure(in: CGSize(width: 300, height: 60))
+                // Pops up quickly, then drifts and fades.
+                let pop = min(1, age / 0.18)
+                // Several gains at one place fan out side by side: centre, left, right, ...
+                let slot = (0..<i).filter { j in
+                    guard j < markTimes.count, case let .gain(other, _) = marks[j], other == id else { return false }
+                    return abs(markTimes[j].timeIntervalSince(markTimes[i])) < 2.5
+                }.count
+                let side = CGFloat((slot + 1) / 2) * (slot % 2 == 1 ? -1 : 1)
+                let p = CGPoint(x: c.x + side * (m.width + 18 * size), y: c.y - (16 + 30 * k) * t.detail)
+                let plate = CGRect(x: p.x - m.width / 2 - 6 * size, y: p.y - m.height / 2 - 2 * size,
+                                   width: m.width + 12 * size, height: m.height + 4 * size)
+                var layer = context
+                layer.opacity = (1 - k * k) * pop
+                layer.translateBy(x: p.x, y: p.y)
+                layer.scaleBy(x: 0.6 + 0.4 * pop, y: 0.6 + 0.4 * pop)
+                layer.translateBy(x: -p.x, y: -p.y)
+                let shape = Path(roundedRect: plate, cornerRadius: plate.height / 2)
+                layer.fill(shape, with: .color(Self.wood.opacity(0.95)))
+                layer.stroke(shape, with: .color(Self.bronze), lineWidth: 1.2 * size)
+                layer.draw(label, at: p)
             case let .event(id, kind):
                 guard let c = token(id, t) else { continue }
                 context.draw(Text(MapMark.glyph(kind)).font(.system(size: 9 * t.detail)),
@@ -698,12 +783,25 @@ extension MapView {
         trail.move(to: a)
         for step in 1...20 { trail.addLine(to: at(eased * Double(step) / 20)) }
         context.stroke(trail, with: .color(color.opacity(0.8)), style: StrokeStyle(lineWidth: 3 * t.detail, lineCap: .round, dash: [5, 4]))
-        let p = at(eased)
-        let r = 8 * t.detail
+        // The army's own token, bobbing as it marches.
+        var p = at(eased)
+        p.y -= abs(sin(eased * .pi * 3)) * 3 * t.detail
+        let r = 10 * t.detail
         let disc = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
+        context.fill(Path(ellipseIn: CGRect(x: p.x - r, y: p.y + r * 0.6, width: 2 * r, height: r * 0.8)), with: .color(.black.opacity(0.25)))
         context.fill(disc, with: .color(color))
-        context.stroke(disc, with: .color(.white), lineWidth: 1.5)
-        context.draw(Text("\(units)").font(.system(size: 9 * t.detail, weight: .heavy)).foregroundStyle(.white), at: p)
+        context.stroke(disc, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
+        context.stroke(disc, with: .color(Self.bronze), lineWidth: 1.2 * t.detail)
+        context.draw(Text("\(units)").font(.system(size: 12 * t.detail, weight: .heavy, design: .rounded)).foregroundStyle(.white), at: p)
+    }
+
+    /// An army arriving: a ring in its colour spreads from where it lands.
+    private func arrival(_ context: inout GraphicsContext, at b: CGPoint, age: Double, color: Color, _ t: BoardTransform) {
+        guard age >= 0, age < 0.45 else { return }
+        let k = age / 0.45
+        let r = (10 + 14 * k) * t.detail
+        context.stroke(Path(ellipseIn: CGRect(x: b.x - r, y: b.y - r, width: 2 * r, height: 2 * r)),
+                       with: .color(color.opacity(1 - k)), lineWidth: 3 * (1 - k) * t.detail + 0.5)
     }
 
     /// A curved arrow between two points, stopping short of the token, with an optional label.
@@ -912,8 +1010,10 @@ extension MapView {
     /// building, and the army's make-up. Zoomed out it shows people and the works that matter
     /// most: roads, walls and harbors.
     fileprivate func drawPlaque(_ context: inout GraphicsContext, _ territory: Territory, at c: CGPoint, army: Army?,
-                                _ t: BoardTransform, emphasized: Bool) {
+                                _ t: BoardTransform, emphasized: Bool, hidden: Bool = false) {
         let id = territory.id
+        // Beyond sight only the land's resources are known (on the resources layer).
+        if hidden && layer != .resources { return }
         // Plaques grow with the zoom only so far, so close up they don't bury the land.
         let k = min(t.detail, 1.45) * (emphasized ? 1.2 : 1)
         let detailed = t.detail >= 1.3 || layer == .resources || emphasized
@@ -931,7 +1031,7 @@ extension MapView {
             }
         }
         let always: Set<ProjectKind> = [.road, .walls, .harbor]
-        let built = ProjectKind.allCases.filter { (land?.improvements.contains($0) ?? false) && (detailed || always.contains($0)) }
+        let built = hidden ? [] : ProjectKind.allCases.filter { (land?.improvements.contains($0) ?? false) && (detailed || always.contains($0)) }
         var works = built.map { Text(Image(systemName: CommandBar.projectSymbol($0))) }
         if detailed, land?.construction != nil { works.append(Text(Image(systemName: "hammer.fill")).foregroundStyle(.orange)) }
         if !works.isEmpty { items.append(works.dropFirst().reduce(works[0]) { $0 + Text(" ") + $1 }.foregroundStyle(Self.bronze)) }
@@ -978,6 +1078,15 @@ extension MapView {
             context.draw(Text("\(units![type])").font(.system(size: 9 * k, weight: .heavy, design: .rounded)).foregroundStyle(Self.cream),
                          at: CGPoint(x: box.maxX + 2 * k, y: box.midY), anchor: .leading)
         }
+    }
+
+    /// A great host beyond sight: rumour says it's there, not how strong.
+    fileprivate func drawRumour(_ context: inout GraphicsContext, _ army: Army, at c: CGPoint, _ t: BoardTransform) {
+        let r: CGFloat = 10 * t.detail
+        let disc = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
+        context.fill(disc, with: .color(Palette.color(army.owner, state).opacity(0.55)))
+        context.stroke(disc, with: .color(.white.opacity(0.8)), style: StrokeStyle(lineWidth: 1.4 * t.detail, dash: [3 * t.detail, 2 * t.detail]))
+        context.draw(Text("?").font(.system(size: 13 * t.detail, weight: .black, design: .serif)).foregroundStyle(.white), at: c)
     }
 
     /// The army token: a disc in its owner's colour with a bronze rim, its size, a star for a

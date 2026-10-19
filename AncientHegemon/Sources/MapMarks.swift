@@ -11,6 +11,12 @@ enum MapMark: Hashable {
     case event(TerritoryID, EventKind)
     /// New troops raised: a brief "+1" that floats up and fades.
     case raised(TerritoryID, civ: CivilizationID, unit: UnitType, count: Int)
+    /// Something the player gained: it rises from the land and fades.
+    case gain(TerritoryID, Gain)
+
+    enum Gain: Hashable {
+        case people(Int), gold(Int), grain(Int), prestige(Int), built(ProjectKind)
+    }
 
     /// Marks for one turn's events, in the order they happened.
     static func from(_ events: [GameEvent], before: GameState, after: GameState) -> [MapMark] {

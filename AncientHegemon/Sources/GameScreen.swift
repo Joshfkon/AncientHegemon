@@ -68,7 +68,9 @@ struct GameScreen: View {
     private var state: GameState { session.state }
     static let panelWidth: CGFloat = 320
 
-    var body: some View {
+    var body: some View { watching(screen) }
+
+    private var screen: some View {
         ZStack {
             MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
                     selected: selected, targets: targets, onTap: tapped,
@@ -77,7 +79,7 @@ struct GameScreen: View {
                     },
                     marks: session.marks, markTimes: session.markTimes, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
                     trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter,
-                    spotlight: spotlightTerritories, flashes: session.flashes)
+                    spotlight: spotlightTerritories, flashes: session.flashes, sight: session.sight)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
                 .modifier(Shake(animatableData: shake))
                 .overlay { if let tint { tint.opacity(0.35).allowsHitTesting(false).transition(.opacity) } }
@@ -240,6 +242,11 @@ struct GameScreen: View {
             }
             offer(.map)
         }
+    }
+
+    /// Reactions to the game moving on: following rivals, offering tips, releasing gains.
+    private func watching<V: View>(_ view: V) -> some View {
+        view
         .onChange(of: focusTerritory) { _, t in
             guard let t, panelOpen else { return }
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
@@ -251,6 +258,7 @@ struct GameScreen: View {
             case let .march(_, _, to, _), let .landing(_, _, to, _): to
             case let .battle(at, _, _): at
             case let .captured(t, _), let .event(t, _), let .raised(t, _, _, _): t
+            case .gain: nil
             }
             if let place { mapCenter = MapCenter(territory: place, id: (mapCenter?.id ?? 0) + 1) }
         }
@@ -259,6 +267,8 @@ struct GameScreen: View {
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
         }
         .onChange(of: session.showReport) { _, shown in if shown { offer(.rivals) } }
+        .onChange(of: !session.showReport && courtSettled) { _, clear in if clear { session.releaseGains() } }
+        .onChange(of: session.gainsAt?.id) { _, _ in lookAtGains() }
         .onChange(of: pending) { _, p in
             if case let .march(_, to)? = p, state.armies[to].map({ $0.owner != session.human }) ?? false { offer(.battle) }
             if p == nil { session.plannedOdds = nil }
@@ -467,6 +477,16 @@ struct GameScreen: View {
         do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }
+    }
+
+    private func lookAtGains() {
+        if let t = session.gainsAt?.territory { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
+    }
+
+    /// No dilemma or succession crisis waits for an answer.
+    private var courtSettled: Bool {
+        guard let human = session.human else { return true }
+        return state.civs[human]?.decision == nil && session.crisis == nil
     }
 
     // MARK: Guidance

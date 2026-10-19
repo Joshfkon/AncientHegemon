@@ -131,7 +131,7 @@ func projectName(_ kind: ProjectKind) -> String {
 func projectPurpose(_ kind: ProjectKind) -> String {
     switch kind {
     case .road: "free supply; troops on roads march twice"
-    case .walls: "+25% defense"
+    case .walls: "+35% defence here"
     case .farm: "+1 grain (+2 in a river valley)"
     case .mine: "+1 of each ore here"
     case .harbor: "+2 gold with trade, cheaper ships"
