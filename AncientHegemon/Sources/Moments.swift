@@ -11,6 +11,8 @@ struct Moment: Identifiable, Equatable {
         case peace(CivilizationID)
         case war(CivilizationID)
         case disaster(EventKind, TerritoryID?)
+        /// The treasury couldn't pay the army and soldiers went home.
+        case unpaid(Int)
     }
     let id = UUID()
     let kind: Kind
@@ -87,6 +89,10 @@ struct MomentBanner: View {
         case let .war(other):
             return Style(icon: "flame.fill", title: "War with \(Palette.name(other, state))",
                          subtitle: nil, color: Color(red: 0.6, green: 0.1, blue: 0.08), stamp: true)
+        case let .unpaid(n):
+            return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
+                         subtitle: "Every \(engine.rules.economy.soldiersPerGold) soldiers need 1 gold a turn",
+                         color: Color(red: 0.5, green: 0.35, blue: 0.08), stamp: false)
         case let .disaster(kind, t):
             let (icon, title): (String, String) = switch kind {
             case .famine: ("leaf.fill", "Famine in \(place(t))")

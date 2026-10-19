@@ -32,11 +32,11 @@ struct WalkthroughView: View {
         Page(title: "Raising troops", picture: AnyView(Picture.recruit), steps: [
             "Tap one of your territories and use Raise infantry, archers or cavalry.",
             "Each soldier costs gold and one of that land's people. Cavalry also need horses.",
-            "After that a soldier costs no gold, but eats 1 🌾 grain every turn, more far from your capital. Ships' crews eat too.",
+            "After that each soldier eats 1 🌾 grain a turn, and every 4 soldiers cost 1 gold a turn in pay. Run out of gold and some go home.",
         ]),
         Page(title: "Grain and supply", picture: AnyView(Picture.grain), steps: [
             "Land grows 🌾 grain. People and soldiers eat it; run short and they starve or desert.",
-            "Armies far from your capital eat more. Land cut off from the capital can't recruit.",
+            "Grain carted overland gets eaten on the way: armies 3+ land steps out eat extra. Roads and ships carry it free. Land cut off from the capital can't recruit.",
             "Tap the grain or gold at the top left to see where it comes from.",
         ]),
         Page(title: "Crossing the sea", picture: AnyView(Picture.sea), steps: [

@@ -57,7 +57,7 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     `.resolveCrisis`, `Engine.attackOdds`. 126 tests. Not yet: a tutorial, sound,
     SpriteKit animation of moves, iPhone device testing. Ship orders, the crisis sheet and
     generals' honors haven't been exercised by hand in the Simulator yet.
-  - **Logistics visible**: `Engine.economy` (EconomyReport), `supplyRoute`, `supplyStrain`,
+  - **Logistics visible**: `Engine.economy` (EconomyReport), `supplyRoute`, `supplySteps`,
     `TradeRoute.path`; app header, Supply/Trade/Resources map layers, Economy section. 128 tests.
   - **Save and resume**: one autosave slot (`AncientHegemon/Sources/SaveStore.swift`, Application
     Support/AncientHegemon/autosave.json) holding the GameState, the player's civ, the chronicle

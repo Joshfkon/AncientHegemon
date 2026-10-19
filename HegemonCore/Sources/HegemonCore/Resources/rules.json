@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -31,6 +31,8 @@
     }
   },
   "economy": {
+    "soldiersPerGold": 4,
+    "unpaidDesertPercent": 50,
     "populationPerGrain": 2,
     "populationCapPerGrain": 1,
     "growthPerTerritory": 1,
@@ -155,7 +157,7 @@
   "supply": {
     "outOfSupplyAttrition": 1,
     "desertAttrition": 1,
-    "stepsPerExtraGrain": 3
+    "overlandStepsPerExtraGrain": 3
   },
   "trade": {
     "goldPerRoute": 2,

@@ -7,7 +7,7 @@ public struct EconomyReport: Sendable, Equatable {
     public let eatenByPeople: Int
     /// Base upkeep of the armies in the home network.
     public let eatenByArmies: Int
-    /// Extra grain for armies far from the capital along their supply lines.
+    /// Extra grain hauled overland to armies far from the capital.
     public let eatenByDistance: Int
     /// Ships' crews and the troops aboard.
     public let eatenAtSea: Int
@@ -19,8 +19,11 @@ public struct EconomyReport: Sendable, Equatable {
     public let taxes: Int
     public let mines: Int
     public let trade: Int
-    /// Gold next harvest, including the ruler's administration bonus.
+    /// Gold next harvest, including the ruler's administration bonus (before army pay).
     public let income: Int
+    /// Gold owed to the soldiers each turn.
+    public let pay: Int
+    public var netIncome: Int { income - pay }
     public let bronze: Int
     /// Bronze cast next harvest (after Bronze casting), and bronze worn out.
     public let bronzePerTurn: Int
@@ -76,10 +79,11 @@ extension Engine {
         }
         return EconomyReport(
             grainProduced: produced, eatenByPeople: people, eatenByArmies: base, eatenByDistance: total - base,
-            eatenAtSea: fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
+            eatenAtSea: pockets.isEmpty ? 0 : fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
             granaryCap: produced * granaryTurns(civ, state),
             grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, income: gold.total,
+            pay: armyPay(of: civ, in: state),
             bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,
             equipmentPercent: bronzePercent(civ, state), taxRate: cs.taxRate,
             taxLegitimacy: taxAndLuxuryLegitimacy(civ, state), growthPercent: growthPercent(civ, state),
@@ -88,10 +92,16 @@ extension Engine {
             resources: resources, cutOff: pockets.dropFirst().flatMap { $0 })
     }
 
-    /// Supply steps from the capital to a territory, and the extra grain each unit there eats.
-    public func supplyStrain(of civ: CivilizationID, at territory: TerritoryID,
-                             in state: GameState) -> (steps: Int, extraGrain: Int)? {
-        guard let steps = supplyDistances(of: civ, in: state)[territory] else { return nil }
-        return (steps, steps / rules.supply.stepsPerExtraGrain)
+    /// Supply steps from the capital to a territory; nil if it's cut off.
+    public func supplySteps(of civ: CivilizationID, to territory: TerritoryID, in state: GameState) -> Int? {
+        supplyDistances(of: civ, in: state)[territory]
+    }
+
+    /// Overland steps grain is hauled to a territory (roads and sea legs free), and the extra
+    /// grain each unit there eats for it. Nil if it's cut off.
+    public func haul(of civ: CivilizationID, to territory: TerritoryID,
+                     in state: GameState) -> (steps: Int, extraGrain: Int)? {
+        guard let steps = supplyDistances(of: civ, overlandOnly: true, in: state)[territory] else { return nil }
+        return (steps, steps / rules.supply.overlandStepsPerExtraGrain)
     }
 }

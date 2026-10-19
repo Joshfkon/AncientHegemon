@@ -76,8 +76,8 @@ extension AIPlayer {
             let vb = ore.reduce(0) { $0 + (map.territory(b)!.resources[$1] ?? 0) }
             return (va, b) > (vb, a)
         })))
-        // Roads where the most troops sit at the end of long supply lines.
-        let strained = state.armies(of: civ).filter { (engine.supplyStrain(of: civ, at: $0.territory, in: state)?.extraGrain ?? 0) > 0 }
+        // Roads where the most troops sit at the end of long supply lines (far land is restless).
+        let strained = state.armies(of: civ).filter { (engine.haul(of: civ, to: $0.territory, in: state)?.extraGrain ?? 0) > 0 }
             .sorted { ($0.units.total, $1.territory) > ($1.units.total, $0.territory) }
         if let route = strained.first.flatMap({ engine.supplyRoute(of: civ, to: $0.territory, in: state) }) {
             let stops = route.compactMap { node -> TerritoryID? in if case .land(let t) = node { t } else { nil } }

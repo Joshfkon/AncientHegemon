@@ -50,6 +50,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case starvation(civ: CivilizationID, populationLost: Int, unitsLost: Int)
     /// Grain bought from trade partners to cover a short harvest.
     case grainImported(civ: CivilizationID, grain: Int, gold: Int)
+    /// Soldiers paid this turn; if the treasury fell short, some unpaid soldiers went home.
+    case armyPaid(civ: CivilizationID, gold: Int, deserted: Int)
     case outOfSupply(civ: CivilizationID, territory: TerritoryID, unitsLost: Int)
     case trade(civ: CivilizationID, partners: [CivilizationID], income: Int)
     case bronzeMade(civ: CivilizationID, amount: Int)

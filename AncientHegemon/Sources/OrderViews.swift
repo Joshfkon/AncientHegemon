@@ -315,23 +315,23 @@ struct TerritoryPanel: View {
         let t = engine.map.territory(territory)!
         let army = state.armies[territory].flatMap { $0.owner == human ? $0 : nil }
         let home = engine.homeNetwork(of: human, in: state).contains(territory)
-        if home, let strain = engine.supplyStrain(of: human, at: territory, in: state) {
-            Text(strain.steps == 0 ? "Your capital." :
-                 "In supply · \(strain.steps) step\(strain.steps == 1 ? "" : "s") from the capital"
-                 + (strain.extraGrain > 0 ? " · each unit here eats \(strain.extraGrain) extra grain" : ""))
-                .font(.caption).foregroundStyle(strain.extraGrain > 0 ? .orange : .secondary)
+        if home, let steps = engine.supplySteps(of: human, to: territory, in: state) {
+            let haul = engine.haul(of: human, to: territory, in: state)
+            let extra = haul?.extraGrain ?? 0
+            Text(steps == 0 ? "Your capital." : "In supply · \(steps) step\(steps == 1 ? "" : "s") from the capital"
+                 + (extra > 0 ? " · grain is carted \(haul!.steps) steps overland, so each unit here eats \(extra) extra (roads or a sea route would carry it free)" : ""))
+                .font(.caption).foregroundStyle(extra > 0 ? .orange : .secondary)
         }
         if let army {
             let ready = army.units - (state.moved[territory] ?? .zero)
             Text(ready.total > 0 ? "Tap a highlighted territory to march \(ready.total) ready units, or a sea with your ships to board."
                                  : "These troops have moved this turn.")
                 .font(.caption).foregroundStyle(.secondary)
-            // Upkeep: grain, never gold. Far from the capital each soldier eats more.
-            let extra = engine.supplyStrain(of: human, at: territory, in: state)?.extraGrain ?? 0
-            let base = engine.rules.upkeep(of: army.units)
-            Text("This army eats \(base + army.units.total * extra) 🌾 a turn"
-                 + (extra > 0 ? " (\(base) + \(army.units.total * extra) for the long haul)" : "")
-                 + ". Soldiers cost no gold once raised.")
+            // Upkeep: grain for every soldier, and pay for every few.
+            let grain = engine.rules.upkeep(of: army.units)
+                + army.units.total * (engine.haul(of: human, to: territory, in: state)?.extraGrain ?? 0)
+            let per = engine.rules.economy.soldiersPerGold
+            Text("Upkeep: \(grain) 🌾 a turn, and 1 gold a turn for every \(per) soldiers in your realm (your army costs \(engine.armyPay(of: human, in: state)) gold a turn in all).")
                 .font(.caption).foregroundStyle(.secondary)
         }
         if home {

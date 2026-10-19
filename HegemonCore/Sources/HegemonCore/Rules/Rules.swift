@@ -66,6 +66,11 @@ public struct EconomyRules: Codable, Sendable, Equatable {
     /// Legitimacy +1 a turn per this many luxuries within reach, up to the cap.
     public let luxuriesPerLegitimacy: Int
     public let luxuryLegitimacyCap: Int
+    /// Army pay: 1 gold a turn for every this many soldiers (rounded down, so a small guard is
+    /// free). Ships' crews are paid in grain only.
+    public let soldiersPerGold: Int
+    /// Share (percent) of the soldiers going unpaid who desert when the treasury runs dry.
+    public let unpaidDesertPercent: Int
 }
 
 /// Building projects in territories: the "industrializing" side of the economy.
@@ -103,9 +108,10 @@ public struct SupplyRules: Codable, Sendable, Equatable {
     public let outOfSupplyAttrition: Int
     /// Extra units lost when the cut-off stack is in desert.
     public let desertAttrition: Int
-    /// Each unit eats one more grain for every this many steps along its supply route from the
-    /// seat (a sea crossing counts as 2 steps). Distant armies strain the granary.
-    public let stepsPerExtraGrain: Int
+    /// Each unit eats one more grain for every this many overland steps along its supply route
+    /// from the seat. Hauling grain by cart eats the cargo; a road makes its step free, and so do
+    /// sea legs through seas where the civ has ships: roads and fleets feed far armies cheaply.
+    public let overlandStepsPerExtraGrain: Int
 }
 
 public struct TradeRules: Codable, Sendable, Equatable {
@@ -203,7 +209,7 @@ public struct Rules: Codable, Sendable, Equatable {
             throw MapError.invalid("rules.json has no stats for unit '\(type.rawValue)'")
         }
         if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1
-            || trade.shareDivisor < 1 || supply.stepsPerExtraGrain < 1 {
+            || trade.shareDivisor < 1 || supply.overlandStepsPerExtraGrain < 1 {
             throw MapError.invalid("rules.json economy divisors must be at least 1")
         }
         guard battle.formation(battle.defaultFormation) != nil else {

@@ -68,6 +68,7 @@ extension Engine {
         let tradeIncome = gold.trade
         let income = gold.total
         state.civs[civ]!.gold += income
+        events += payArmy(civ, &state)
 
         wearBronze(civ, &state)
         var bronze = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
@@ -87,6 +88,37 @@ extension Engine {
         if bronze > 0 { events.append(.bronzeMade(civ: civ, amount: bronze)) }
         events += learn(civ, production: home.production, bronze: bronze, income: income, routes: routes, &state)
         return events
+    }
+
+    /// Gold owed each turn to the civilization's soldiers, on land and aboard ship.
+    public func armyPay(of civ: CivilizationID, in state: GameState) -> Int {
+        armyPay(soldiers: state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total })
+    }
+
+    public func armyPay(soldiers: Int) -> Int {
+        soldiers / max(1, rules.economy.soldiersPerGold)
+    }
+
+    /// Pays the army from the treasury. What can't be paid sends some of the unpaid home, from
+    /// the largest stacks.
+    func payArmy(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+        let owed = armyPay(of: civ, in: state)
+        guard owed > 0 else { return [] }
+        let paid = min(owed, state.civs[civ]!.gold)
+        state.civs[civ]!.gold -= paid
+        var deserted = 0
+        if paid < owed {
+            let unpaid = (owed - paid) * rules.economy.soldiersPerGold
+            var leaving = max(1, unpaid * rules.economy.unpaidDesertPercent / 100)
+            while leaving > 0, let stack = state.armies(of: civ).max(by: { a, b in
+                a.units.total != b.units.total ? a.units.total < b.units.total : a.territory > b.territory
+            }) {
+                removeUnits(1, from: stack.territory, &state)
+                leaving -= 1
+                deserted += 1
+            }
+        }
+        return [.armyPaid(civ: civ, gold: paid, deserted: deserted)]
     }
 
     /// Gold a civilization takes in per turn, by source.
@@ -116,16 +148,16 @@ extension Engine {
     }
 
     /// Grain eaten per turn by the population of `territories` and the civilization's armies in them.
-    /// Armies in the home network also pay for the length of their supply route.
+    /// Armies in the home network also pay for hauling grain overland to them.
     public func grainConsumption(of civ: CivilizationID, in territories: [TerritoryID],
                                  _ state: GameState) -> Int {
         let set = Set(territories)
         let population = territories.reduce(0) { $0 + state.population(of: $1) }
-        let distances = supplyDistances(of: civ, in: state)
+        let haul = supplyDistances(of: civ, overlandOnly: true, in: state)
         let armies = state.armies(of: civ).filter { set.contains($0.territory) }
         return rules.grainEaten(byPopulation: population) + armies.reduce(0) { total, stack in
-            let haul = (distances[stack.territory] ?? 0) / rules.supply.stepsPerExtraGrain
-            return total + rules.upkeep(of: stack.units) + stack.units.total * haul
+            let extra = (haul[stack.territory] ?? 0) / rules.supply.overlandStepsPerExtraGrain
+            return total + rules.upkeep(of: stack.units) + stack.units.total * extra
         }
     }
 

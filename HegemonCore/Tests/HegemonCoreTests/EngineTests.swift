@@ -181,7 +181,9 @@ import Testing
         let events = try engine.apply(.endTurn, to: &s)
         #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 4, unitsLost: 2)))
         #expect(s.population(of: "mesopotamia") == 1)
-        #expect(s.armies["mesopotamia"]!.units.infantry == 8)
+        // With an empty treasury, some of the 8 left can't be paid either and go home.
+        let unpaid = events.reduce(0) { if case let .armyPaid(_, _, n) = $1 { $0 + n } else { $0 } }
+        #expect(s.armies["mesopotamia"]!.units.infantry == 8 - unpaid)
         #expect(s.civs["mesopotamia"]!.granary == 0)
     }
 

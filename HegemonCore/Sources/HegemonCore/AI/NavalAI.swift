@@ -92,7 +92,14 @@ extension AIPlayer {
         // Whether any home coast has troops to spare, before this turn's boarding takes them.
         let reinforcements = !portSeas(civ, state).isEmpty
         for sea in state.fleets(of: civ).map(\.sea) {
-            embark(civ, at: sea, upTo: campaign.force, &state, &turn)
+            // Board only a force that could land: a half-filled expedition just sails back and
+            // unloads, turn after turn.
+            if let fleet = state.fleet(of: civ, in: sea) {
+                let full = min(campaign.force, fleet.ships * engine.shipCapacity(civ, state))
+                if fleet.cargo.total + spareOnCoasts(of: sea, civ, state) >= max(2, full * 2 / 3) {
+                    embark(civ, at: sea, upTo: campaign.force, &state, &turn)
+                }
+            }
             if land(civ, from: sea, campaign, &state, &turn) { continue }
             guard let fleet = state.fleet(of: civ, in: sea), fleet.cargo.total > 0 || fleet.ships > 0 else { continue }
             let ready = fleet.ships - fleet.movedShips
@@ -108,7 +115,10 @@ extension AIPlayer {
                 if issue(.land(sea: sea, territory: coast, units: fleet.cargo), &state, &turn) { continue }
             }
             let homeSeas = Set(engine.homeNetwork(of: civ, in: state).flatMap { map.seas(bordering: $0) })
-            let goal = weak && !ports.contains(sea) && !ports.isEmpty ? ports
+            // An empty fleet waits where troops can board, or goes to fetch them.
+            if fleet.cargo.total == 0, ports.contains(sea) || ports.isEmpty { continue }
+            let goal = fleet.cargo.total == 0 ? ports
+                : weak && !ports.contains(sea) && !ports.isEmpty ? ports
                 : weak && ports.isEmpty && !homeSeas.isEmpty ? homeSeas
                 : campaign.landingSeas
             let dist = seaDistances(to: goal, ships: ready, civ, state)
@@ -129,6 +139,14 @@ extension AIPlayer {
             if spare > 0 { seas.formUnion(map.seas(bordering: t)) }
         }
         return seas
+    }
+
+    /// Ready troops beyond their garrisons on the coasts of `sea`.
+    private func spareOnCoasts(of sea: SeaZoneID, _ civ: CivilizationID, _ state: GameState) -> Int {
+        map.coastalTerritories(of: sea).reduce(0) { total, t in
+            guard state.armies[t]?.owner == civ else { return total }
+            return total + max(0, min(readyUnits(at: t, state).total, state.armies[t]!.units.total - garrison(t, for: civ, state) - 1))
+        }
     }
 
     /// Boards ready troops beyond their garrisons from coasts on `sea`, up to the force size.

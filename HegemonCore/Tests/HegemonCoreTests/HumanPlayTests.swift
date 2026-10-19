@@ -113,11 +113,15 @@ import Testing
                 continue
             }
             #expect(report.grainProduced == production)
-            #expect(report.grainProduced - report.grainBalance == consumption)
+            #expect(report.grainProduced - report.grainBalance == consumption,
+                    "seed \(seed): people \(report.eatenByPeople) armies \(report.eatenByArmies) haul \(report.eatenByDistance) sea \(report.eatenAtSea) vs \(consumption)")
             #expect(report.income == income)
             // Grain bought from abroad in a lean harvest is paid for out of the same treasury.
             let imports = events.reduce(0) { if case let .grainImported(_, _, cost) = $1 { $0 + cost } else { $0 } }
-            #expect(s.civs[civ]!.gold == gold + income - imports)
+            // The army is paid after the harvest, and the report forecasts it.
+            let paid = events.reduce(0) { if case let .armyPaid(_, gold, _) = $1 { $0 + gold } else { $0 } }
+            #expect(paid == min(report.pay, gold + income - imports))
+            #expect(s.civs[civ]!.gold == gold + income - imports - paid)
         }
     }
 
@@ -128,7 +132,7 @@ import Testing
         let route = try #require(engine.supplyRoute(of: "greece", to: "dacia", in: s))
         #expect(route.first == .land("greece"))
         #expect(route.last == .land("dacia"))
-        #expect(engine.supplyStrain(of: "greece", at: "dacia", in: s)?.steps == route.count - 1)
+        #expect(engine.supplySteps(of: "greece", to: "dacia", in: s) == route.count - 1)
         s.land["sicilia"]!.owner = "greece"  // reachable only by sea
         let sea = try #require(engine.supplyRoute(of: "greece", to: "sicilia", in: s))
         #expect(sea.contains { if case .sea = $0 { true } else { false } })

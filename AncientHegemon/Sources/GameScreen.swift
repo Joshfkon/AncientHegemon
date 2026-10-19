@@ -347,6 +347,7 @@ struct GameScreen: View {
         case .discovery: SoundBoard.shared.play(.horn, volume: 0.45); Feedback.outcome(true)
         case .lost, .war: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
         case .disaster: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(1)
+        case .unpaid: SoundBoard.shared.play(.coins, volume: 0.6); Feedback.outcome(false)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -466,7 +467,7 @@ struct GameScreen: View {
             }
             if let human = session.human, let cs = state.civs[human], let econ = session.economy {
                 HStack(spacing: 12) {
-                    Button { explain = .gold } label: { stat("Gold", "\(cs.gold)", change: econ.income, color: .orange) }
+                    Button { explain = .gold } label: { stat("Gold", "\(cs.gold)", change: econ.netIncome, color: .orange) }
                     Button { explain = .grain } label: {
                         stat(harvestHit ? "Grain ⚠" : "Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
                     }

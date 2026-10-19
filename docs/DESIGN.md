@@ -1131,3 +1131,22 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   Win shares moved within noise: Greece 2/7% → 0/12%, Egypt 37/30% → 42/15%, Italia 27/27% →
   30/32%, Mesopotamia 32/35% → 27/40%. Game length (44–47 rounds) and defences held were
   unchanged. The AI always chases.
+
+### Army pay and the overland haul (Josh: "they should cost a small amount of gold to maintain"; "I do want having roads and ships make a difference")
+
+- **Pay**: every 4 soldiers (on land or aboard ship) draw 1 gold a turn, rounded down, so a
+  guard of up to 3 is free. It's paid after the harvest. When the treasury can't cover it, half
+  of the unpaid soldiers go home, from the largest stacks. Ships' crews still cost grain only.
+  The AI raises troops only while pay stays within about three quarters of its income.
+- **Haul**: each soldier eats 1 grain a turn, plus 1 for every 3 *overland* steps grain is
+  carted to him from the capital. A road makes its step free, and so does a sea leg through a
+  sea where the civ has ships. That's the real logic of ancient logistics: carts and oxen ate
+  the cargo, ships didn't. It replaces the old surcharge, which counted sea steps double and
+  didn't care about ships. Cut-off armies still lose a unit a turn.
+- **Naval AI**: boards only a force that could land (two thirds of what the ships carry), and
+  empty fleets wait at a port with troops. This ended a loop where Greece shuttled two soldiers
+  on and off a ship every turn.
+- **Balance** (40 games × 2 seed sets, against the build before): Mesopotamia 27/40% → 42/45%,
+  Italia 30/32% → 32/22%, Egypt 42/15% → 22/20% (it collapses more; its westward desert push
+  is a long haul), Greece 0/12% → 2/12%. Armies are smaller (Italia's median 18–20 units at
+  round 30). Rules version 10.

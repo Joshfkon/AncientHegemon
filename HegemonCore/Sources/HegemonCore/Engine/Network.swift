@@ -120,7 +120,11 @@ extension Engine {
 
     /// Steps along the supply route from the seat to each territory of the home network.
     /// Land borders count 1; sailing counts 1 per sea zone plus 1 to land.
-    public func supplyDistances(of civ: CivilizationID, in state: GameState) -> [TerritoryID: Int] {
+    /// Supply steps from the seat to each territory in supply: every step counts, except into a
+    /// territory with a road. With `overlandOnly`, sea legs through seas where the civ has ships are
+    /// free too: that is the cost of hauling grain, which ships carry cheaply.
+    public func supplyDistances(of civ: CivilizationID, overlandOnly: Bool = false,
+                                in state: GameState) -> [TerritoryID: Int] {
         guard let seat = seat(of: civ, in: state) else { return [:] }
         // 0-1 breadth-first search: entering a territory with a road is free.
         var steps: [NetworkNode: Int] = [.land(seat): 0]
@@ -132,6 +136,11 @@ extension Engine {
             for next in neighbors(of: node, through: [civ], travelers: [civ], in: state) {
                 var cost = 1
                 if case .land(let t) = next, state.land[t]?.improvements.contains(.road) == true { cost = 0 }
+                // Ships carry grain free: sea legs through a sea where the civ has a fleet.
+                if overlandOnly {
+                    if case .sea(let z) = next, state.fleet(of: civ, in: z) != nil { cost = 0 }
+                    if case .sea(let z) = node, state.fleet(of: civ, in: z) != nil { cost = 0 }
+                }
                 let d = steps[node]! + cost
                 if d < steps[next] ?? .max {
                     steps[next] = d

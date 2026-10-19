@@ -164,8 +164,13 @@ public struct AIPlayer: Sendable {
 
     func recruit(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let cheapest = UnitType.allCases.map { rules.stats($0).cost }.min()!
+        let income = engine.economy(of: civ, in: state).income
         for _ in 0..<60 {
             guard state.civs[civ]!.gold >= cheapest else { return }
+            // Only raise soldiers the treasury can keep paying: income, or savings for a while.
+            let soldiers = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
+            let pay = engine.armyPay(soldiers: soldiers + 1)
+            guard pay <= income * 3 / 4 + max(0, state.civs[civ]!.gold - cheapest) / 10 else { return }
             let home = engine.homeNetwork(of: civ, in: state)
             // Don't raise more mouths than the home granary can carry for a few turns.
             let production = engine.yield(of: .grain, in: home, state)

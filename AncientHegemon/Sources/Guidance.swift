@@ -46,7 +46,7 @@ struct QuickLookCard: View {
             if let human = session.human {
                 if owner == human {
                     let home = engine.homeNetwork(of: human, in: state).contains(id)
-                    Text(home ? (engine.supplyStrain(of: human, at: id, in: state).map { "In supply, \($0.steps) step\($0.steps == 1 ? "" : "s") from the capital" } ?? "In supply")
+                    Text(home ? (engine.supplySteps(of: human, to: id, in: state).map { "In supply, \($0) step\($0 == 1 ? "" : "s") from the capital" } ?? "In supply")
                               : "⚠️ Cut off from your capital")
                         .font(.caption).foregroundStyle(home ? .secondary : Color.orange)
                     let levy = engine.levy(at: id, state)
@@ -166,10 +166,11 @@ struct StatExplainer: View {
                     row("Taxes (\(e.taxRate)%)", e.taxes)
                     row("Mines", e.mines)
                     row("Trade", e.trade)
+                    row("Army pay", -e.pay)
                     Divider()
-                    row("Next harvest", e.income, bold: true)
+                    row("Each turn", e.netIncome, bold: true)
                 }
-                Text("Spend it on troops, ships, generals and buildings. Higher taxes bring more but slow growth and cost legitimacy.")
+                Text("Spend it on troops, ships, generals and buildings. Every \(session.engine.rules.economy.soldiersPerGold) soldiers draw 1 gold a turn in pay; if the treasury can't pay, some go home. Higher taxes bring more but slow growth and cost legitimacy.")
                     .font(.caption).foregroundStyle(.secondary)
             case .grain:
                 Text("Grain").font(.headline)
@@ -177,7 +178,7 @@ struct StatExplainer: View {
                     row("Harvest", e.grainProduced)
                     row("People eat", -e.eatenByPeople)
                     row("Armies eat", -e.eatenByArmies)
-                    row("Long supply lines", -e.eatenByDistance)
+                    row("Hauled overland", -e.eatenByDistance)
                     row("Ships' crews", -e.eatenAtSea)
                     Divider()
                     row("Each turn", e.grainBalance, bold: true)
@@ -185,7 +186,7 @@ struct StatExplainer: View {
                 }
                 Text("This is a forecast for your next harvest. Famine, drought and floods strike at the start of a turn and can cut it; they show in your news and as ⚠ here.")
                     .font(.caption).foregroundStyle(.orange)
-                Text("Armies far from your capital eat more. When the granary runs dry, people and soldiers starve.")
+                Text("Each soldier eats 1 grain a turn, plus 1 for every 3 steps grain must be carted overland to him. Roads and sea routes carry it free. When the granary runs dry, people and soldiers starve.")
                     .font(.caption).foregroundStyle(.secondary)
             case .legitimacy:
                 Text("Legitimacy").font(.headline)
@@ -264,7 +265,7 @@ struct CodexView: View {
         ("arrow.triangle.turn.up.right.diamond.fill", "A turn",
          "Your turn starts with events and the harvest. Then move armies (each unit once), recruit, build, sail and make peace or war. End the turn and every rival moves in turn."),
         ("leaf.fill", "Grain and supply",
-         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn (there's no gold upkeep). Armies eat more the farther they are from the capital along their supply line. Land cut off from the capital can't recruit, and its armies waste away."),
+         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn, and every 4 soldiers draw 1 gold a turn in pay. Carting grain overland eats it: armies 3+ land steps from the capital eat more, unless roads or ships carry the supply. Keep supply lines open: land cut off from the capital can't recruit, pays no taxes, and its armies waste away a unit a turn."),
         ("arrow.left.arrow.right", "Trade and resources",
          "Empires at peace that can reach each other trade automatically, sharing ore, horses, timber and more. Copper and tin make bronze, which arms your troops; it wears out without fresh tin. Iron needs Ironworking."),
         ("shield.lefthalf.filled", "Battles",

@@ -381,6 +381,8 @@ final class GameSession {
                 new.append(Moment(kind: .peace(pair.a == me ? pair.b : pair.a)))
             case let .warDeclared(by, on) where by == me || on == me:
                 new.append(Moment(kind: .war(by == me ? on : by)))
+            case let .armyPaid(civ, _, deserted) where civ == me && deserted > 0:
+                new.append(Moment(kind: .unpaid(deserted)))
             case let .event(r) where r.civ == me:
                 if [.famine, .drought, .flood, .plague, .earthquake, .seaPeoples, .barbarians, .revolt].contains(r.kind) {
                     new.append(Moment(kind: .disaster(r.kind, r.territory)))
@@ -502,6 +504,8 @@ final class GameSession {
                 add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")
             case let .peaceOffered(from, to):
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
+            case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
+                add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
             case let .disbanded(civ, t, units, rejoined) where civ == human:
                 add(civ, "Disbanded \(units.total) troops in \(place(t))" + (rejoined > 0 ? "; \(rejoined) went home to farm" : ""), at: t)
             case let .tribeJoined(civ, t, parley, warriors) where civ == human:

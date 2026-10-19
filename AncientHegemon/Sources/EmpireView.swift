@@ -84,14 +84,14 @@ struct EconomyView: View {
                 ("Harvest", econ.grainProduced),
                 ("People eat", -econ.eatenByPeople),
                 ("Armies eat", -econ.eatenByArmies),
-                ("Long supply lines", -econ.eatenByDistance),
+                ("Hauled overland", -econ.eatenByDistance),
                 ("Ships' crews", -econ.eatenAtSea),
             ], total: ("Each turn", econ.grainBalance))
             Text("Granary \(econ.granary) of \(econ.granaryCap)"
                  + (econ.grainBalance < 0 ? " · empties in \(max(1, econ.granary / max(1, -econ.grainBalance) + 1)) turns, then people starve" : ""))
                 .font(.caption).foregroundStyle(econ.grainBalance < 0 ? .red : .secondary)
-            ledger("Gold", [("Taxes", econ.taxes), ("Mines", econ.mines), ("Trade", econ.trade)],
-                   total: ("Next harvest", econ.income))
+            ledger("Gold", [("Taxes", econ.taxes), ("Mines", econ.mines), ("Trade", econ.trade), ("Army pay", -econ.pay)],
+                   total: ("Each turn", econ.netIncome))
             VStack(alignment: .leading, spacing: 3) {
                 Text("Trade").font(.caption.bold())
                 if econ.tradePartners.isEmpty {

@@ -744,7 +744,7 @@ extension MapView {
         }
         for (territory, _) in state.armies(of: civ) where home.contains(territory) {
             guard let route = engine.supplyRoute(of: civ, to: territory, in: state), route.count > 1 else { continue }
-            let extra = engine.supplyStrain(of: civ, at: territory, in: state)?.extraGrain ?? 0
+            let extra = engine.haul(of: civ, to: territory, in: state)?.extraGrain ?? 0
             let color: Color = extra == 0 ? .white : extra == 1 ? .orange : .red
             context.stroke(line(through: route, t), with: .color(.black.opacity(0.5)),
                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
