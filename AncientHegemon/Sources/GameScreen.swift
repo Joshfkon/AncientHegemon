@@ -36,6 +36,7 @@ struct GameScreen: View {
     @State private var showCodex = false
     @State private var showWalkthrough = false
     @State private var showThrone = false
+    @State private var showStandings = false
     @State private var layer = MapLayer.armies
     @State private var quickLook: TerritoryID?
     @State private var explain: StatTopic?
@@ -172,6 +173,11 @@ struct GameScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showStandings) {
+            NavigationStack {
+                StandingsView(session: session).toolbar { Button("Done") { showStandings = false } }
+            }
+        }
         .fullScreenCover(isPresented: $showWalkthrough) {
             WalkthroughView { showWalkthrough = false }
         }
@@ -245,7 +251,12 @@ struct GameScreen: View {
             HStack(alignment: .top, spacing: 8) {
                 status
                 Spacer(minLength: 8)
-                if !panelOpen { layerPicker }
+                if !panelOpen {
+                    VStack(spacing: 6) {
+                        layerPicker
+                        if session.human != nil { StandingsBar(session: session) { showStandings = true } }
+                    }
+                }
                 Spacer(minLength: 8)
                 toolbar
             }

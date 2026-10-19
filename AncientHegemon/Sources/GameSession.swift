@@ -27,8 +27,17 @@ struct BattleEntry: Identifiable, Codable {
 final class GameSession {
     let engine: Engine
     private(set) var state: GameState {
-        didSet { refreshEconomy() }
+        didSet {
+            refreshEconomy()
+            // Borders and prestige are recorded once a round, whoever's move began it.
+            if started, state.turn != recordedTurn || (state.winner != nil && oldValue.winner == nil) {
+                recordedTurn = state.turn
+                snapshotBorders()
+            }
+        }
     }
+    /// The round last recorded in `history`.
+    private var recordedTurn = 0
     /// The player's economy as it stands (grain, gold, trade, resources), kept current.
     private(set) var economy: EconomyReport?
     private(set) var log: [LogLine] = []
@@ -61,6 +70,8 @@ final class GameSession {
     private(set) var markTimes: [Date] = []
     /// Who held each territory at the start of each round, for the end-of-game replay.
     private(set) var history: [[TerritoryID: CivilizationID]] = []
+    /// Each empire's prestige at the start of each round, for the standings chart.
+    private(set) var prestigeHistory: [[CivilizationID: Int]] = []
     /// The chronicle lines since the player last ended a turn, shown as a summary card.
     private(set) var report: [LogLine] = []
     var showReport = false
@@ -104,6 +115,8 @@ final class GameSession {
         log = []
         battles = []
         history = []
+        prestigeHistory = []
+        recordedTurn = state.turn
         snapshotBorders()
         message = nil
         replay = nil
@@ -126,6 +139,8 @@ final class GameSession {
         log = game.log
         battles = game.battles
         history = game.history ?? []
+        prestigeHistory = game.prestigeHistory ?? []
+        recordedTurn = state.turn
         nextID = (game.log.map(\.id) + game.battles.map(\.id)).max() ?? 0
         message = nil
         replay = nil
@@ -143,7 +158,7 @@ final class GameSession {
             return
         }
         let game = SavedGame(human: human, seed: seed, state: state, log: Array(log.prefix(150)),
-                             battles: Array(battles.prefix(30)), savedAt: .now, history: history)
+                             battles: Array(battles.prefix(30)), savedAt: .now, history: history, prestigeHistory: prestigeHistory)
         SaveStore.save(game)
         saved = game
     }
@@ -270,7 +285,7 @@ final class GameSession {
         }.value
         record(events, round: start.turn, before: start, after: after)
         state = after
-        if after.turn > start.turn || after.winner != nil { snapshotBorders() }
+
         // Reveal this rival's moves one at a time, so they can be followed on the map.
         for mark in MapMark.from(events, before: start, after: after) {
             marks.append(mark)
@@ -361,6 +376,9 @@ final class GameSession {
         var owners: [TerritoryID: CivilizationID] = [:]
         for (t, land) in state.land { if let o = land.owner { owners[t] = o } }
         history.append(owners)
+        var prestige: [CivilizationID: Int] = [:]
+        for civ in state.players where !(state.civs[civ]?.eliminated ?? true) { prestige[civ] = engine.prestige(of: civ, in: state) }
+        prestigeHistory.append(prestige)
     }
 
     // MARK: Moments

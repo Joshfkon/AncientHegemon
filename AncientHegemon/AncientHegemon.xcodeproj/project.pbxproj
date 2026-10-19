@@ -23,6 +23,7 @@
 		50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */; };
 		54C9133A6A5FA07E5DBC30D9 /* arrows.wav in Resources */ = {isa = PBXBuildFile; fileRef = 81666E7D20EECA8701512537 /* arrows.wav */; };
 		58AA774DC005708C95E2CDA5 /* Moments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90FA72590070862E642AFFAE /* Moments.swift */; };
+		5A8C3BEE15D78A51658DDEC1 /* Standings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B6EFEC6B7A04539C9215408 /* Standings.swift */; };
 		63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */; };
 		6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B35133F6C1422877D8A459 /* UnitIcons.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
@@ -74,6 +75,7 @@
 		94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeView.swift; sourceTree = "<group>"; };
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
 		99446154A61CAABED13A5D65 /* roar.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = roar.wav; sourceTree = "<group>"; };
+		9B6EFEC6B7A04539C9215408 /* Standings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Standings.swift; sourceTree = "<group>"; };
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlefieldView.swift; sourceTree = "<group>"; };
 		AD395B564F5864E92AF2E613 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 				6FA988893EB7B67616AC6394 /* ResourcesView.swift */,
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
+				9B6EFEC6B7A04539C9215408 /* Standings.swift */,
 				98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */,
 				34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */,
 				FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */,
@@ -300,6 +303,7 @@
 				E1DBC00849377F7EFEFCCFA8 /* ResourcesView.swift in Sources */,
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,
+				5A8C3BEE15D78A51658DDEC1 /* Standings.swift in Sources */,
 				50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */,
 				63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */,
 				D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */,

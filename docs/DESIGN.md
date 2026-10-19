@@ -1293,3 +1293,18 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   lands. Each step is a normal command, so a fleet beaten at sea on the way stops there.
 - The command bar's hint says so, or, with no ships, says to build one first. The walkthrough
   page on crossing the sea is updated. The step-by-step way (board, sail, land) still works.
+
+### Standings (Josh: "difficult to tell how you're doing vs the other players"; no regions or ambitions: "I want it to be realistic… Civilization should be more the feel")
+
+- A standings bar sits under the map layers: every living empire's prestige as a bar in its
+  colour, leader first with a crown, yours outlined. It warns when anyone holds 80% of the
+  land needed for domination ("Mesopotamia holds 52% of the land; 60% wins").
+- Tap it for the standings sheet:
+  - prestige over the game as a line chart (`GameSession.prestigeHistory`, saved);
+  - each empire's prestige broken down (`Engine.prestigeBreakdown`: land, people, gold,
+    legitimacy, capital, court);
+  - the last five rounds' trend;
+  - land share against the domination line.
+- Borders and prestige are now recorded on every change of round. Before, a round that turned
+  over on the player's own End turn was missed, which also left gaps in the end-of-game
+  border replay.

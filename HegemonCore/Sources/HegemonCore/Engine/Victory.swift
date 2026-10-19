@@ -18,6 +18,27 @@ extension Engine {
             + magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence
     }
 
+    /// Where a civilization's prestige comes from, part by part (they sum to `prestige`).
+    public func prestigeBreakdown(of civ: CivilizationID, in state: GameState) -> [(source: String, points: Int)] {
+        guard let cs = state.civs[civ], !cs.eliminated else { return [] }
+        let p = rules.victory.prestige
+        let land = state.territories(of: civ).count
+        let capital = map.civilization(civ)?.capital
+        return [
+            ("\(land) land\(land == 1 ? "" : "s")", land * p.perTerritory),
+            ("\(state.totalPopulation(of: civ)) people", state.totalPopulation(of: civ) * p.perPopulation),
+            ("\(cs.gold) gold", cs.gold / max(1, p.goldDivisor)),
+            ("Legitimacy \(cs.legitimacy)", cs.legitimacy / max(1, p.legitimacyDivisor)),
+            ("Capital held", capital.map { state.owner(of: $0) == civ } == true ? p.capitalHeld : 0),
+            ("Court's magnificence", magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence),
+        ].filter { $0.1 != 0 }
+    }
+
+    /// Share of all territories a civ holds, in percent, and the share that wins by domination.
+    public func landShare(of civ: CivilizationID, in state: GameState) -> (percent: Int, toWin: Int) {
+        (state.territories(of: civ).count * 100 / max(1, map.territories.count), rules.victory.territoryPercent)
+    }
+
     /// Survivors by prestige, then the fallen, the last to fall first.
     public func standings(in state: GameState) -> [CivilizationID] {
         let alive = state.players.filter { !state.civs[$0]!.eliminated }

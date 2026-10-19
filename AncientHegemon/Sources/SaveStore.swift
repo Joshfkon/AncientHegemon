@@ -15,6 +15,8 @@ struct SavedGame: Codable {
     var savedAt: Date
     /// Who held each territory at the start of each round, for the end-of-game replay.
     var history: [[TerritoryID: CivilizationID]]?
+    /// Each empire's prestige at the start of each round.
+    var prestigeHistory: [[CivilizationID: Int]]?
 }
 
 /// One autosave slot in Application Support.

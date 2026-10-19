@@ -66,3 +66,17 @@ import Testing
         #expect(engine.successionEase(of: "egypt", in: s) == 5)
     }
 }
+
+@Suite struct StandingsTests {
+    let engine = try! Engine.bare()
+
+    @Test func theBreakdownAddsUpToPrestige() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        s.civs["egypt"]!.gold = 31
+        s.civs["egypt"]!.decorations = ["throne"]
+        for civ in ["egypt", "greece"] {
+            let parts = engine.prestigeBreakdown(of: civ, in: s)
+            #expect(parts.reduce(0) { $0 + $1.points } == engine.prestige(of: civ, in: s))
+        }
+    }
+}
