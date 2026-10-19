@@ -380,7 +380,7 @@ struct MapView: View {
                            at: .zero)
             // Zoomed in: grain, people and buildings under the army token (a clear spot even
             // where the lettering runs sideways), below its troop plate.
-            if t.detail >= 1.3, layer != .resources {
+            if t.detail >= 1.3, layer != .resources, layer != .trade {
                 let c = t.point(shape.token)
                 let k = t.detail
                 let army = (state.armies[territory.id]?.units.total ?? 0) > 0
@@ -769,12 +769,26 @@ extension MapView {
         let routes = engine.tradeRoutes(in: state)
         for route in routes {
             let path = line(through: route.path, t)
-            context.stroke(path, with: .color(.black.opacity(0.5)),
-                           style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            context.stroke(path, with: .color(.black.opacity(0.6)),
+                           style: StrokeStyle(lineWidth: 5.5 * t.detail, lineCap: .round, lineJoin: .round))
             context.stroke(path, with: .color(.yellow),
-                           style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round, dash: [6, 3]))
+                           style: StrokeStyle(lineWidth: 3 * t.detail, lineCap: .round, lineJoin: .round,
+                                              dash: [8 * t.detail, 4 * t.detail]))
         }
-        // What each route carries, at its middle: each partner's color, then what it receives.
+        // Army tokens, for labels to keep clear of.
+        let tokens: [CGRect] = map.territories.compactMap { territory in
+            guard let shape = art.territories[territory.id], (state.armies[territory.id]?.units.total ?? 0) > 0 else { return nil }
+            let c = t.point(shape.token), r = 11 * t.detail
+            return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
+        }
+        var placed = tokens
+        // The strait markers and their names, drawn last, also need room.
+        for strait in map.chokepoints {
+            guard let link = strait.gatesSeaLink, let a = art.seas[link[0]], let b = art.seas[link[1]] else { continue }
+            let pa = t.point(a), pb = t.point(b), k = t.detail
+            placed.append(CGRect(x: (pa.x + pb.x) / 2 - 40 * k, y: (pa.y + pb.y) / 2 - 9 * k, width: 80 * k, height: 32 * k))
+        }
+        // What each route carries, near its middle: each partner's color, then what it receives.
         for route in routes {
             let stops = route.path.compactMap { point($0, t) }
             guard !stops.isEmpty else { continue }
@@ -787,16 +801,38 @@ extension MapView {
                 lines.append(goods.reduce(Text("▸").foregroundStyle(Palette.color(to, state))) { $0 + Text(" ") + Self.icon($1) })
             }
             guard !lines.isEmpty else { continue }
-            let resolved = lines.map { context.resolve($0.font(.system(size: 6.5, weight: .bold))) }
-            let width = (resolved.map { $0.measure(in: CGSize(width: 200, height: 20)).width }.max() ?? 0) + 4
-            let height = CGFloat(lines.count) * 9 + 3
+            let k = t.detail
+            let resolved = lines.map { context.resolve($0.font(.system(size: 9.5 * k, weight: .bold))) }
+            let width = (resolved.map { $0.measure(in: CGSize(width: 400, height: 40)).width }.max() ?? 0) + 8 * k
+            let row = 12 * k
+            let height = CGFloat(lines.count) * row + 4 * k
             // Keep the label on the board.
             let left = t.point([BoardArt.frame.minX, 0]).x, right = t.point([BoardArt.frame.maxX, 0]).x
-            let mid = CGPoint(x: min(max(middle.x, left + width / 2 + 2), right - width / 2 - 2), y: middle.y)
-            context.fill(Path(roundedRect: CGRect(x: mid.x - width / 2, y: mid.y - height / 2, width: width, height: height),
-                              cornerRadius: 3), with: .color(.white.opacity(0.8)))
+            func spot(_ p: CGPoint) -> CGRect {
+                let x = min(max(p.x, left + width / 2 + 2), right - width / 2 - 2)
+                return CGRect(x: x - width / 2, y: p.y - height / 2, width: width, height: height)
+            }
+            // The stop nearest the middle whose label covers no army and no other label.
+            var along: [CGPoint] = []
+            for (i, p) in stops.enumerated() {
+                along.append(p)
+                if i + 1 < stops.count { along.append(CGPoint(x: (p.x + stops[i + 1].x) / 2, y: (p.y + stops[i + 1].y) / 2)) }
+            }
+            let centre = along.count / 2
+            let order = along.indices.sorted { abs($0 - centre) < abs($1 - centre) }
+            let nudges = [CGSize.zero, CGSize(width: 0, height: -height), CGSize(width: 0, height: height),
+                          CGSize(width: -width * 0.6, height: 0), CGSize(width: width * 0.6, height: 0)]
+            let candidates = order.flatMap { i in nudges.map { spot(CGPoint(x: along[i].x + $0.width, y: along[i].y + $0.height)) } }
+            func covered(_ b: CGRect) -> CGFloat {
+                placed.reduce(0) { sum, p in let o = p.intersection(b); return sum + (o.isNull ? 0 : o.width * o.height) }
+            }
+            let box = candidates.first { covered($0) == 0 } ?? candidates.min { covered($0) < covered($1) } ?? spot(middle)
+            placed.append(box)
+            let mid = CGPoint(x: box.midX, y: box.midY)
+            context.fill(Path(roundedRect: box,
+                              cornerRadius: 4 * k), with: .color(.white.opacity(0.9)))
             for (i, line) in resolved.enumerated() {
-                context.draw(line, at: CGPoint(x: mid.x, y: mid.y - height / 2 + 6 + CGFloat(i) * 9))
+                context.draw(line, at: CGPoint(x: mid.x, y: mid.y - height / 2 + 2 * k + row / 2 + CGFloat(i) * row))
             }
         }
         let tolled = Set(routes.flatMap(\.chokepoints))
@@ -805,11 +841,17 @@ extension MapView {
             let pa = t.point(a), pb = t.point(b)
             let c = CGPoint(x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2)
             let holder = engine.holder(of: strait, in: state)
-            let dot = Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12))
+            let d = 8 * t.detail
+            let dot = Path(ellipseIn: CGRect(x: c.x - d, y: c.y - d, width: 2 * d, height: 2 * d))
             context.fill(dot, with: .color(holder.map { Palette.color($0, state) } ?? Color(white: 0.8)))
             context.stroke(dot, with: .color(tolled.contains(strait.id) ? .yellow : .black), lineWidth: 1.5)
-            context.draw(Text(strait.name).font(.system(size: 6.5, weight: .semibold)).foregroundStyle(.white),
-                         at: CGPoint(x: c.x, y: c.y + 11))
+            let name = context.resolve(Text(strait.name).font(.system(size: 9 * t.detail, weight: .bold)).foregroundStyle(.white))
+            let size = name.measure(in: CGSize(width: 300, height: 40))
+            let at = CGPoint(x: c.x, y: c.y + d + 3 * t.detail + size.height / 2)
+            context.fill(Path(roundedRect: CGRect(x: at.x - size.width / 2 - 4, y: at.y - size.height / 2 - 1,
+                                                  width: size.width + 8, height: size.height + 2), cornerRadius: size.height / 2),
+                         with: .color(.black.opacity(0.55)))
+            context.draw(name, at: at)
         }
     }
 

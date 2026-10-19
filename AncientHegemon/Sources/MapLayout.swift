@@ -78,7 +78,8 @@ struct BoardTransform {
 enum Palette {
     static let base: [CivilizationID: Color] = [
         "greece": Color(red: 0.20, green: 0.42, blue: 0.85),
-        "egypt": Color(red: 0.85, green: 0.65, blue: 0.13),
+        // Royal purple: gold vanished into the painted desert that most of Egypt is.
+        "egypt": Color(red: 0.56, green: 0.26, blue: 0.70),
         "italia": Color(red: 0.80, green: 0.20, blue: 0.20),
         "mesopotamia": Color(red: 0.18, green: 0.62, blue: 0.35),
     ]
