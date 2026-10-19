@@ -121,7 +121,12 @@ struct CommandBar: View {
             if let haul = engine.haul(of: human, to: id, in: state), haul.extraGrain > 0 {
                 return "Grain is carted \(haul.steps) steps here: each soldier eats \(haul.extraGrain) extra. Roads or ships carry it free."
             }
-            return ready.total > 0 ? "Tap a glowing territory to march, or a sea with your ships to board." : "These troops have moved this turn."
+            guard ready.total > 0 else { return "These troops have moved this turn." }
+            let coastal = !(engine.map.territory(id)?.seas.isEmpty ?? true)
+            let routes = engine.seaRoutes(from: id, for: human, in: state)
+            if !routes.isEmpty { return "Tap white land to march, or a blue coast ⛵ to sail there and attack in one go." }
+            if coastal { return "Tap a glowing territory to march. To cross the sea, build a ship (Ships, below) first." }
+            return "Tap a glowing territory to march."
         }
         if state.owner(of: id) == human { return engine.homeNetwork(of: human, in: state).contains(id) ? "" : "Cut off from your capital: no recruiting here." }
         return "Select one of your armies next door and tap here to attack."

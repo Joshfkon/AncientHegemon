@@ -6,6 +6,16 @@ enum PendingOrder: Hashable {
     case march(from: TerritoryID, to: TerritoryID)
     case embark(from: TerritoryID, sea: SeaZoneID)
     case land(sea: SeaZoneID, to: TerritoryID)
+    /// Board the ships off this coast, sail if need be, and land across the water: one order.
+    case seaAssault(from: TerritoryID, to: TerritoryID, route: SeaRouteKey)
+}
+
+/// A sea route as a hashable value for the pending order.
+struct SeaRouteKey: Hashable {
+    let board: SeaZoneID
+    let land: SeaZoneID
+    let room: Int
+    init(_ r: SeaRoute) { board = r.board; land = r.land; room = r.room }
 }
 
 /// The game: the board fills the screen, with the player's status and controls floating over it.
@@ -363,7 +373,7 @@ struct GameScreen: View {
     /// Where the player is looking: the order's target, else the selected territory.
     private var focusTerritory: TerritoryID? {
         switch pending {
-        case let .march(_, to)?, let .land(_, to)?: return to
+        case let .march(_, to)?, let .land(_, to)?, let .seaAssault(_, to, _)?: return to
         case let .embark(from, _)?: return from
         case nil: break
         }
@@ -796,6 +806,14 @@ struct GameScreen: View {
 
     // MARK: Map interaction
 
+    /// Coasts the selected army can sail to this turn with the ships offshore.
+    private var seaRoutes: [TerritoryID: SeaRoute] {
+        guard session.isHumanTurn, let human = session.human, case .territory(let from)? = selected,
+              let army = state.armies[from], army.owner == human,
+              (army.units - (state.moved[from] ?? .zero)).total > 0 else { return [:] }
+        return engine.seaRoutes(from: from, for: human, in: state)
+    }
+
     /// Where the selected army or fleet can go this turn.
     private var targets: Set<MapPick> {
         guard session.isHumanTurn, let human = session.human, pending == nil else { return [] }
@@ -812,6 +830,8 @@ struct GameScreen: View {
                     picks.insert(.sea(sea))
                 }
             }
+            // Coasts across the water that the ships offshore can carry this army to.
+            picks.formUnion(seaRoutes.keys.map(MapPick.territory))
             return picks
         case .sea(let sea)?:
             guard let fleet = state.fleet(of: human, in: sea) else { return [] }
@@ -834,7 +854,12 @@ struct GameScreen: View {
         session.message = nil
         if let pick, targets.contains(pick), let from = selected {
             switch (from, pick) {
-            case let (.territory(a), .territory(b)): pending = .march(from: a, to: b)
+            case let (.territory(a), .territory(b)):
+                if !engine.map.areLandAdjacent(a, b), let route = seaRoutes[b] {
+                    pending = .seaAssault(from: a, to: b, route: SeaRouteKey(route))
+                } else {
+                    pending = .march(from: a, to: b)
+                }
             case let (.territory(a), .sea(s)): pending = .embark(from: a, sea: s)
             case let (.sea(s), .territory(t)): pending = .land(sea: s, to: t)
             case let (.sea(s), .sea(t)):

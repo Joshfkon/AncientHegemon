@@ -44,7 +44,7 @@ struct OrderComposer: View {
 
     private var available: UnitCounts {
         switch order {
-        case let .march(from, _), let .embark(from, _):
+        case let .march(from, _), let .embark(from, _), let .seaAssault(from, _, _):
             guard let army = state.armies[from], army.owner == human else { return .zero }
             let ready = army.units - (state.moved[from] ?? .zero)
             return UnitCounts(infantry: max(0, ready.infantry), archers: max(0, ready.archers),
@@ -56,9 +56,24 @@ struct OrderComposer: View {
 
     private var destination: TerritoryID? {
         switch order {
-        case let .march(_, to), let .land(_, to): to
+        case let .march(_, to), let .land(_, to), let .seaAssault(_, to, _): to
         case .embark: nil
         }
+    }
+
+    /// The sea troops come ashore from, for landings and sea assaults.
+    private var landingSea: SeaZoneID? {
+        switch order {
+        case let .land(sea, _): sea
+        case let .seaAssault(_, _, route): route.land
+        default: nil
+        }
+    }
+
+    /// Troops the ships can carry on a sea assault.
+    private var seaRoom: Int? {
+        if case let .seaAssault(_, _, route) = order { return route.room }
+        return nil
     }
 
     private var isBattle: Bool {
@@ -77,6 +92,7 @@ struct OrderComposer: View {
         case let .march(from, to): return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
         case let .embark(from, sea): return "Board ships in the \(place(sea)) from \(place(from))"
         case let .land(sea, to): return "\(isBattle ? "Land and attack" : "Land in") \(place(to)) from the \(place(sea))"
+        case let .seaAssault(from, to, _): return "\(isBattle ? "Sail and attack" : "Sail to") \(place(to)) from \(place(from))"
         }
     }
 
@@ -87,14 +103,26 @@ struct OrderComposer: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(title).font(.headline)
                     if let to = destination { destinationSummary(to) }
+                    if case let .seaAssault(_, _, route) = order {
+                        let water = route.board == route.land
+                            ? "Your ships in the \(engine.map.sea(route.board)?.name ?? route.board) carry them straight across."
+                            : "Your ships board in the \(engine.map.sea(route.board)?.name ?? route.board), sail into the \(engine.map.sea(route.land)?.name ?? route.land), and land."
+                        Label(water + " Room for \(route.room).", systemImage: "sailboat.fill")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     UnitPicker(available: available, units: $units)
+                    if let room = seaRoom, units.total > room {
+                        Label("Only \(room) fit aboard.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
                     if let general {
                         Toggle("\(general.name) leads (\(traitName(general.trait)))", isOn: $withGeneral).font(.callout)
                     }
                     if isBattle, destination != nil {
                         odds
                     }
-                    if case let .land(sea, _) = order,
+                    if let sea = landingSea,
                        let enemy = state.fleets.first(where: { $0.sea == sea && $0.ships > 0 && state.atWar(human, $0.owner) }) {
                         Label("\(Palette.name(enemy.owner, state))'s \(enemy.ships) ship\(enemy.ships == 1 ? "" : "s") guard these waters: your fleet must beat them at sea before anyone lands.",
                               systemImage: "sailboat.fill")
@@ -119,7 +147,7 @@ struct OrderComposer: View {
                 Button(confirmLabel) { send() }
                     .buttonStyle(.borderedProminent)
                     .tint(isBattle ? .red : .accentColor)
-                    .disabled(units.isEmpty)
+                    .disabled(units.isEmpty || units.total > (seaRoom ?? .max))
             }
             .padding(.top, 4)
         }
@@ -146,7 +174,7 @@ struct OrderComposer: View {
     private func updateOdds() {
         guard isBattle, let to = destination else { oddsByFormation = [:]; return }
         let from: TerritoryID? = if case let .march(f, _) = order { f } else { nil }
-        let amphibious = { if case .land = order { true } else { false } }()
+        let amphibious = { switch order { case .land, .seaAssault: true; default: false } }()
         let chosen = plan.formation ?? engine.rules.battle.defaultFormation
         let leader = withGeneral ? general : nil
         let ids = from == nil ? [chosen] : engine.rules.battle.formations.map(\.id).filter {
@@ -168,6 +196,7 @@ struct OrderComposer: View {
         case .march: isBattle ? "To the battlefield" : "March"
         case .embark: "Board"
         case .land: isBattle ? "Land and attack" : "Land"
+        case .seaAssault: isBattle ? "Sail and attack" : "Sail"
         }
     }
 
@@ -175,7 +204,7 @@ struct OrderComposer: View {
         let t = engine.map.territory(to)!
         let crossing: String = switch order {
         case let .march(from, _): engine.map.crossing(between: from, and: to).map { " · across a \($0.rawValue)" } ?? ""
-        case .land: " · from the sea"
+        case .land, .seaAssault: " · from the sea"
         case .embark: ""
         }
         VStack(alignment: .leading, spacing: 2) {
@@ -245,6 +274,14 @@ struct OrderComposer: View {
                 units[type] = min(left, available[type])
                 left -= units[type]
             }
+        case .seaAssault(_, _, let route):
+            // As many as fit, foot first.
+            var left = route.room
+            units = .zero
+            for type in [UnitType.infantry, .cavalry, .archers] {
+                units[type] = min(left, available[type])
+                left -= units[type]
+            }
         case .march(_, let to) where !isBattle && state.owner(of: to) != human:
             // Claiming empty land takes one unit.
             let type = UnitType.allCases.first { available[$0] > 0 } ?? .infantry
@@ -272,6 +309,23 @@ struct OrderComposer: View {
             if session.order(.embark(territory: from, sea: sea, units: units)) { done(.sea(sea)) }
         case let .land(sea, to):
             if session.order(.land(sea: sea, territory: to, units: units)) { done(.territory(to)) }
+        case let .seaAssault(from, to, route):
+            // Board, sail if the target is a sea further, then land. Each step is a normal order,
+            // so a sea battle on the way can stop it.
+            guard session.order(.embark(territory: from, sea: route.board, units: units)) else { return }
+            if route.board != route.land, let fleet = state.fleet(of: human, in: route.board) {
+                let ready = fleet.ships - fleet.movedShips
+                guard session.order(.moveFleet(from: route.board, to: route.land, ships: ready, cargo: fleet.cargo)) else { return }
+                guard state.fleet(of: human, in: route.land) != nil else {
+                    done(.sea(route.board))  // beaten at sea: the fleet fell back
+                    return
+                }
+            }
+            let aboard = state.fleet(of: human, in: route.land)?.cargo ?? .zero
+            var landing = units
+            for type in UnitType.allCases { landing[type] = min(landing[type], aboard[type]) }
+            guard !landing.isEmpty else { done(.sea(route.land)); return }
+            if session.order(.land(sea: route.land, territory: to, units: landing)) { done(.territory(to)) }
         }
     }
 }

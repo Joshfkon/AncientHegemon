@@ -37,7 +37,7 @@ extension Engine {
         return chokepoint.heldBy.allSatisfy { state.owner(of: $0) == first } ? first : nil
     }
 
-    func seaLinkOpen(_ a: SeaZoneID, _ b: SeaZoneID, for travelers: [CivilizationID],
+    public func seaLinkOpen(_ a: SeaZoneID, _ b: SeaZoneID, for travelers: [CivilizationID],
                      in state: GameState) -> Bool {
         guard let gate = map.chokepoint(gating: a, b), let holder = holder(of: gate, in: state) else {
             return true

@@ -331,11 +331,23 @@ struct MapView: View {
         seam.addLine(to: t.point([BoardArt.seamX, f.maxY]))
         context.stroke(seam, with: .color(.black.opacity(0.75)), lineWidth: 1.6)
 
+        // Land the selected army can march to glows white; coasts it can reach by ship glow blue.
+        let overSea: (TerritoryID) -> Bool = { id in
+            guard case .territory(let from)? = self.selected else { return false }
+            return !self.map.areLandAdjacent(from, id)
+        }
         for target in targets {
             if case .territory(let id) = target, let shape = art.territories[id] {
                 let path = t.path(shape.polygon)
-                context.fill(path, with: .color(.white.opacity(0.18)))
-                context.stroke(path, with: .color(.white), style: StrokeStyle(lineWidth: 1.8, dash: [4, 3]))
+                let sea = overSea(id)
+                let color = sea ? Color(red: 0.55, green: 0.85, blue: 1) : .white
+                context.fill(path, with: .color(color.opacity(sea ? 0.25 : 0.18)))
+                context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 1.8, dash: [4, 3]))
+                if sea {
+                    context.draw(Text(Image(systemName: "sailboat.fill")).font(.system(size: 11 * t.detail))
+                                    .foregroundStyle(color),
+                                 at: CGPoint(x: t.point(shape.token).x + 14 * t.detail, y: t.point(shape.token).y - 14 * t.detail))
+                }
             }
         }
         if case .territory(let id)? = selected, let shape = art.territories[id] {

@@ -1282,3 +1282,14 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   (`woodPanel`): the status box, layer picker, toolbar, notices, round buttons, side panel and
   the "rivals move" pill. End turn is a bronze button in serif type, like Continue on the
   title screen.
+
+### Sail and attack in one order (Josh: "it's unclear how I can take my troops on board ships and attack a coastal country")
+
+- Selecting an army on a coast now also lights up, in blue with a ⛵, every coast its ships can
+  reach this turn (`Engine.seaRoutes`): coasts of a sea where it has ships with room, and,
+  if those ships haven't moved, coasts one sea further. Land next door stays white (march).
+- Tapping a blue coast opens one "Sail and attack" order: pick who goes (capped at the room
+  aboard), see the route and the scouts' report, and the game boards, sails if needed, and
+  lands. Each step is a normal command, so a fleet beaten at sea on the way stops there.
+- The command bar's hint says so, or, with no ships, says to build one first. The walkthrough
+  page on crossing the sea is updated. The step-by-step way (board, sail, land) still works.

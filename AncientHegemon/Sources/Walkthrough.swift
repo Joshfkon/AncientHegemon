@@ -41,8 +41,8 @@ struct WalkthroughView: View {
         ]),
         Page(title: "Crossing the sea", picture: AnyView(Picture.sea), steps: [
             "Ships are built in a sea next to your coast: tap a coastal territory and use Build a ship. Each ship needs gold and a 🪵 timber, and carries 2 troops.",
-            "Select your army on that coast, then tap the sea (it glows) to board.",
-            "Tap the sea with your ships, then a glowing coast to land. On held land you fight from the boats.",
+            "Select your army on that coast: coasts your ships can reach glow blue with a ⛵.",
+            "Tap one, choose who goes, and they board, sail and land in one order. Enemy ships at sea must be beaten first.",
         ]),
         Page(title: "Neighbours", picture: AnyView(Picture.diplomacy), steps: [
             "Tribes next to you can be won with gifts, or made to submit if your army at their border is big enough.",
