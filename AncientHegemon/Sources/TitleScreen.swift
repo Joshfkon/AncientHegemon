@@ -8,6 +8,9 @@ struct CivPickerView: View {
     @State private var drift = false
     @State private var chosen: CivilizationID?
     @State private var appeared = false
+    @State private var showWalkthrough = false
+    /// First time on the title screen: the How to play button pulses.
+    @AppStorage("walkthroughSeen") private var walkthroughSeen = false
 
     private var engine: Engine { session.engine }
 
@@ -56,6 +59,16 @@ struct CivPickerView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    Button { showWalkthrough = true } label: {
+                        Label("How to play", systemImage: "book.fill")
+                            .font(.callout.bold())
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(Bronze.gradient, lineWidth: walkthroughSeen ? 0 : 2))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .symbolEffect(.bounce, options: .repeat(walkthroughSeen ? 0 : 3), value: appeared)
                     Button { session.start(as: nil) } label: {
                         Label("Watch the empires", systemImage: "eye")
                             .font(.callout.bold())
@@ -68,6 +81,12 @@ struct CivPickerView: View {
                 .opacity(appeared ? 1 : 0)
             }
             .padding(.vertical)
+        }
+        .fullScreenCover(isPresented: $showWalkthrough) {
+            WalkthroughView {
+                walkthroughSeen = true
+                showWalkthrough = false
+            }
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) { appeared = true }

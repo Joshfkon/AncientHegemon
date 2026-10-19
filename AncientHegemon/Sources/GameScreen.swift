@@ -24,6 +24,7 @@ struct GameScreen: View {
     @State private var panelOpen = false
     @State private var showKnowledge = false
     @State private var showCodex = false
+    @State private var showWalkthrough = false
     @State private var layer = MapLayer.armies
     @State private var quickLook: TerritoryID?
     @State private var explain: StatTopic?
@@ -145,6 +146,9 @@ struct GameScreen: View {
                     session.quit()
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showWalkthrough) {
+            WalkthroughView { showWalkthrough = false }
         }
         .sheet(isPresented: $showCodex) {
             NavigationStack {
@@ -514,7 +518,8 @@ struct GameScreen: View {
             }
             toolButton("Chronicle", "scroll.fill", badge: unreadLog) { open(.log); seenLog = session.log.first?.id ?? 0 }
             Menu {
-                Button("How to play", systemImage: "book") { showCodex = true }
+                Button("How to play", systemImage: "book") { showWalkthrough = true }
+                Button("Rules reference", systemImage: "text.book.closed") { showCodex = true }
                 Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
                 Button("New game", role: .destructive) { session.quit() }
             } label: {

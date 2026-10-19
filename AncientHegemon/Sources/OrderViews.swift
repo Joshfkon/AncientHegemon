@@ -326,6 +326,13 @@ struct TerritoryPanel: View {
             Text(ready.total > 0 ? "Tap a highlighted territory to march \(ready.total) ready units, or a sea with your ships to board."
                                  : "These troops have moved this turn.")
                 .font(.caption).foregroundStyle(.secondary)
+            // Upkeep: grain, never gold. Far from the capital each soldier eats more.
+            let extra = engine.supplyStrain(of: human, at: territory, in: state)?.extraGrain ?? 0
+            let base = engine.rules.upkeep(of: army.units)
+            Text("This army eats \(base + army.units.total * extra) 🌾 a turn"
+                 + (extra > 0 ? " (\(base) + \(army.units.total * extra) for the long haul)" : "")
+                 + ". Soldiers cost no gold once raised.")
+                .font(.caption).foregroundStyle(.secondary)
         }
         if home {
             HStack {
@@ -347,7 +354,7 @@ struct TerritoryPanel: View {
                 }
             }
             .animation(.spring(duration: 0.35, bounce: 0.5), value: raisedThisTurn(human).total)
-            Text("Each soldier costs gold and one of this land's people (👥 \(state.population(of: territory)) here). Cavalry also need a horse: each horse you have lets you raise one cavalry a turn.")
+            Text("Each soldier costs gold and one of this land's people (👥 \(state.population(of: territory)) here), then eats 1 🌾 grain a turn. Cavalry also need a horse: each horse you have lets you raise one cavalry a turn.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(spacing: 6) {
@@ -375,7 +382,8 @@ struct TerritoryPanel: View {
                                 }
                             }
                             Spacer(minLength: 4)
-                            (Text("\(stats.cost) gold · 1 👥") + (stats.requires.map { Text(" · 1 \(MapView.icon($0))") } ?? Text("")))
+                            (Text("\(stats.cost) gold · 1 👥") + (stats.requires.map { Text(" · 1 \(MapView.icon($0))") } ?? Text(""))
+                             + Text(" · 🌾\(stats.upkeep)/turn"))
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.primary)
                         }
@@ -391,13 +399,7 @@ struct TerritoryPanel: View {
                 }
                 .buttonStyle(.bordered)
             }
-            ForEach(t.seas, id: \.self) { sea in
-                Button("Build a ship in the \(engine.map.sea(sea)?.name ?? sea) (\(engine.rules.ships.cost) gold)") {
-                    session.order(.buildShips(territory: territory, sea: sea, count: 1))
-                }
-                .buttonStyle(.bordered)
-                .font(.caption)
-            }
+            if !t.seas.isEmpty { SeaCrossing(session: session, territory: territory, civ: human) }
             projects(human)
         } else {
             Text("Cut off from your capital: no recruiting here.").font(.caption).foregroundStyle(.orange)
@@ -613,6 +615,76 @@ struct TribeTalks: View {
         case 40..<55: "they may accept"
         case 25..<40: "they will probably refuse"
         default: "they will very likely refuse"
+        }
+    }
+}
+
+/// Crossing the sea, as three steps with where the player stands on each: ships in a sea off this
+/// coast (building one needs gold and timber), boarding by tapping that sea with the army
+/// selected, then landing by selecting the ships and tapping the far coast.
+struct SeaCrossing: View {
+    let session: GameSession
+    let territory: TerritoryID
+    let civ: CivilizationID
+
+    private var engine: Engine { session.engine }
+    private var state: GameState { session.state }
+
+    var body: some View {
+        let seas = engine.map.territory(territory)?.seas ?? []
+        let capacity = engine.rules.ships.capacity
+        let fleets = seas.compactMap { state.fleet(of: civ, in: $0) }
+        let ships = fleets.reduce(0) { $0 + $1.ships }
+        let aboard = fleets.reduce(0) { $0 + $1.cargo.total }
+        let army = state.armies[territory].flatMap { $0.owner == civ ? $0.units.total : nil } ?? 0
+        let allowance = engine.shipAllowance(for: civ, in: state)
+        let gold = state.civs[civ]?.gold ?? 0
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Crossing the sea", systemImage: "sailboat.fill").font(.subheadline.bold())
+            step(1, done: ships > 0, ships > 0
+                 ? "You have \(ships) ship\(ships == 1 ? "" : "s") off this coast (each carries \(capacity))."
+                 : "Build a ship in a sea off this coast. Each costs \(engine.rules.ships.cost) gold and a timber "
+                   + "(🪵 \(allowance.left) left this turn), carries \(capacity) troops, and its crew eats \(engine.rules.ships.upkeep) 🌾 a turn.")
+            ForEach(seas, id: \.self) { sea in
+                Button {
+                    if session.order(.buildShips(territory: territory, sea: sea, count: 1)) {
+                        SoundBoard.shared.play(.coins, volume: 0.6)
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "hammer.fill")
+                        Text("Build a ship in the \(engine.map.sea(sea)?.name ?? sea)")
+                        Spacer(minLength: 4)
+                        Text("\(engine.rules.ships.cost) gold · 1 ") + MapView.icon(.timber)
+                    }
+                    .font(.caption.bold())
+                }
+                .buttonStyle(.bordered)
+                .disabled(allowance.left == 0 || gold < engine.rules.ships.cost)
+            }
+            if allowance.perTurn == 0 {
+                Button {
+                    NotificationCenter.default.post(name: .showResource, object: Resource.timber)
+                } label: {
+                    Text("You have no timber: tap to see where to get it.").font(.caption2.bold())
+                }
+                .foregroundStyle(.orange)
+            }
+            step(2, done: aboard > 0, aboard > 0
+                 ? "\(aboard) troops are aboard."
+                 : army > 0 ? "With this army selected, tap the sea (it glows) and choose who boards."
+                            : "Bring an army here, select it, then tap the sea to board.")
+            step(3, done: false, "Tap your ships' sea, then a glowing coast to land. Landing on held land means a fight from the boats.")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+    }
+
+    private func step(_ n: Int, done: Bool, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(n).circle")
+                .foregroundStyle(done ? .green : .secondary)
+            Text(text).font(.caption).fixedSize(horizontal: false, vertical: true)
         }
     }
 }

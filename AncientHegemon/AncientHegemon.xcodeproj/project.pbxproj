@@ -27,6 +27,7 @@
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
+		94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DF88279096FCF589EA9D0E /* Walkthrough.swift */; };
 		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
 		B234E652CC62E857DB359A86 /* click.wav in Resources */ = {isa = PBXBuildFile; fileRef = BD6DDA213A9E31B4C7C20FF7 /* click.wav */; };
 		BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */; };
@@ -62,6 +63,7 @@
 		8174C96AEEC6F7CD3E672281 /* defeat.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = defeat.wav; sourceTree = "<group>"; };
 		8264F7FC3FCC73EAA576137C /* SaveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStore.swift; sourceTree = "<group>"; };
 		84160A606F9979A055583705 /* wardrums.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = wardrums.wav; sourceTree = "<group>"; };
+		87DF88279096FCF589EA9D0E /* Walkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Walkthrough.swift; sourceTree = "<group>"; };
 		90545C84FE5971D4416409AA /* OrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderViews.swift; sourceTree = "<group>"; };
 		90FA72590070862E642AFFAE /* Moments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Moments.swift; sourceTree = "<group>"; };
 		94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeView.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */,
 				FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */,
 				D1B35133F6C1422877D8A459 /* UnitIcons.swift */,
+				87DF88279096FCF589EA9D0E /* Walkthrough.swift */,
 				274DD8EB3BAAB27A38991F2C /* WorldView.swift */,
 			);
 			path = Sources;
@@ -289,6 +292,7 @@
 				50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */,
 				D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */,
 				6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */,
+				94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */,
 				B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

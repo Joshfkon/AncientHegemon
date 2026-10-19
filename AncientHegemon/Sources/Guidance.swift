@@ -264,7 +264,7 @@ struct CodexView: View {
         ("arrow.triangle.turn.up.right.diamond.fill", "A turn",
          "Your turn starts with events and the harvest. Then move armies (each unit once), recruit, build, sail and make peace or war. End the turn and every rival moves in turn."),
         ("leaf.fill", "Grain and supply",
-         "Land grows grain; people and soldiers eat it. Armies eat more the farther they are from the capital along their supply line. Land cut off from the capital can't recruit, and its armies waste away."),
+         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn (there's no gold upkeep). Armies eat more the farther they are from the capital along their supply line. Land cut off from the capital can't recruit, and its armies waste away."),
         ("arrow.left.arrow.right", "Trade and resources",
          "Empires at peace that can reach each other trade automatically, sharing ore, horses, timber and more. Copper and tin make bronze, which arms your troops; it wears out without fresh tin. Iron needs Ironworking."),
         ("shield.lefthalf.filled", "Battles",
@@ -288,7 +288,7 @@ struct CodexView: View {
             }
             .padding(.vertical, 4)
         }
-        .navigationTitle("How to play")
+        .navigationTitle("Rules reference")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
