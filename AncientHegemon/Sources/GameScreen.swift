@@ -224,6 +224,7 @@ struct GameScreen: View {
                 session.demoFlash(seat)
             }
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
+            if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
@@ -253,7 +254,7 @@ struct GameScreen: View {
         }
         .onChange(of: session.marks.count) { _, _ in
             // Follow the rivals around the map as they move.
-            guard session.busy, !session.skipping, let mark = session.marks.last else { return }
+            guard session.busy, !session.skipping, let mark = session.marks.last, session.inSight(mark) else { return }
             let place: TerritoryID? = switch mark {
             case let .march(_, _, to, _), let .landing(_, _, to, _): to
             case let .battle(at, _, _): at
@@ -694,6 +695,10 @@ struct GameScreen: View {
                     ProgressView().controlSize(.small)
                     Text("Rivals move…").font(.callout)
                     if !session.skipping {
+                        Button(session.fastRivals ? "2×" : "1×") { session.fastRivals.toggle() }
+                            .font(.callout.bold().monospacedDigit())
+                            .foregroundStyle(session.fastRivals ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(.white.opacity(0.75)))
+                            .accessibilityLabel(session.fastRivals ? "Double speed" : "Normal speed")
                         Button("Skip") { session.skipping = true }.font(.callout.bold())
                     }
                 }

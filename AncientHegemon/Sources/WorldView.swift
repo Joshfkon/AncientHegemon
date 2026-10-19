@@ -792,7 +792,8 @@ extension MapView {
         context.fill(disc, with: .color(color))
         context.stroke(disc, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
         context.stroke(disc, with: .color(Self.bronze), lineWidth: 1.2 * t.detail)
-        context.draw(Text("\(units)").font(.system(size: 12 * t.detail, weight: .heavy, design: .rounded)).foregroundStyle(.white), at: p)
+        context.draw(Text("\(units)").font(.system(size: (units >= 100 ? 7.5 : units >= 10 ? 10 : 12) * t.detail, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white), at: p)
     }
 
     /// An army arriving: a ring in its colour spreads from where it lands.
@@ -1099,8 +1100,11 @@ extension MapView {
         context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.85 : 1)))
         context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
         context.stroke(badge, with: .color(native ? Color(white: 0.75) : Self.bronze), lineWidth: 1.2 * t.detail)
-        context.draw(Text("\(army.units.total)\(led ? "★" : "")")
-                        .font(.system(size: (native ? 9.5 : 12) * t.detail, weight: .heavy, design: .rounded))
+        let label = "\(army.units.total)\(led ? "★" : "")"
+        // Long labels ("14★") shrink to stay inside the disc.
+        let fit: CGFloat = label.count >= 4 ? 0.62 : label.count == 3 ? 0.75 : 1
+        context.draw(Text(label)
+                        .font(.system(size: (native ? 9.5 : 12) * fit * t.detail, weight: .heavy, design: .rounded))
                         .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
                      at: c)
         // Veterans wear chevrons above the token, one per rank.

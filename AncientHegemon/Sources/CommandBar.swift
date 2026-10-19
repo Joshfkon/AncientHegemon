@@ -352,7 +352,7 @@ struct CommandBar: View {
                     } else if steps == 0 {
                         Text("At the capital: fed straight from the granary.")
                     } else {
-                        Text("\(steps!) steps from the capital, by road or sea: no carting costs.")
+                        Text("\(steps!) step\(steps == 1 ? "" : "s") from the capital, by road or sea: no carting costs.")
                     }
                 }
                 .font(.caption2).foregroundStyle(Color(red: 0.3, green: 0.24, blue: 0.16))

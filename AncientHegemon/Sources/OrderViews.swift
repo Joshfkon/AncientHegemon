@@ -80,6 +80,12 @@ struct OrderComposer: View {
         destination.map { engine.defenders(of: $0, against: human, state) != nil } ?? false
     }
 
+    /// Three or more to one: no need for the battlefield (it's still a tap away).
+    private var overwhelming: Bool {
+        guard case let .march(_, to) = order, isBattle, let d = engine.defenders(of: to, against: human, state) else { return false }
+        return units.total >= 3 * max(1, d.army.units.total + d.levy)
+    }
+
     private var general: General? {
         guard case let .march(from, _) = order, let g = state.general(of: human, at: from),
               !state.generalsMoved.contains(g.id) else { return nil }
@@ -135,8 +141,10 @@ struct OrderComposer: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if isBattle, case .march = order {
-                        Label("You'll choose your battle plan on the field.", systemImage: "flag.2.crossed")
+                        Label(overwhelming ? "You outnumber them three to one or more: attack at once, or plan it on the battlefield."
+                                           : "You'll choose your battle plan on the field.", systemImage: "flag.2.crossed")
                             .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(.trailing, 4)
@@ -144,10 +152,17 @@ struct OrderComposer: View {
             HStack {
                 Button("Cancel") { done(nil) }.buttonStyle(.bordered)
                 Spacer()
-                Button(confirmLabel) { send() }
-                    .buttonStyle(.borderedProminent)
-                    .tint(isBattle ? .red : .accentColor)
-                    .disabled(units.isEmpty || units.total > (seaRoom ?? .max))
+                if overwhelming {
+                    Button("Battlefield") { send() }.buttonStyle(.bordered)
+                    Button("Attack") { quickAttack() }
+                        .buttonStyle(.borderedProminent).tint(.red)
+                        .disabled(units.isEmpty)
+                } else {
+                    Button(confirmLabel) { send() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(isBattle ? .red : .accentColor)
+                        .disabled(units.isEmpty || units.total > (seaRoom ?? .max))
+                }
             }
             .padding(.top, 4)
         }
@@ -290,6 +305,13 @@ struct OrderComposer: View {
         default:
             units = available
         }
+    }
+
+    /// Straight in, with the army's standing battle plan.
+    private func quickAttack() {
+        guard case let .march(from, to) = order else { return }
+        SoundBoard.shared.play(.roar, volume: 0.6)
+        if session.order(.move(from: from, to: to, units: units, general: withGeneral)) { done(.territory(to)) }
     }
 
     private func send() {

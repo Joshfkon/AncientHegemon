@@ -1478,3 +1478,16 @@ goals: everything here follows from how real Bronze Age empires held together or
   Rivals' marches, battles and raises out of sight aren't drawn; captures still are (news
   travels). The territory panel and quick look say "Beyond your sight" and how to see further.
 - The AI still sees everything (a known simplification). Rules version 18; 234 tests.
+
+### Tempo (Josh: "faster rival turns… quick battles for small fights")
+
+- Rivals' turns only pause for what happens in sight; news from afar (including distant
+  captures) appears without a pause or a camera move. Pauses are shorter (march 0.48 s, battle
+  0.6 s, other 0.22 s, 0.25 s between rivals), and a 1×/2× toggle beside Skip (remembered)
+  more than halves them. A round of rivals now takes about 5 seconds, down from 10 or more.
+- Quick battles: when one side has at least three times the other's troops (levy included),
+  the fight resolves on the map (a burst and a toast: "Easy victory at Libya" or
+  "Libya: overwhelmed") instead of opening the battle replay. Attacking with such odds, the
+  order card offers "Attack" (straight in with the army's standing plan) beside "Battlefield".
+  Close fights still go to the battlefield.
+- Debug launch argument `-demoHost YES` swells the capital's army to 14 for trying quick battles.

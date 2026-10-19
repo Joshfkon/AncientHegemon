@@ -65,6 +65,14 @@ final class GameSession {
         }
     }
 
+    /// Whether a mark happened where the player can see (unlike `visible`, distant captures don't count).
+    func inSight(_ mark: MapMark) -> Bool {
+        switch mark {
+        case let .captured(t, _): sees(t)
+        default: visible(mark)
+        }
+    }
+
     /// The round last recorded in `history`.
     private var recordedTurn = 0
     /// The player's economy as it stands (grain, gold, trade, resources), kept current.
@@ -89,7 +97,12 @@ final class GameSession {
         didSet { if playing { startPlaying() } }
     }
     /// Seconds between AI turns, so their moves can be followed on the map.
-    var pace = 0.35
+    var pace = 0.25
+    /// Rivals' turns at double speed (remembered between games).
+    var fastRivals = UserDefaults.standard.bool(forKey: "fastRivals") {
+        didSet { UserDefaults.standard.set(fastRivals, forKey: "fastRivals") }
+    }
+    private var speed: Double { fastRivals ? 0.45 : 1 }
     private var nextID = 0
     /// A game that can be continued, offered on the picker.
     private(set) var saved: SavedGame?
@@ -361,7 +374,7 @@ final class GameSession {
         defer { busy = false }
         while !isOver, state.activePlayer != human {
             await playOneAITurn()
-            if !skipping { try? await Task.sleep(for: .seconds(pace)) }
+            if !skipping { try? await Task.sleep(for: .seconds(pace * speed)) }
         }
         if let old = turnEnded { noteGains(since: old) }
         turnEnded = nil
@@ -389,9 +402,10 @@ final class GameSession {
         for mark in MapMark.from(events, before: start, after: after) where visible(mark) {
             marks.append(mark)
             markTimes.append(.now)
-            if human != nil, !skipping {
-                let pause = if case .battle = mark { 700 } else if case .march = mark { 650 } else { 300 }
-                try? await Task.sleep(for: .milliseconds(pause))
+            // Only what happens in sight is worth waiting for; news from afar just appears.
+            if human != nil, !skipping, inSight(mark) {
+                let pause: Double = if case .battle = mark { 600 } else if case .march = mark { 480 } else { 220 }
+                try? await Task.sleep(for: .milliseconds(Int(pause * speed)))
             }
         }
     }
@@ -443,6 +457,13 @@ final class GameSession {
             return "they already have all the allies they can keep."
         }
         return "no shared enemy worries them. Courts ally against a common foe at least as strong as they are."
+    }
+
+    /// One side outnumbered the other at least three to one.
+    static func lopsided(_ report: BattleReport) -> Bool {
+        let a = report.setup.attacker.units.total
+        let d = report.setup.defender.units.total + report.setup.defender.levy
+        return max(a, d) >= 3 * max(1, min(a, d))
     }
 
     /// The chronicle's line for how the player answered the court's dilemma.
@@ -678,7 +699,16 @@ final class GameSession {
                     nextID += 1
                     let entry = BattleEntry(id: nextID, round: round, territory: t, report: report)
                     battles.insert(entry, at: 0)
-                    if let human, a.civ == human || d.civ == human { replay = entry }
+                    if let human, a.civ == human || d.civ == human {
+                        // Lopsided fights resolve on the map; only real contests open the battlefield.
+                        if Self.lopsided(report) {
+                            let ours = (a.civ == human) == won
+                            toast = (ours ? "Easy victory at \(place(t))" : "\(place(t)): overwhelmed", (toast?.id ?? 0) + 1, !ours)
+                            flashes[t] = .now
+                        } else {
+                            replay = entry
+                        }
+                    }
                 }
             case let .captured(civ, t, from) where before.isPlayer(from) || after.isPlayer(civ) && from != nil:
                 let verb = after.isPlayer(civ) ? "takes" : "seize"
@@ -790,6 +820,12 @@ final class GameSession {
     }
 
     #if DEBUG
+    /// Launch with -demoHost YES: the capital's army swells to 14, for trying quick battles.
+    func demoHost() {
+        guard let human, let seat = engine.seat(of: human, in: state), state.armies[seat]?.owner == human else { return }
+        state.armies[seat]!.units = UnitCounts(infantry: 14)
+    }
+
     /// Launch with -demoCrisis YES: the player's generals contest the throne.
     func demoCrisis() {
         guard let human else { return }
