@@ -18,6 +18,7 @@ struct StandingsBar: View {
         // Bars run from a little below the last-placed empire, so small gaps show.
         let floor = Double(scores.min() ?? 0) * 0.7
         let threat = order.first { engine.landShare(of: $0, in: state).percent * 100 >= engine.landShare(of: $0, in: state).toWin * 80 }
+        let menace = engine.menace(in: state)
         Button(action: open) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
@@ -48,6 +49,11 @@ struct StandingsBar: View {
                 if let civ = threat {
                     let share = engine.landShare(of: civ, in: state)
                     Text("⚠︎ \(Palette.name(civ, state)) holds \(share.percent)% of the land; \(share.toWin)% wins")
+                        .font(.caption2.bold()).foregroundStyle(.orange)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                } else if let menace {
+                    Text(menace == session.human ? "⚠︎ The world fears you: rivals will band together against you"
+                                                 : "⚠︎ \(Palette.name(menace, state)) grows too strong: rivals will ally against it")
                         .font(.caption2.bold()).foregroundStyle(.orange)
                         .lineLimit(1).minimumScaleFactor(0.8)
                 }
@@ -82,6 +88,8 @@ struct StandingsView: View {
                     .font(.callout).foregroundStyle(.secondary)
                 chart(order)
                 ForEach(Array(order.enumerated()), id: \.element) { i, civ in card(i + 1, civ) }
+                Text("Great works of the age").font(.headline)
+                GreatWorksList(session: session)
             }
             .padding()
         }

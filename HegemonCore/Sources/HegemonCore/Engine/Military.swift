@@ -78,6 +78,8 @@ extension Engine {
         if previous != civ, state.armies[to]?.owner == civ {
             state.land[to]!.owner = civ
             state.land[to]!.construction = nil
+            state.monumentSites[to] = nil
+            taken(to, &state)
             events.append(.captured(civ: civ, territory: to, from: previous))
             adjustLegitimacy(civ, rules.government.legitimacy.capture, &state)
             if let previous, map.civilization(previous)?.capital == to {
@@ -188,9 +190,10 @@ extension Engine {
 
     /// Damage reduction walls give a territory's defenders.
     public func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
-        guard state.land[territory]?.improvements.contains(.walls) == true else { return 0 }
+        let gate = state.monuments["lionGate"] == territory ? 30 : 0
+        guard state.land[territory]?.improvements.contains(.walls) == true else { return gate }
         let builders = level(.construction, of: state.owner(of: territory), in: state) >= 2
-        return rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0)
+        return rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0) + gate
     }
 
     /// The chance an attack succeeds, estimated by running the battle several times with seeds

@@ -142,6 +142,13 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     argument `-demoBattle YES` opens the battlefield against a neighbouring tribe. 185 tests.
     Open: in the Simulator a tap's effect sometimes shows only after the next touch (not seen on
     a device yet); natives win most even fights in the desert; the AI doesn't parley.
+  - **Since then** (each has its own DESIGN.md section, in order): army pay and the overland
+    haul, throne room and council, veterans and spoils, landings blocked by fleets, sea battles
+    on the grid, the command bar, sail-and-attack, standings and graphs, the city view and trade,
+    roads, alliances, and most recently **restless land, coalitions, great works, patronage and
+    the court's dilemmas** (rules version 16). New engine files: `Unrest.swift`,
+    `Monuments.swift`, `Patronage.swift`, `Decisions.swift`; their UI is in
+    `AncientHegemon/Sources/AgeFeatures.swift`.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

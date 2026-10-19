@@ -143,6 +143,9 @@ struct CommandBar: View {
             if coastal { return "Tap a glowing territory to march. To cross the sea, build a ship (Ships, below) first." }
             return "Tap a glowing territory to march."
         }
+        if state.owner(of: id) == human, engine.restless(id, of: human, in: state) {
+            return "Restless: it pays no taxes and may revolt. March in at least \(engine.rules.unrest.garrisonToCalm) soldier to calm it."
+        }
         if state.owner(of: id) == human { return engine.homeNetwork(of: human, in: state).contains(id) ? "" : "Cut off from your capital: no recruiting here." }
         return "Select one of your armies next door and tap here to attack."
     }

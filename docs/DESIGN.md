@@ -1368,3 +1368,43 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   to fight X / Leave alliance. There are banners for alliances made and broken, allies joining
   wars, and calls to arms, and chronicle lines for each.
 - Balance (80 games): unchanged within noise. Rules version 15; 219 tests.
+
+### Holding an empire together, great works, patronage and the court's dilemmas (Josh: "let's do all of these"; "maybe you need to garrison troops to prevent rebellions")
+
+Aimed at the runaway leader and at giving a builder something to build, without artificial
+goals: everything here follows from how real Bronze Age empires held together or didn't.
+
+- **Restless land (overextension).** Land taken in the last 5 rounds, or 5+ supply steps from
+  the capital, needs a garrison of at least 1 soldier. Without one it is *restless*: it pays no
+  taxes, and revolts now fall on restless land (each restless land adds 5 to the revolt chance
+  weight; a realm past 8 lands adds 3 per extra land). The capital never needs a garrison.
+  Roads shorten the supply distance, so they calm far provinces too. We tried a garrison of 2:
+  wars between empires fell by about 80%, so it's 1. The map shows a red raised hand on your
+  restless land; the command bar, the town view and the steward say what to do.
+- **Coalitions.** The leader becomes a *menace* when its prestige is at least 160% of the
+  runner-up's and it holds at least 35% of the domination share, or when it holds 70% of the
+  land it needs to win. AIs then look for war against it (if they border it with a decent edge),
+  make peace among themselves, and ally with anyone else fighting it. The standings bar warns
+  ("rivals will band together against you").
+- **Great works.** Five, one in the world each: the Great Pyramid and the Ziggurat (river
+  valley), the Lion Gate (hills or mountains), the Royal Library and the Lighthouse (coast).
+  Each costs gold, stone and timber and several turns, and gives prestige plus a lasting effect
+  (in rules.json). Several empires can race for the same one; the first to finish wins and the
+  others' sites are abandoned with half the cost back. A finished work belongs to whoever holds
+  its land, so it can be conquered. Built from the town view ("Great works"); the standings
+  sheet lists the age's works and who holds them; a gold seal marks them on the map (pale while
+  rising); banners when one is finished anywhere. The AI builds one when it has gold to spare.
+- **Patronage.** Pay 3 gold a turn to masters of one field (farmers, smiths, shipwrights…) for
+  12 extra knowledge a turn in it. Chosen at the top of the Knowledge sheet; it lapses if the
+  treasury can't pay.
+- **The court's dilemmas** (people only; the AI's realm runs itself). At most one a turn, as a
+  wood card with two answers:
+  - *Famine*: open the granaries (the grain, +3 legitimacy) or keep them shut (−3 legitimacy,
+    and the land loses a person);
+  - *A general demands honours*: pay, or refuse (−15 loyalty: sulking generals stage coups);
+  - *Sea Peoples mercenaries*: 3 blooded warriors at the capital for 9 gold.
+  Ending the turn without answering refuses.
+- Balance (80 games, seed 501): Egypt 38%, Mesopotamia 30%, Italia 22%, Greece 8%; 2
+  dominations; the round-10 leader goes on to win only 38% of games, so the lead now changes
+  hands. Egypt gains most from great works (two need a river valley). Rules version 16; 228
+  tests.

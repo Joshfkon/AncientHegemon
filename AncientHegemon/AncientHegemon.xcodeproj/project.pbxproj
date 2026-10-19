@@ -31,6 +31,7 @@
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
 		94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DF88279096FCF589EA9D0E /* Walkthrough.swift */; };
+		A41087CA8A624B7E29CB90B2 /* AgeFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D757836BEC95C0399096193 /* AgeFeatures.swift */; };
 		AB98FE64DAE66DDF159BE715 /* TradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2CF376F9E0AE28E930B3BE /* TradeView.swift */; };
 		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
 		B234E652CC62E857DB359A86 /* click.wav in Resources */ = {isa = PBXBuildFile; fileRef = BD6DDA213A9E31B4C7C20FF7 /* click.wav */; };
@@ -78,6 +79,7 @@
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
 		99446154A61CAABED13A5D65 /* roar.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = roar.wav; sourceTree = "<group>"; };
 		9B6EFEC6B7A04539C9215408 /* Standings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Standings.swift; sourceTree = "<group>"; };
+		9D757836BEC95C0399096193 /* AgeFeatures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgeFeatures.swift; sourceTree = "<group>"; };
 		9E2CF376F9E0AE28E930B3BE /* TradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeView.swift; sourceTree = "<group>"; };
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlefieldView.swift; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 		BFA8AFED8A6372F6F5B96C27 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				9D757836BEC95C0399096193 /* AgeFeatures.swift */,
 				E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */,
 				AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */,
 				13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */,
@@ -289,6 +292,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A41087CA8A624B7E29CB90B2 /* AgeFeatures.swift in Sources */,
 				D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */,
 				811367309C8774DE014E4391 /* BattlePlan.swift in Sources */,
 				E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */,

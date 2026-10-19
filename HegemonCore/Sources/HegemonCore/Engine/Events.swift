@@ -44,12 +44,6 @@ extension Engine {
         return fronts.sorted { ($0.0, $0.1) < ($1.0, $1.1) }
     }
 
-    /// Territories far from the seat along supply routes, or cut off entirely.
-    private func distantTerritories(_ civ: CivilizationID, _ state: GameState) -> [TerritoryID] {
-        let steps = supplyDistances(of: civ, in: state)
-        return state.territories(of: civ).filter { (steps[$0] ?? .max) >= rules.events.revoltDistance }
-    }
-
     func eventWeights(_ civ: CivilizationID, _ state: GameState) -> [(EventKind, Int)] {
         let w = rules.events.weights
         let owned = state.territories(of: civ)
@@ -68,7 +62,7 @@ extension Engine {
             (.goldDiscovered, w.goldDiscovered + rugged * w.goldPerHill),
             (.badOmen, max(0, 50 - legitimacy) * w.omenPerLegitimacyPoint),
             (.barbarians, barbarianFronts(civ, state).count * w.barbariansPerExposure),
-            (.revolt, distantTerritories(civ, state).count * w.revoltPerDistantTerritory),
+            (.revolt, revoltWeight(civ, state)),
         ]
     }
 
@@ -146,7 +140,7 @@ extension Engine {
         case .revolt:
             let steps = supplyDistances(of: civ, in: state)
             let seat = seat(of: civ, in: state)
-            guard let target = distantTerritories(civ, state).filter({ $0 != seat })
+            guard let target = restlessLands(of: civ, in: state).filter({ $0 != seat })
                 .max(by: { ((steps[$0] ?? .max), $1) < ((steps[$1] ?? .max), $0) }) else { return [] }
             let rebels = UnitCounts(infantry: rules.start.natives.base
                                     + map.territory(target)!.grain / max(1, rules.start.natives.grainPerUnit))

@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 16,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -663,6 +663,39 @@
       { "id": "statue", "name": "Statue of the ruler", "gold": 10, "stock": { "stone": 4 }, "magnificence": 3 },
       { "id": "throne", "name": "Gilded throne", "gold": 14, "stock": {}, "magnificence": 3 }
     ]
+  },
+  "decisions": {
+    "famineLegitimacy": 3,
+    "honoursChancePercent": 25,
+    "honoursSnubLoyalty": 15,
+    "mercenaryChancePercent": 12,
+    "mercenaryWarriors": 3,
+    "mercenaryGold": 9
+  },
+  "patronage": {
+    "gold": 3,
+    "experience": 12
+  },
+  "monuments": {
+    "raceRefundPercent": 50,
+    "list": [
+      { "id": "pyramid", "name": "Great Pyramid", "effect": "+1 legitimacy a turn: the god-king's tomb awes the land.", "needs": "river_valley", "gold": 30, "stone": 12, "timber": 0, "turns": 8, "prestige": 40 },
+      { "id": "ziggurat", "name": "Great Ziggurat", "effect": "Temple granaries: your granary holds an extra turn of harvest.", "needs": "river_valley", "gold": 24, "stone": 8, "timber": 4, "turns": 6, "prestige": 30 },
+      { "id": "lionGate", "name": "Lion Gate", "effect": "+30% defence where it stands, and +5 morale for all your armies.", "needs": "hills", "gold": 20, "stone": 10, "timber": 0, "turns": 5, "prestige": 25 },
+      { "id": "library", "name": "Royal Library", "effect": "Scribes gather the world's learning: +25% new knowledge.", "needs": "coastal", "gold": 24, "stone": 4, "timber": 4, "turns": 6, "prestige": 30 },
+      { "id": "lighthouse", "name": "Great Lighthouse", "effect": "+1 troop per ship, and 2 more grain from trade in a lean year.", "needs": "coastal", "gold": 24, "stone": 10, "timber": 0, "turns": 6, "prestige": 30 }
+    ]
+  },
+  "coalitions": {
+    "prestigeLeadPercent": 160,
+    "dominationSharePercent": 70
+  },
+  "unrest": {
+    "recentRounds": 5,
+    "garrisonToCalm": 1,
+    "revoltPerRestless": 5,
+    "sizeCalm": 8,
+    "revoltPerExtraLand": 3
   },
   "alliances": {
     "enemyTooStrongPercent": 200,

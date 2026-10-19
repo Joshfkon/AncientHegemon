@@ -89,6 +89,7 @@ extension Engine {
         let warriors = tribe.units.total * r.warriorsJoinPercent / 100
         state.armies[territory] = warriors > 0 ? Army(owner: civ, units: UnitCounts(infantry: warriors)) : nil
         state.land[territory]!.owner = civ
+        taken(territory, &state)
         var events: [GameEvent] = [.tribeJoined(civ: civ, territory: territory, parley: kind, warriors: warriors)]
         if state.winner == nil,
            state.territories(of: civ).count * 100 >= map.territories.count * rules.victory.territoryPercent {

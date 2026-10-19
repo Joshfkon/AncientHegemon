@@ -87,6 +87,11 @@ enum Council {
                 council.append(Advisor(role: .steward, name: names[.steward]!,
                     advice: "The army's pay (\(e.pay) gold) outruns our income. When the treasury is empty, the unpaid go home.",
                     mood: .warning, target: .realm))
+            } else if let restless = engine.restlessLands(of: civ, in: state).first {
+                let n = engine.restlessLands(of: civ, in: state).count
+                council.append(Advisor(role: .steward, name: names[.steward]!,
+                    advice: "\(place(restless))\(n > 1 ? " and \(n - 1) other land\(n == 2 ? "" : "s")" : "") will not pay taxes and murmur of revolt. A single soldier there would calm it.",
+                    mood: .warning, target: .territory(restless)))
             } else if let cut = e.cutOff.first {
                 council.append(Advisor(role: .steward, name: names[.steward]!,
                     advice: "\(place(cut)) is cut off from the capital: no taxes, no recruits, and its garrison wastes away. Reopen the road.",

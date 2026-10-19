@@ -100,6 +100,8 @@ public struct AIPlayer: Sendable {
         let t0 = threat(to: t, for: civ, state, excluding: skip)
         var keep = Int((Double(t0) * personality.caution).rounded(.up))
         if map.civilization(civ)?.capital == t, t0 > 0 { keep += 1 }
+        // Restless land needs troops to hold it down.
+        if engine.needsGarrison(t, of: civ, in: state) { keep = max(keep, rules.unrest.garrisonToCalm) }
         return keep
     }
 
@@ -117,11 +119,19 @@ public struct AIPlayer: Sendable {
         // Strength edge needed to start a war: 1.0 for a conqueror, about 1.3 for a turtle.
         let warEdge = 1.6 - 0.4 * personality.aggression
         let others = state.players.filter { $0 != civ && !state.civs[$0]!.eliminated }
+        // A coalition: when one empire runs away with the age, the rest stop fighting each
+        // other and turn on it together.
+        let menace = engine.menace(in: state)
         for other in others {
             let edge = Double(mine) / Double(max(1, strength(of: other, state)))
             let neighbor = borders(civ, other, state)
             let losing = edge < 0.75
-            let prey = neighbor && !room && edge >= warEdge
+            var prey = neighbor && !room && edge >= warEdge
+            if let menace, menace != civ {
+                // Bordering the menace is reason enough to fight it with friends; everyone else is a friend.
+                if other == menace { prey = neighbor && edge >= warEdge * 0.6 }
+                else if state.atWar(other, menace) { prey = false }
+            }
             if state.atPeace(civ, other) {
                 // Allies keep faith.
                 if engine.allied(civ, other, in: state) { continue }
@@ -131,6 +141,11 @@ public struct AIPlayer: Sendable {
                 continue
             }
             var wantsPeace = losing || (!prey && (!neighbor || personality.trade >= 0.8))
+            if let menace, menace != civ {
+                // Make common cause with the menace's other enemies; never a separate peace with it.
+                if other == menace { wantsPeace = losing && edge < 0.4 }
+                else if state.atWar(other, menace) { wantsPeace = true }
+            }
             // Not while an ally is at war with them: a separate peace betrays it.
             if engine.allies(of: civ, in: state).contains(where: { state.atWar($0, other) && $0 != other }) { wantsPeace = losing }
             // A splendid court's envoys are hard to turn away.

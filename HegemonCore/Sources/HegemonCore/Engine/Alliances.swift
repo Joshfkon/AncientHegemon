@@ -54,6 +54,8 @@ extension Engine {
         guard state.atPeace(civ, other), !allied(civ, other, in: state),
               allies(of: civ, in: state).count < rules.alliances.maxAllies else { return false }
         let mine = militaryStrength(civ, state)
+        // Against a menace, any fellow enemy of it will do.
+        if let m = menace(in: state), m != civ, m != other, state.atWar(civ, m), state.atWar(other, m) { return true }
         return state.players.contains { enemy in
             enemy != civ && enemy != other && !(state.civs[enemy]?.eliminated ?? true)
                 && state.atWar(civ, enemy) && state.atWar(other, enemy)
@@ -182,5 +184,31 @@ extension Engine {
             }
         }
         return events
+    }
+}
+
+// MARK: Coalitions
+
+public struct CoalitionRules: Codable, Sendable, Equatable {
+    /// An empire is a menace once its prestige is this much (percent) of the next one's…
+    public let prestigeLeadPercent: Int
+    /// …or once it holds this share (percent) of the land needed to win by domination.
+    public let dominationSharePercent: Int
+}
+
+extension Engine {
+    /// The empire everyone else fears, if one has pulled far enough ahead.
+    public func menace(in state: GameState) -> CivilizationID? {
+        let alive = state.players.filter { !(state.civs[$0]?.eliminated ?? true) }
+        guard alive.count >= 3 else { return nil }
+        let ranked = alive.sorted { (prestige(of: $0, in: state), $1) > (prestige(of: $1, in: state), $0) }
+        let first = ranked[0], second = ranked[1]
+        let c = rules.coalitions
+        let lead = prestige(of: first, in: state) * 100 >= max(1, prestige(of: second, in: state)) * c.prestigeLeadPercent
+        let share = landShare(of: first, in: state)
+        let nearWin = share.percent * 100 >= share.toWin * c.dominationSharePercent
+        // Prestige alone isn't enough: a menace must also hold a good share of the land.
+        let large = share.percent * 100 >= share.toWin * c.dominationSharePercent / 2
+        return (lead && large) || nearWin ? first : nil
     }
 }

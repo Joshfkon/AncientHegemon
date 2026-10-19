@@ -17,6 +17,8 @@ public struct TerritoryReport: Sendable, Equatable {
     public let supplySteps: Int?
     /// How much harder walls make it to take, in percent.
     public let fortification: Int
+    /// Newly taken or far-flung, without a garrison: no taxes, and it may revolt.
+    public let restless: Bool
 }
 
 public struct TradeReport: Sendable, Equatable {
@@ -41,7 +43,8 @@ extension Engine {
         let e = rules.economy
         let coinage = level(.administration, of: civ, in: state) >= 2 ? rules.knowledge.effects.coinagePercent : 0
         let rate = state.civs[civ]?.taxRate ?? e.defaultTax
-        let taxes = inSupply ? state.population(of: territory) * rate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100) : 0
+        let calm = !restless(territory, of: civ, in: state)
+        let taxes = inSupply && calm ? state.population(of: territory) * rate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100) : 0
         let mines = inSupply ? territoryYield(.gold, territory, state) + (state.bonusGold[territory] ?? 0) : 0
         let wine = inSupply ? territoryYield(.wine, territory, state) * e.winePerGold : 0
         let trading = routes.contains { $0.involves(civ) }
@@ -55,7 +58,8 @@ extension Engine {
         return TerritoryReport(grain: territoryYield(.grain, territory, state), people: state.population(of: territory),
                                peopleCap: populationCap(of: territory), taxes: taxes, mines: mines, wine: wine, harbor: harbor,
                                resources: resources, supplySteps: supplyDistances(of: civ, in: state)[territory],
-                               fortification: fortification(at: territory, state))
+                               fortification: fortification(at: territory, state),
+                               restless: !calm)
     }
 
     public func tradeReports(for civ: CivilizationID, in state: GameState) -> [TradeReport] {

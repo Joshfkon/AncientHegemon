@@ -31,6 +31,17 @@ extension AIPlayer {
                   state.civs[civ]!.gold - engine.projectCost(kind, for: civ, state).gold >= reserve,
                   attempt(.build(territory: territory, project: kind), &state, &turn) else { break }
         }
+        // A great work, when gold is plentiful and nothing is already rising.
+        if !state.monumentSites.keys.contains(where: { state.owner(of: $0) == civ }) {
+            let cs = state.civs[civ]!
+            let home = engine.homeNetwork(of: civ, in: state).sorted()
+            outer: for m in rules.monuments.list where cs.gold - m.gold >= 2 * reserve
+                && (cs.stock[.stone] ?? 0) >= m.stone && (cs.stock[.timber] ?? 0) >= m.timber {
+                for t in home where engine.canRaise(m.id, in: t, state) {
+                    if attempt(.buildMonument(territory: t, monument: m.id), &state, &turn) { break outer }
+                }
+            }
+        }
         // A rich court adorns its hall: only gold well beyond any need, one piece a turn.
         let cs = state.civs[civ]!
         if let d = rules.throneRoom.decorations.first(where: { d in

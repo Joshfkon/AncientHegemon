@@ -351,6 +351,21 @@ final class GameSession {
     }
 
     /// The engine's refusals, in words.
+    /// The chronicle's line for how the player answered the court's dilemma.
+    static func decisionLine(_ kind: DecisionKind, _ accepted: Bool, _ state: GameState, _ engine: Engine) -> String {
+        switch kind {
+        case let .famine(t, grain):
+            let place = engine.map.territory(t)?.name ?? t
+            return accepted ? "The granaries open for \(place) (\(grain) grain); the people bless your name"
+                            : "The granaries stay shut; \(place) starves and remembers"
+        case let .honours(id, gold):
+            let g = state.generals[id]?.name ?? "The general"
+            return accepted ? "\(g) is honoured with \(gold) gold" : "\(g) is refused honours and sulks"
+        case let .mercenaries(warriors, gold):
+            return accepted ? "\(warriors) Sea People warriors take your \(gold) gold and your orders" : "The Sea People mercenaries sail away"
+        }
+    }
+
     static func describe(_ error: Error, engine: Engine) -> String {
         func place(_ t: String) -> String { engine.map.territory(t)?.name ?? engine.map.sea(t)?.name ?? t }
         guard let e = error as? GameError else { return "That can't be done." }
@@ -386,6 +401,10 @@ final class GameSession {
         case .alreadyAsked: return "You already asked them this turn."
         case .noWarRequest: return "That call to arms has lapsed."
         case .unknownDecoration: return "No such decoration."
+        case .unknownMonument: return "No such great work."
+        case .monumentUnavailable: return "That great work can't be raised there: it may stand already, or need other ground."
+        case .noDecision: return "That matter is already settled."
+        case .insufficientGrain(let needed): return "Not enough grain in the granaries: \(needed) needed."
         case .noTribe(let t): return "There is no tribe in \(place(t)) you can treat with: your land must border theirs."
         case .alreadyParleyed(let t): return "Your envoys have already spoken with \(place(t)) this turn."
         default: return "That can't be done (\(e))."
@@ -450,6 +469,10 @@ final class GameSession {
                 new.append(Moment(kind: .ally(by, joined: false)))
             case let .calledToWar(r) where r.to == me:
                 new.append(Moment(kind: .callToArms(r.from, r.against)))
+            case let .monumentCompleted(civ, _, id):
+                new.append(Moment(kind: .monument(id, civ)))
+            case let .monumentLost(civ, _, id) where civ == me:
+                new.append(Moment(kind: .monumentLost(id)))
             case let .armyPaid(civ, _, deserted) where civ == me && deserted > 0:
                 new.append(Moment(kind: .unpaid(deserted)))
             case let .event(r) where r.civ == me:
@@ -521,6 +544,9 @@ final class GameSession {
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
         case let .eliminated(civ): return civ == me
+        case let .monumentStarted(civ, _, _), let .monumentCompleted(civ, _, _), let .monumentLost(civ, _, _),
+             let .decided(civ, _, _), let .patronageSet(civ, _):
+            return civ == me
         default: return false
         }
     }
@@ -530,6 +556,7 @@ final class GameSession {
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name } ?? "?" }
+        func monumentName(_ id: MonumentID) -> String { engine.rules.monuments.list.first { $0.id == id }?.name ?? id }
         var mine = false
         func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
             nextID += 1
@@ -641,6 +668,16 @@ final class GameSession {
                 add(civ, "\(projectName(kind)) finished in \(place(t))", at: t)
             case let .projectDestroyed(t, kind) where before.owner(of: t) == human:
                 add(human, "\(projectName(kind)) in \(place(t)) destroyed", at: t)
+            case let .monumentStarted(civ, t, id):
+                add(civ, "\(name(civ)) begin\(civ == human ? "" : "s") the \(monumentName(id)) in \(place(t))", at: t)
+            case let .monumentCompleted(civ, t, id):
+                add(civ, "The \(monumentName(id)) rises in \(place(t)): a wonder of the age for \(name(civ))", at: t)
+            case let .monumentLost(civ, t, id) where civ == human:
+                add(civ, "Work on the \(monumentName(id)) in \(place(t)) is abandoned: a rival finished first", at: t)
+            case let .patronageSet(civ, field) where civ == human:
+                add(civ, field.map { "The court now pays \(PatronagePicker.patrons($0).lowercased())" } ?? "The court ends its patronage")
+            case let .decided(civ, kind, accepted) where civ == human:
+                add(civ, Self.decisionLine(kind, accepted, after, engine))
             case let .taxRateSet(civ, rate) where civ == human:
                 add(civ, "Taxes set to \(rate)%")
             case let .eliminated(civ): add(civ, "\(name(civ)) is destroyed")

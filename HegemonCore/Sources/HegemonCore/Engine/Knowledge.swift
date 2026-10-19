@@ -61,7 +61,8 @@ extension Engine {
 
         // New knowledge, split by experience (largest shares first, leftovers to the most practiced).
         let population = state.totalPopulation(of: civ)
-        let points = 10 * max(1, population / max(1, k.populationPerPoint) + income / max(1, k.goldPerPoint))
+        var points = 10 * max(1, population / max(1, k.populationPerPoint) + income / max(1, k.goldPerPoint))
+        if holds("library", civ, in: state) { points = points * 125 / 100 }
         let experience = state.civs[civ]!.experience
         let total = experience.values.reduce(0, +)
         if total > 0 {
@@ -101,11 +102,13 @@ extension Engine {
     // MARK: Effects used across the engine
 
     func granaryTurns(_ civ: CivilizationID, _ state: GameState) -> Int {
-        level(.agriculture, of: civ, in: state) >= 2 ? rules.knowledge.effects.granaryTurns : rules.economy.granaryCapTurns
+        (level(.agriculture, of: civ, in: state) >= 2 ? rules.knowledge.effects.granaryTurns : rules.economy.granaryCapTurns)
+            + (holds("ziggurat", civ, in: state) ? 1 : 0)
     }
 
     public func shipCapacity(_ civ: CivilizationID, _ state: GameState) -> Int {
         rules.ships.capacity + (level(.seafaring, of: civ, in: state) >= 1 ? rules.knowledge.effects.galleysCapacity : 0)
+            + (holds("lighthouse", civ, in: state) ? 1 : 0)
     }
 
     func navalPercent(_ civ: CivilizationID, _ state: GameState) -> Int {
@@ -152,6 +155,7 @@ extension Engine {
                           depth: plan.depth, stratagem: plan.stratagem)
         army.pursue = plan.pursue
         applyVeterancy(&army, battles: battles)
+        if holds("lionGate", civ, in: state) { army.morale += 5 }
         return army
     }
 

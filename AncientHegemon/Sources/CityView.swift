@@ -55,6 +55,16 @@ struct CityView: View {
                         }
                     }
                     buildings
+                    section("Great works") {
+                        GreatWorksList(session: session, territory: territory)
+                    }
+                    if engine.restless(territory, of: civ, in: state) {
+                        Label("Restless: newly taken or far from the capital, it pays no taxes and may revolt. Keep at least \(engine.rules.unrest.garrisonToCalm) soldier here to calm it.",
+                              systemImage: "hand.raised.fill").font(.caption).foregroundStyle(.red)
+                    } else if engine.needsGarrison(territory, of: civ, in: state) {
+                        Label("Calm while its garrison stays: withdraw every soldier and it grows restless.",
+                              systemImage: "shield.lefthalf.filled").font(.caption).foregroundStyle(.secondary)
+                    }
                     if r.supplySteps == nil {
                         Label("Cut off from the capital: no taxes, no recruits, and its garrison wastes away.",
                               systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)

@@ -12,6 +12,12 @@ public enum Command: Codable, Sendable, Equatable {
     case leaveAlliance(with: CivilizationID)
     case callToWar(ally: CivilizationID, against: CivilizationID)
     case answerCallToWar(from: CivilizationID, against: CivilizationID, join: Bool)
+    /// Answers the court's dilemma.
+    case decide(accept: Bool)
+    /// Pays patrons of one field of learning each turn (nil stops).
+    case setPatronage(KnowledgeField?)
+    /// Begins a great work.
+    case buildMonument(territory: TerritoryID, monument: MonumentID)
     /// Adorns the throne room.
     case decorate(DecorationID)
     /// Sends soldiers home: on the empire's own land they go back to the fields as people.
@@ -79,6 +85,12 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
     case tribeJoined(civ: CivilizationID, territory: TerritoryID, parley: Parley, warriors: Int)
     case decorated(civ: CivilizationID, decoration: DecorationID)
+    case patronageSet(civ: CivilizationID, field: KnowledgeField?)
+    case decisionOffered(civ: CivilizationID, DecisionKind)
+    case decided(civ: CivilizationID, DecisionKind, accepted: Bool)
+    case monumentStarted(civ: CivilizationID, territory: TerritoryID, monument: MonumentID)
+    case monumentCompleted(civ: CivilizationID, territory: TerritoryID, monument: MonumentID)
+    case monumentLost(civ: CivilizationID, territory: TerritoryID, monument: MonumentID)
     case trophyWon(civ: CivilizationID, trophy: TrophyKind)
     case tribeRefused(civ: CivilizationID, territory: TerritoryID, parley: Parley)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
@@ -164,6 +176,10 @@ public enum GameError: Error, Equatable, Sendable {
     case notAtPeace(CivilizationID)
     case noPeaceOffer(CivilizationID)
     case alreadyAllied(CivilizationID)
+    case unknownMonument(MonumentID)
+    case noDecision
+    case insufficientGrain(needed: Int)
+    case monumentUnavailable(MonumentID)
     case notAllied(CivilizationID)
     case noAllianceOffer(CivilizationID)
     case tooManyAllies

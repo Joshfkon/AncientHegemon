@@ -64,6 +64,7 @@ extension Engine {
         let routes = tradeRoutes(in: state)
         stockpile(civ, routes, &state)
         events += progressConstruction(civ, &state)
+        events += progressMonuments(civ, &state)
         let gold = income(of: civ, homeNet, routes, state)
         let tradeIncome = gold.trade
         let income = gold.total
@@ -86,6 +87,7 @@ extension Engine {
             events.append(.trade(civ: civ, partners: civRoutes.map { $0.partner(of: civ) }, income: tradeIncome))
         }
         if bronze > 0 { events.append(.bronzeMade(civ: civ, amount: bronze)) }
+        events += payPatrons(civ, &state)
         events += learn(civ, production: home.production, bronze: bronze, income: income, routes: routes, &state)
         return events
     }
@@ -125,7 +127,8 @@ extension Engine {
     func income(of civ: CivilizationID, _ homeNet: [TerritoryID], _ routes: [TradeRoute], _ state: GameState)
         -> (taxes: Int, mines: Int, trade: Int, total: Int) {
         let e = rules.economy
-        let population = homeNet.reduce(0) { $0 + state.population(of: $1) }
+        // Restless land pays nothing.
+        let population = homeNet.filter { !restless($0, of: civ, in: state) }.reduce(0) { $0 + state.population(of: $1) }
         let coinage = level(.administration, of: civ, in: state) >= 2 ? rules.knowledge.effects.coinagePercent : 0
         let taxes = population * state.civs[civ]!.taxRate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100)
         let mines = yield(of: .gold, in: homeNet, state) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
@@ -141,6 +144,7 @@ extension Engine {
         let harbors = coasts.filter { state.land[$0]?.improvements.contains(.harbor) ?? false }
         return (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.count * rules.trade.grainPerRoute
             + coasts.count * rules.trade.grainPerCoast + harbors.count * rules.trade.grainPerHarbor
+            + (holds("lighthouse", civ, in: state) ? 2 : 0)
     }
 
     public func populationCap(of territory: TerritoryID) -> Int {

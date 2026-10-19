@@ -591,6 +591,27 @@ extension MapView {
            !engine.homeNetwork(of: me, in: state).contains(id) {
             context.draw(Text("⚠️").font(.system(size: 8.5 * k)), at: CGPoint(x: c.x - 10 * k, y: c.y - 10 * k))
         }
+        // Restless land: needs a soldier or it may revolt, and pays no taxes meanwhile.
+        if let me = focus, let engine, engine.restless(id, of: me, in: state) {
+            let p = CGPoint(x: c.x + 11 * k, y: c.y - 11 * k)
+            let r = 6 * k
+            context.fill(Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)),
+                         with: .color(Color(red: 0.75, green: 0.2, blue: 0.1)))
+            context.draw(Text(Image(systemName: "hand.raised.fill")).font(.system(size: 7 * k, weight: .bold)).foregroundStyle(.white), at: p)
+        }
+        // A great work: a gold seal above the token; a work still rising, a pale one.
+        let standing = state.monuments.first { $0.value == id }?.key
+        if let m = standing ?? state.monumentSites[id]?.id {
+            let p = CGPoint(x: c.x, y: c.y - 19 * k)
+            let r = 7.5 * k
+            let disc = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
+            context.fill(disc, with: standing != nil ? .linearGradient(Gradient(colors: [Color(red: 1, green: 0.85, blue: 0.45), Color(red: 0.7, green: 0.48, blue: 0.15)]),
+                                                                        startPoint: CGPoint(x: p.x, y: p.y - r), endPoint: CGPoint(x: p.x, y: p.y + r))
+                                                      : .color(.white.opacity(0.7)))
+            context.stroke(disc, with: .color(.black.opacity(0.6)), lineWidth: 0.8)
+            context.draw(Text(Image(systemName: GreatWorksList.symbol(m))).font(.system(size: 8 * k, weight: .bold))
+                            .foregroundStyle(Color(red: 0.25, green: 0.15, blue: 0.05).opacity(standing != nil ? 1 : 0.6)), at: p)
+        }
     }
 
     /// "🌾3 + resources" under a territory's token.

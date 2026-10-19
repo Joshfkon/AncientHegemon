@@ -41,6 +41,8 @@ public struct TerritoryState: Codable, Sendable, Equatable {
     public var improvements: Set<ProjectKind> = []
     /// A project under way, lost if the land changes hands.
     public var construction: Construction?
+    /// The round it last changed hands by conquest or submission (it is restless for a while).
+    public var takenOnRound: Int?
 }
 
 public struct Construction: Codable, Sendable, Equatable {
@@ -89,6 +91,10 @@ public struct CivState: Codable, Sendable, Equatable {
     /// The throne room: decorations bought and trophies won.
     public var decorations: Set<DecorationID> = []
     public var trophies: [Trophy] = []
+    /// The field of learning the court pays for, if any.
+    public var patronage: KnowledgeField?
+    /// A dilemma waiting for a person's answer this turn.
+    public var decision: DecisionKind?
 }
 
 /// Rival claimants to a contested throne, and what buying them off would cost.
@@ -238,6 +244,9 @@ public struct GameState: Codable, Sendable, Equatable {
     public var allianceOffers: Set<PeaceOffer> = []
     public var warRequests: Set<WarRequest> = []
     public var calledToWar: Set<CivilizationID> = []
+    /// Finished great works and where they stand; works under way, by territory.
+    public var monuments: [MonumentID: TerritoryID] = [:]
+    public var monumentSites: [TerritoryID: MonumentSite] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

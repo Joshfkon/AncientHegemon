@@ -97,6 +97,11 @@ struct GameScreen: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .task(id: moment.id) { await play(moment) }
             }
+            if let human = session.human, let kind = state.civs[human]?.decision, session.isHumanTurn,
+               session.moments.isEmpty, !session.showReport {
+                DecisionCard(session: session, kind: kind)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
             if session.showReport, session.isHumanTurn, tip != .map, session.moments.isEmpty {
                 TurnReportCard(session: session) { t in
                     selected = .territory(t)
@@ -132,8 +137,11 @@ struct GameScreen: View {
         .sheet(isPresented: $showKnowledge) {
             if let human = session.human {
                 NavigationStack {
-                    TechTreeView(civ: human, state: state, engine: engine)
-                        .toolbar { Button("Done") { showKnowledge = false } }
+                    ScrollView {
+                        PatronagePicker(session: session).padding([.horizontal, .top])
+                        TechTreeView(civ: human, state: state, engine: engine)
+                    }
+                    .toolbar { Button("Done") { showKnowledge = false } }
                 }
             }
         }
@@ -424,6 +432,10 @@ struct GameScreen: View {
         case .allyJoins: SoundBoard.shared.play(.roar, volume: 0.6); Feedback.outcome(true)
         case .callToArms: SoundBoard.shared.play(.wardrums, volume: 0.5); Feedback.impact(0.7)
         case let .seaBattle(_, won, _): SoundBoard.shared.play(won ? .victory : .defeat, volume: 0.5); Feedback.outcome(won)
+        case let .monument(_, civ):
+            let ours = civ == session.human
+            SoundBoard.shared.play(ours ? .victory : .horn, volume: 0.5); Feedback.outcome(ours)
+        case .monumentLost: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -438,7 +450,7 @@ struct GameScreen: View {
         }
         // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
         // Discoveries stay up longer: there's something to read.
-        let linger = if case .discovery = moment.kind { 4200 } else { 1900 }
+        let linger = switch moment.kind { case .discovery, .monument: 4200; default: 1900 }
         do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }

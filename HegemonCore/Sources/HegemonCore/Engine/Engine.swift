@@ -51,6 +51,12 @@ public struct Engine: Sendable {
             return try callToWar(ally, against: against, &state)
         case let .answerCallToWar(from, against, join):
             return try answerCallToWar(from, against: against, join: join, &state)
+        case let .decide(accept):
+            return try decide(accept, &state)
+        case let .setPatronage(field):
+            return try setPatronage(field, &state)
+        case let .buildMonument(territory, monument):
+            return try buildMonument(monument, in: territory, &state)
         case let .decorate(id):
             return try decorate(id, &state)
         case let .disband(territory, units):
@@ -247,6 +253,9 @@ public struct Engine: Sendable {
     // MARK: End turn
 
     private func endTurn(_ state: inout GameState) -> [GameEvent] {
+        // An unanswered dilemma is a no.
+        var closing: [GameEvent] = []
+        if state.civs[state.activePlayer]?.decision != nil, let answered = try? decide(false, &state) { closing = answered }
         state.moved = [:]
         state.roadMoved = [:]
         state.calledToWar = []
@@ -267,11 +276,11 @@ public struct Engine: Sendable {
         if state.turn > roundBefore {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
-            if !ended.isEmpty { return ended }
+            if !ended.isEmpty { return closing + ended }
         }
 
         let civ = state.activePlayer
-        var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)]
+        var events: [GameEvent] = closing + [.turnStarted(civ: civ, turn: state.turn)]
         events += expireWarRequests(from: civ, &state)
         state.allianceOffers = state.allianceOffers.filter { $0.from != civ }
         // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
@@ -281,6 +290,7 @@ public struct Engine: Sendable {
             if !state.civs[civ]!.eliminated {
                 events += harvest(civ, &state)
                 events += governmentPhase(civ, &state)
+                events += offerDecision(civ, after: events, &state)
             }
         }
         // A civ can fall before it moves: overrun by raiders, or its last army starved.

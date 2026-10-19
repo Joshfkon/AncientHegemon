@@ -119,6 +119,7 @@ extension Engine {
         let luxuries = effectiveYield(of: .luxuries, for: civ, in: state)
         return taxes + min(e.luxuryLegitimacyCap, luxuries / max(1, e.luxuriesPerLegitimacy))
             + courtLegitimacy(of: civ, in: state)
+            + (holds("pyramid", civ, in: state) ? 1 : 0)
     }
 
     /// Share of surplus grain that goes into population growth: less when taxes are high.

@@ -23,6 +23,10 @@ struct Moment: Identifiable, Equatable {
         case callToArms(CivilizationID, CivilizationID)
         /// A rival struck the player's land.
         case attacked(CivilizationID, TerritoryID?)
+        /// A great work finished somewhere, by us or a rival.
+        case monument(MonumentID, CivilizationID)
+        /// A rival finished first: our site is abandoned.
+        case monumentLost(MonumentID)
     }
     let id = UUID()
     let kind: Kind
@@ -121,6 +125,18 @@ struct MomentBanner: View {
         case let .attacked(by, t):
             return Style(icon: "flame.fill", title: "\(Palette.name(by, state)) attacks!",
                          subtitle: t.map { "Their army struck \(place($0))" }, color: Palette.color(by, state), stamp: true)
+        case let .monument(id, civ):
+            let m = engine.rules.monuments.list.first { $0.id == id }
+            let ours = civ == session.human
+            return Style(icon: GreatWorksList.symbol(id),
+                         title: ours ? "The \(m?.name ?? id) is complete" : "\(Palette.name(civ, state)) raises the \(m?.name ?? id)",
+                         subtitle: ours ? "+\(m?.prestige ?? 0) prestige. \(m?.effect ?? "")" : "Take the land to take its glory",
+                         color: ours ? Color(red: 0.62, green: 0.45, blue: 0.12) : Palette.color(civ, state), stamp: ours)
+        case let .monumentLost(id):
+            let m = engine.rules.monuments.list.first { $0.id == id }
+            return Style(icon: "hammer.circle", title: "Our \(m?.name ?? id) is abandoned",
+                         subtitle: "A rival finished first; half the cost is recovered",
+                         color: Color(red: 0.35, green: 0.22, blue: 0.12), stamp: false)
         case let .unpaid(n):
             return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
                          subtitle: "Every \(engine.rules.economy.soldiersPerGold) soldiers need 1 gold a turn",
