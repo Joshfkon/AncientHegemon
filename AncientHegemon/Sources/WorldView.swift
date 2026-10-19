@@ -332,6 +332,8 @@ struct MapView: View {
         seam.addLine(to: t.point([BoardArt.seamX, f.maxY]))
         context.stroke(seam, with: .color(.black.opacity(0.75)), lineWidth: 1.6)
 
+        drawWorks(&context, t)
+
         // Land the selected army can march to glows white; coasts it can reach by ship glow blue.
         let overSea: (TerritoryID) -> Bool = { id in
             guard case .territory(let from)? = self.selected else { return false }
@@ -508,6 +510,45 @@ extension MapView {
             waves.addQuadCurve(to: CGPoint(x: c.x + w, y: c.y), control: CGPoint(x: c.x + w / 2, y: c.y - w * 0.45))
         }
         context.stroke(waves, with: .color(.white.opacity(0.22)), style: StrokeStyle(lineWidth: 1 * t.detail, lineCap: .round))
+    }
+
+    /// Walls as stone ramparts around the land, roads as paved ways running from each road
+    /// toward its neighbours; where two roads meet, the halves join into one road.
+    fileprivate func drawWorks(_ context: inout GraphicsContext, _ t: BoardTransform) {
+        let k = t.detail
+        // Walls first, so roads run over the gates.
+        for territory in map.territories where state.land[territory.id]?.improvements.contains(.walls) == true {
+            guard let shape = art.territories[territory.id] else { continue }
+            var inner = context
+            let path = t.path(shape.polygon)
+            inner.clip(to: path)
+            // Stone rampart along the inside of the border, with battlements.
+            inner.stroke(path, with: .color(Color(red: 0.3, green: 0.27, blue: 0.24)), lineWidth: 11 * k)
+            inner.stroke(path, with: .color(Color(red: 0.72, green: 0.68, blue: 0.6)), lineWidth: 8 * k)
+            inner.stroke(path, with: .color(Color(red: 0.45, green: 0.41, blue: 0.36)),
+                         style: StrokeStyle(lineWidth: 8 * k, dash: [3 * k, 3 * k]))
+        }
+        let roads = map.territories.filter { state.land[$0.id]?.improvements.contains(.road) == true }
+        for territory in roads {
+            guard let a = token(territory.id, t) else { continue }
+            let owner = state.owner(of: territory.id)
+            for n in map.landNeighbors(of: territory.id) {
+                guard let b = token(n, t), state.owner(of: n) == owner else { continue }
+                let joined = state.land[n]?.improvements.contains(.road) == true
+                // To the neighbour's token if it has a road too, else most of the way to the border.
+                let end = joined ? CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+                                 : CGPoint(x: a.x + (b.x - a.x) * 0.42, y: a.y + (b.y - a.y) * 0.42)
+                var road = Path()
+                road.move(to: a)
+                road.addLine(to: end)
+                context.stroke(road, with: .color(Color(red: 0.25, green: 0.18, blue: 0.1).opacity(0.85)),
+                               style: StrokeStyle(lineWidth: 8 * k, lineCap: .round))
+                context.stroke(road, with: .color(Color(red: 0.88, green: 0.78, blue: 0.56)),
+                               style: StrokeStyle(lineWidth: 5.5 * k, lineCap: .round))
+                context.stroke(road, with: .color(Color(red: 0.55, green: 0.45, blue: 0.3)),
+                               style: StrokeStyle(lineWidth: 1.2 * k, lineCap: .round, dash: [4 * k, 4 * k]))
+            }
+        }
     }
 
     private func token(_ t: TerritoryID, _ bt: BoardTransform) -> CGPoint? {
