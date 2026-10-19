@@ -418,6 +418,21 @@ final class GameSession {
 
     #if DEBUG
     func demoFlash(_ t: TerritoryID) { flashes[t] = .now }
+
+    /// Stages a sea battle: four of our ships beside three enemy ships, at war.
+    func demoSeaBattle() -> Muster? {
+        guard let human, let enemy = state.players.first(where: { $0 != human }),
+              let seat = engine.seat(of: human, in: state), let sea = engine.map.seas(bordering: seat).first,
+              let next = engine.map.seaNeighbors(of: sea).sorted().first else { return nil }
+        var s = state
+        s.fleets.removeAll { $0.owner == human || $0.sea == next }
+        s.fleets.append(Fleet(sea: sea, owner: human, ships: 4))
+        s.fleets.append(Fleet(sea: next, owner: enemy, ships: 3))
+        s.fleets.sort { ($0.sea, $0.owner) < ($1.sea, $1.owner) }
+        s.peace.remove(CivPair(human, enemy))
+        state = s
+        return Muster(from: sea, to: next, units: .zero, general: false, ships: 4, cargo: .zero)
+    }
     #endif
 
     func dismissMoment() {
@@ -538,7 +553,13 @@ final class GameSession {
                 let winner = r.winner == .attacker ? r.attacker : r.defender
                 add(winner, "Sea battle in the \(engine.map.sea(sea)?.name ?? sea): \(name(r.attacker)) (\(r.attackerShips) ships) "
                     + "\(r.winner == .attacker ? "beat" : "beaten off by") \(name(r.defender)) (\(r.defenderShips)); "
-                    + "\(r.attackerShips - r.attackerShipsLeft + r.defenderShips - r.defenderShipsLeft) ships sunk")
+                    + "\(r.attackerShips - r.attackerShipsLeft + r.defenderShips - r.defenderShipsLeft) ships sunk", at: nil)
+                if let grid = r.battle {
+                    nextID += 1
+                    let entry = BattleEntry(id: nextID, round: round, territory: sea, report: grid)
+                    battles.insert(entry, at: 0)
+                    if let human, r.attacker == human || r.defender == human { replay = entry }
+                }
             case let .generalKilled(id):
                 if let g = after.generals[id] { add(g.owner, "General \(g.name) of \(name(g.owner)) falls") }
             case let .discovery(civ, field, level):

@@ -1246,3 +1246,20 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   beaten: X now holds the sea; its troops can land". The chronicle gives both sides' ships
   and how many sank. The landing order warns when enemy ships guard the water.
 - Balance unchanged (120 games: Mesopotamia 44%, Italia 31%, Egypt 20%, Greece 2%). 205 tests.
+
+### Sea battles on the grid (Josh: "a sea battle should have the same grid battle as a land battle")
+
+- Sea battles are fought by the land battle simulator on the 5×5 board: each ship is one unit,
+  on open water (`BattleSetup.naval`), with strength from seafaring knowledge. Morale, routs,
+  chasing and formations all work the same. `NavalReport.battle` keeps the grid battle for the
+  replay. The old auto-resolve (`resolveNaval`) is no longer used in play.
+- Fleets have their own battle plan (`Command.setFleetPlan`), used when they attack and when
+  they defend. It sails with the squadron, and so do the troops' battle honours.
+- Sailing your fleet into a sea holding enemy ships opens the battlefield, as a land attack does:
+  ships drawn up on water, a naval scouts' report, the plan cards, then "Row in!". Every sea
+  battle your ships fight shows the replay with blue water, ship blocks and naval narration
+  ("Bronze rams crash into hulls!").
+- Balance (120 games): Mesopotamia 43%, Italia 35%, Egypt 15%, Greece 5%. Sea battles are more
+  even than before (each side wins 41–54%), and more of them are fought (beaten fleets now
+  live to fight again). Egypt's 15% is within noise of its 19–20%. Debug launch argument:
+  `-demoSeaBattle YES`. 206 tests.

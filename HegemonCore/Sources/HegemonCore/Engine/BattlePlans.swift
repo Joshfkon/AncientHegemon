@@ -59,4 +59,19 @@ extension Engine {
         state.armies[territory]!.holdBack = plan.pursue ? nil : true
         return [.battlePlanSet(civ: civ, territory: territory, plan: plan)]
     }
+
+    func setFleetPlan(_ sea: SeaZoneID, _ plan: BattlePlan, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard let i = state.fleets.firstIndex(where: { $0.owner == civ && $0.sea == sea }) else { throw GameError.noFleet(sea) }
+        if let f = plan.formation {
+            guard rules.battle.formation(f) != nil else { throw GameError.unknownFormation(f) }
+            guard formationAvailable(f, civ, general: nil, in: state) else { throw GameError.planLocked }
+        }
+        if let s = plan.stratagem, !stratagemAvailable(s, civ, general: nil, in: state) { throw GameError.planLocked }
+        state.fleets[i].formation = plan.formation
+        state.fleets[i].depth = plan.depth
+        state.fleets[i].stratagem = plan.stratagem
+        state.fleets[i].holdBack = plan.pursue ? nil : true
+        return []
+    }
 }

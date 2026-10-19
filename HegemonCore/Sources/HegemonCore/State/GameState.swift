@@ -167,6 +167,23 @@ public struct Fleet: Codable, Sendable, Equatable {
     public var cargo: UnitCounts = .zero
     /// Battle honours of the troops aboard.
     public var cargoBattles: Int?
+    /// How the ships fight: formation, line, stratagem, whether they chase.
+    public var formation: FormationID?
+    public var depth: LineDepth?
+    public var stratagem: Stratagem?
+    public var holdBack: Bool?
+
+    public init(sea: SeaZoneID, owner: CivilizationID, ships: Int, movedShips: Int = 0, cargo: UnitCounts = .zero) {
+        self.sea = sea
+        self.owner = owner
+        self.ships = ships
+        self.movedShips = movedShips
+        self.cargo = cargo
+    }
+
+    public var plan: BattlePlan {
+        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem, pursue: !(holdBack ?? false))
+    }
 }
 
 /// Everything that changes during a game. Fully Codable so a game can be saved, reloaded,

@@ -85,6 +85,8 @@ public struct BattleSetup: Codable, Sendable, Equatable {
     public var seed: UInt64
     /// Extra damage reduction for the defender from walls, in percent.
     public var fortification: Int
+    /// A sea battle: the blocks are ships, on open water.
+    public var naval: Bool?
 
     public init(attacker: BattleArmy, defender: BattleArmy, terrain: Terrain,
                 approach: Approach = .overland, seed: UInt64, fortification: Int = 0) {
@@ -164,4 +166,6 @@ public struct NavalReport: Codable, Sendable, Equatable {
     public let rounds: Int
     public let attackerShipsLeft: Int
     public let defenderShipsLeft: Int
+    /// The battle as fought on the grid, ship by ship, for the replay.
+    public var battle: BattleReport?
 }

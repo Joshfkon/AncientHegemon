@@ -45,4 +45,16 @@ import Testing
         #expect(!events.contains { if case .landed = $0 { true } else { false } })
         #expect(s.armies["libya"]?.owner != "greece")
     }
+
+    @Test func seaBattlesAreFoughtOnTheGrid() throws {
+        var s = try setup(defenders: 2)
+        let events = try engine.apply(.land(sea: "eastern_med", territory: "libya", units: UnitCounts(infantry: 6)), to: &s)
+        guard case let .navalBattle(_, report)? = events.first, let grid = report.battle else {
+            Issue.record("no grid battle")
+            return
+        }
+        #expect(grid.setup.naval == true)
+        #expect(grid.frames.count > 1)
+        #expect(report.attackerShipsLeft == grid.attackerSurvivors.total)
+    }
 }

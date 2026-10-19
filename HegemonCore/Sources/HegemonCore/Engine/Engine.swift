@@ -39,6 +39,8 @@ public struct Engine: Sendable {
             return try setFormation(territory, formation, &state)
         case let .parley(territory, kind):
             return try parley(territory, kind, &state)
+        case let .setFleetPlan(sea, plan):
+            return try setFleetPlan(sea, plan, &state)
         case let .decorate(id):
             return try decorate(id, &state)
         case let .disband(territory, units):

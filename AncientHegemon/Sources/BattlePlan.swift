@@ -15,6 +15,8 @@ struct BattlePlanEditor: View {
     @Binding var plan: BattlePlan
     /// Chance of victory with each formation under the current depth and stratagem (attacks only).
     var odds: [FormationID: Double] = [:]
+    /// The blocks are ships.
+    var naval = false
 
     private var formation: FormationID { plan.formation ?? engine.rules.battle.defaultFormation }
 
@@ -80,7 +82,7 @@ struct BattlePlanEditor: View {
                 Spacer(minLength: 0)
 
             }
-            FormationDiagram(formation: f, units: units, depth: plan.depth)
+            FormationDiagram(formation: f, units: units, depth: plan.depth, naval: naval)
                 .frame(height: 46)
             Text(open ? Self.summary(f.id) : Self.needs(engine.requirement(for: f.id), engine))
                 .font(.caption2).foregroundStyle(.secondary)
@@ -184,6 +186,7 @@ struct FormationDiagram: View {
     let formation: Formation
     let units: UnitCounts
     var depth: LineDepth = .deep
+    var naval = false
 
     var body: some View {
         GeometryReader { geo in
@@ -199,8 +202,10 @@ struct FormationDiagram: View {
                 }
                 ForEach(placed, id: \.slot) { item in
                     ZStack(alignment: .topTrailing) {
-                        UnitIcon(type: item.type)
-                            .padding(cell * 0.12)
+                        Group {
+                            if naval { Image(systemName: "sailboat.fill").resizable().scaledToFit() } else { UnitIcon(type: item.type) }
+                        }
+                        .padding(cell * 0.12)
                         if formation.advance[item.type] == true {
                             Image(systemName: "arrowtriangle.up.fill")
                                 .font(.system(size: cell * 0.28))

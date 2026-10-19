@@ -24,7 +24,11 @@ struct BattleReplayView: View {
     private var last: Int { report.frames.count - 1 }
     /// The frame on screen, always a valid index.
     private var shown: Int { min(max(0, frame), last) }
-    private var title: String { map.territory(entry.territory).map { "Battle of \($0.name)" } ?? "Battle" }
+    private var title: String {
+        if let t = map.territory(entry.territory) { return "Battle of \(t.name)" }
+        if let s = map.sea(entry.territory) { return "Battle in the \(s.name)" }
+        return "Battle"
+    }
     private var story: BattleStory { BattleStory(report: report, state: state, perspective: perspective) }
 
     var body: some View {
@@ -140,11 +144,11 @@ struct BattleReplayView: View {
         let s = report.setup
         return VStack(spacing: 4) {
             HStack(alignment: .top) {
-                ArmySide(army: s.defender, label: "Defending", state: state)
+                ArmySide(army: s.defender, label: "Defending", state: state, naval: s.naval == true)
                 Spacer()
-                ArmySide(army: s.attacker, label: "Attacking", state: state)
+                ArmySide(army: s.attacker, label: "Attacking", state: state, naval: s.naval == true)
             }
-            Text("\(s.terrain.rawValue.capitalized)\(s.approach == .overland ? "" : " · \(s.approach.rawValue) crossing")")
+            Text(s.naval == true ? "Open sea" : "\(s.terrain.rawValue.capitalized)\(s.approach == .overland ? "" : " · \(s.approach.rawValue) crossing")")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -225,6 +229,7 @@ struct ArmySide: View {
     let label: String
     let state: GameState
     var rank: VeteranRank?
+    var naval = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -233,7 +238,11 @@ struct ArmySide: View {
                 Circle().fill(Palette.color(army.civ, state)).frame(width: 9, height: 9)
                 Text(Palette.name(army.civ, state)).font(.headline)
             }
-            UnitRow(units: army.units, showZero: true).font(.caption)
+            if naval {
+                Label("\(army.units.total) ship\(army.units.total == 1 ? "" : "s")", systemImage: "sailboat.fill").font(.caption)
+            } else {
+                UnitRow(units: army.units, showZero: true).font(.caption)
+            }
             if let rank, rank > .green { VeteranBadge(rank: rank) }
             if army.levy > 0 { Text("+ \(army.levy) militia").font(.caption) }
             Text(army.formation.replacingOccurrences(of: "_", with: " ").capitalized
@@ -267,8 +276,14 @@ struct BattleBoard: View {
                     let col = i % 5, row = 4 - i / 5
                     let rock = rocks.contains(GridPoint(col, row))
                     ZStack {
-                        Rectangle().fill(rock ? Self.rockColor : Self.ground(setup.terrain, row: row, col: col))
-                        if rock {
+                        Rectangle().fill(setup.naval == true ? Self.water(row: row, col: col)
+                                         : rock ? Self.rockColor : Self.ground(setup.terrain, row: row, col: col))
+                        if setup.naval == true {
+                            if (col + 2 * row) % 3 == 0 {
+                                Image(systemName: "water.waves").font(.system(size: cell * 0.24)).foregroundStyle(.white.opacity(0.22))
+                                    .offset(x: cell * 0.2, y: cell * 0.22)
+                            }
+                        } else if rock {
                             Image(systemName: "mountain.2.fill").font(.system(size: cell * 0.4)).foregroundStyle(.white.opacity(0.35))
                         } else if let glyph = Self.groundMark(setup.terrain), (col + row) % 3 == 0 {
                             Image(systemName: glyph).font(.system(size: cell * 0.22)).foregroundStyle(.black.opacity(0.12))
@@ -299,7 +314,7 @@ struct BattleBoard: View {
                 // Blocks: they shake and flash when hit, and shrink away when destroyed.
                 ForEach(frame.blocks.filter { $0.status != .destroyed }, id: \.id) { block in
                     let lost = (previous.first { $0.id == block.id }?.units ?? block.units) - block.units
-                    BlockView(block: block,
+                    BlockView(block: block, ship: setup.naval == true,
                               color: Palette.color(block.side == .attacker ? setup.attacker.civ : setup.defender.civ, state),
                               hit: lost > 0 ? tick : nil)
                         .frame(width: cell * 0.82, height: cell * 0.82)
@@ -341,6 +356,11 @@ struct BattleBoard: View {
     // MARK: Look
 
     static let rockColor = Color(red: 0.36, green: 0.33, blue: 0.3)
+
+    static func water(row: Int, col: Int) -> Color {
+        let k = (row + col) % 2 == 0 ? 1.0 : 0.94
+        return Color(red: 0.16 * k, green: 0.4 * k, blue: 0.68 * k)
+    }
 
     /// The field's ground for the battle's terrain, lightly chequered.
     static func ground(_ terrain: Terrain, row: Int, col: Int) -> Color {
@@ -452,11 +472,15 @@ struct BattleStory {
         }
     }
 
-    private func noun(_ b: BlockSnapshot) -> String { b.levy ? "militia" : b.type.rawValue }
+    private func noun(_ b: BlockSnapshot) -> String {
+        report.setup.naval == true ? "ships" : b.levy ? "militia" : b.type.rawValue
+    }
 
     func line(for index: Int) -> String {
         let frames = report.frames
+        let naval = report.setup.naval == true
         guard index > 0, index < frames.count else {
+            if naval { return "The fleets row out to meet each other." }
             let t = report.setup.terrain
             let ground = (t == .desert || t == .forest ? "in the " : "on the ") + t.rawValue
             return report.setup.approach == .overland ? "The armies draw up \(ground)."
@@ -469,7 +493,7 @@ struct BattleStory {
             return "\(whose(broke.side)) \(noun(broke)) break and run!"
         }
         if let fell = now.blocks.first(where: { $0.status == .destroyed && old[$0.id]?.status != .destroyed }) {
-            return "\(whose(fell.side)) \(noun(fell)) are cut down to the last man."
+            return naval ? "\(whose(fell.side)) ships are rammed and sunk!" : "\(whose(fell.side)) \(noun(fell)) are cut down to the last man."
         }
         let lost = { (side: BattleSide) in
             now.blocks.filter { $0.side == side }.reduce(0) { $0 + (old[$1.id]?.units ?? $1.units) - $1.units }
@@ -478,13 +502,13 @@ struct BattleStory {
         let tally = a + b > 0 ? " (\(perspective == nil ? name(us) : "us") −\(a), \(perspective == nil ? name(us.other) : "them") −\(b))" : ""
         let melee = now.strikes.contains { !$0.ranged }
         let firstMelee = melee && !frames[1..<index].contains { $0.strikes.contains { !$0.ranged } }
-        if firstMelee { return "The lines crash together!" + tally }
+        if firstMelee { return (naval ? "Bronze rams crash into hulls!" : "The lines crash together!") + tally }
         if !melee, !now.strikes.isEmpty {
             let shooters = Set(now.strikes.compactMap { s in now.blocks.first { $0.id == s.from }?.side })
             if shooters.count == 1, let side = shooters.first { return "\(whose(side)) archers loose a volley." + tally }
             return "Arrows fly both ways." + tally
         }
-        if now.strikes.isEmpty { return "The armies close in." }
+        if now.strikes.isEmpty { return naval ? "The oars beat as the fleets close." : "The armies close in." }
         if b > a * 2 { return "\(who(us)) drive into \(perspective == nil ? "the " + name(us.other) : "them")!" + tally }
         if a > b * 2 { return "\(who(us.other)) push \(perspective == nil ? "the " + name(us) : "us") back!" + tally }
         return "The fighting is hard on both sides." + tally
@@ -500,7 +524,8 @@ struct BattleStory {
         guard let p = report.pursuit else {
             return "\(who(winner)) hold the field and let \(perspective == nil ? "them" : winner == us ? "them" : "us") go."
         }
-        var text = winnerHasCavalry ? "\(whose(winner)) horsemen ride down the fleeing" : "\(who(winner)) give chase"
+        var text = report.setup.naval == true ? "\(who(winner)) chase the fleeing ships"
+            : winnerHasCavalry ? "\(whose(winner)) horsemen ride down the fleeing" : "\(who(winner)) give chase"
         text += p.routed > 0 ? ": \(p.routed) cut down in the rout."
             : ", but \(perspective == nil ? "the " + name(loser) : loser == us ? "we" : "they") get away."
         if p.pursuersLost > 0 { text += " \(whose(loser)) archers cover the retreat, felling \(p.pursuersLost)." }
@@ -589,6 +614,7 @@ private struct LossMarker: View {
 
 private struct BlockView: View {
     let block: BlockSnapshot
+    var ship = false
     let color: Color
     /// The frame in which the block was hit, to trigger its shake and flash.
     var hit: Int?
@@ -599,7 +625,12 @@ private struct BlockView: View {
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 1) {
-                        UnitIcon(type: block.type, color: .white).frame(width: g.size.width * 0.5, height: g.size.width * 0.5)
+                        if ship {
+                            Image(systemName: "sailboat.fill").resizable().scaledToFit().foregroundStyle(.white)
+                                .frame(width: g.size.width * 0.5, height: g.size.width * 0.5)
+                        } else {
+                            UnitIcon(type: block.type, color: .white).frame(width: g.size.width * 0.5, height: g.size.width * 0.5)
+                        }
                         Text("\(block.units)").font(.system(size: max(9, g.size.width * 0.22), weight: .bold).monospacedDigit())
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

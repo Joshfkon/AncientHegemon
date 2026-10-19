@@ -182,6 +182,7 @@ struct GameScreen: View {
                                    Moment(kind: .disaster(.earthquake, seat))]
                 session.demoFlash(seat)
             }
+            if UserDefaults.standard.bool(forKey: "demoSeaBattle") { session.muster = session.demoSeaBattle() }
             // Launch with -demoBattle YES to draw the capital's army up against a neighbouring tribe.
             if UserDefaults.standard.bool(forKey: "demoBattle"), let human = session.human,
                let seat = engine.seat(of: human, in: state), let army = state.armies[seat],
@@ -823,6 +824,13 @@ struct GameScreen: View {
                 if let fleet = state.fleet(of: session.human!, in: s) {
                     let ready = fleet.ships - fleet.movedShips
                     let cargo = fleet.cargo.total <= ready * engine.rules.ships.capacity ? fleet.cargo : .zero
+                    // Enemy ships there: draw up for a sea battle first.
+                    if state.fleets.contains(where: { $0.sea == t && $0.ships > 0 && state.atWar(session.human!, $0.owner) }) {
+                        session.muster = Muster(from: s, to: t, units: .zero, general: false, ships: ready, cargo: cargo)
+                        tab = .orders
+                        panelOpen = true
+                        return
+                    }
                     if session.order(.moveFleet(from: s, to: t, ships: ready, cargo: cargo)) {
                         selected = state.fleet(of: session.human!, in: t) != nil ? .sea(t) : nil
                     }

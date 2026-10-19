@@ -4,6 +4,8 @@ public enum Command: Codable, Sendable, Equatable {
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
     /// Talk to the tribe on unclaimed land next to yours.
     case parley(territory: TerritoryID, Parley)
+    /// How a fleet fights at sea.
+    case setFleetPlan(sea: SeaZoneID, plan: BattlePlan)
     /// Adorns the throne room.
     case decorate(DecorationID)
     /// Sends soldiers home: on the empire's own land they go back to the fields as people.

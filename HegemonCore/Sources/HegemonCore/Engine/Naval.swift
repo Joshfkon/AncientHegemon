@@ -107,7 +107,8 @@ extension Engine {
         if !enemies.isEmpty {
             var fleet = state.fleets.remove(at: i)
             for enemy in enemies where state.fleets.contains(where: { $0.owner == enemy && $0.sea == sea }) {
-                let result = navalBattle(civ, ships: fleet.ships, cargo: fleet.cargo, from: sea, against: enemy, in: sea, &state)
+                let result = navalBattle(civ, ships: fleet.ships, cargo: fleet.cargo, from: sea, against: enemy, in: sea,
+                                         plan: fleet.plan, &state)
                 events += result.events
                 fleet.ships = result.ships
                 fleet.cargo = result.cargo
@@ -152,6 +153,8 @@ extension Engine {
         guard map.seaNeighbors(of: from).contains(to) else { throw GameError.notAdjacent(from, to) }
         guard seaLinkOpen(from, to, for: [civ], in: state) else { throw GameError.chokepointClosed(from, to) }
 
+        let plan = fleet.plan
+        let honours = fleet.cargoBattles ?? 0
         state.fleets[i].ships -= ships
         state.fleets[i].cargo -= cargo
         if state.fleets[i].ships == 0 { state.fleets.remove(at: i) }
@@ -161,7 +164,7 @@ extension Engine {
         var cargo = cargo
         let enemies = state.fleets.filter { $0.sea == to && state.atWar(civ, $0.owner) }.map(\.owner).sorted()
         for enemy in enemies {
-            let result = navalBattle(civ, ships: ships, cargo: cargo, from: from, against: enemy, in: to, &state)
+            let result = navalBattle(civ, ships: ships, cargo: cargo, from: from, against: enemy, in: to, plan: plan, &state)
             events += result.events
             (ships, cargo) = (result.ships, result.cargo)
             guard result.won else {
@@ -169,18 +172,77 @@ extension Engine {
                 return events
             }
         }
+        let existed = fleetIndex(civ, to, state) != nil
+        let before = existed ? state.fleets[fleetIndex(civ, to, state)!] : nil
         addToFleet(civ, to, ships: ships, moved: ships, cargo: cargo, &state)
+        if let j = fleetIndex(civ, to, state) {
+            // The squadron's plan and its troops' honours sail with it.
+            if !existed {
+                state.fleets[j].formation = plan.formation
+                state.fleets[j].depth = plan.depth
+                state.fleets[j].stratagem = plan.stratagem
+                state.fleets[j].holdBack = plan.pursue ? nil : true
+            }
+            state.fleets[j].cargoBattles = mergedBattles(before?.cargoBattles ?? 0, before?.cargo.total ?? 0,
+                                                         honours, cargo.total)
+        }
         return events
+    }
+
+    /// A sea battle as fought on the grid: each ship a unit, on open water, crews as good as
+    /// their seafaring.
+    public func navalSetup(_ civ: CivilizationID, ships: Int, plan: BattlePlan,
+                           against enemy: CivilizationID, ships enemyShips: Int, plan enemyPlan: BattlePlan,
+                           seed: UInt64 = 0, _ state: GameState) -> BattleSetup {
+        func side(_ c: CivilizationID, _ n: Int, _ p: BattlePlan) -> BattleArmy {
+            var army = battleArmy(c, UnitCounts(infantry: n), plan: p, general: nil, state)
+            army.unitPercent = [.infantry: navalPercent(c, state) - 100]
+            army.morale = 0
+            return army
+        }
+        var setup = BattleSetup(attacker: side(civ, ships, plan), defender: side(enemy, enemyShips, enemyPlan),
+                                terrain: .plains, approach: .overland, seed: seed)
+        setup.naval = true
+        return setup
+    }
+
+    /// The first enemy fleet a squadron sailing into `sea` would have to fight, and the battle.
+    public func fleetAttackSetup(_ civ: CivilizationID, ships: Int, into sea: SeaZoneID, plan: BattlePlan,
+                                 in state: GameState) -> BattleSetup? {
+        guard let enemy = state.fleets.filter({ $0.sea == sea && $0.ships > 0 && state.atWar(civ, $0.owner) })
+            .sorted(by: { $0.owner < $1.owner }).first else { return nil }
+        return navalSetup(civ, ships: ships, plan: plan, against: enemy.owner, ships: enemy.ships, plan: enemy.plan, state)
+    }
+
+    /// Chance a squadron wins that battle, from a few trial runs (the game's RNG is untouched).
+    public func fleetAttackOdds(_ civ: CivilizationID, ships: Int, into sea: SeaZoneID, plan: BattlePlan,
+                                samples: Int = 12, in state: GameState) -> Double? {
+        guard let setup = fleetAttackSetup(civ, ships: ships, into: sea, plan: plan, in: state) else { return nil }
+        var rng = SeededRNG(seed: state.seed ^ (UInt64(state.turn) &* 0x9E37_79B9_7F4A_7C15) ^ UInt64(sea.utf8.count))
+        let sim = BattleSimulator(rules: rules)
+        var wins = 0
+        for _ in 0..<samples {
+            var trial = setup
+            trial.seed = rng.next()
+            if sim.resolve(trial).winner == .attacker { wins += 1 }
+        }
+        return Double(wins) / Double(samples)
     }
 
     /// Fights the enemy fleet in `sea`. Returns whether the attacker won and what it has left.
     private func navalBattle(_ civ: CivilizationID, ships: Int, cargo: UnitCounts, from: SeaZoneID,
-                             against enemy: CivilizationID, in sea: SeaZoneID, _ state: inout GameState)
+                             against enemy: CivilizationID, in sea: SeaZoneID, plan attackerPlan: BattlePlan = BattlePlan(),
+                             _ state: inout GameState)
         -> (won: Bool, ships: Int, cargo: UnitCounts, events: [GameEvent]) {
         let d = fleetIndex(enemy, sea, state)!
-        let report = BattleSimulator(rules: rules).resolveNaval(
-            attacker: civ, attackerShips: ships, defender: enemy, defenderShips: state.fleets[d].ships,
-            seed: state.rng.next(), attackerPercent: navalPercent(civ, state), defenderPercent: navalPercent(enemy, state))
+        let setup = navalSetup(civ, ships: ships, plan: attackerPlan,
+                               against: enemy, ships: state.fleets[d].ships, plan: state.fleets[d].plan,
+                               seed: state.rng.next(), state)
+        let grid = BattleSimulator(rules: rules).resolve(setup)
+        var report = NavalReport(attacker: civ, defender: enemy, attackerShips: ships,
+                                 defenderShips: state.fleets[d].ships, winner: grid.winner, rounds: grid.rounds,
+                                 attackerShipsLeft: grid.attackerSurvivors.total, defenderShipsLeft: grid.defenderSurvivors.total)
+        report.battle = grid
         var events: [GameEvent] = [.navalBattle(sea: sea, report: report)]
         addExperience(civ, .seafaring, 5, &state)
         addExperience(enemy, .seafaring, 5, &state)

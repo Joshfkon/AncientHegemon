@@ -3,10 +3,15 @@ import SwiftUI
 
 /// An attack the player has ordered, drawn up on the field before the first blow.
 struct Muster: Identifiable, Equatable {
-    let from: TerritoryID
-    let to: TerritoryID
+    /// Territories for a march; seas for a fleet attack.
+    let from: String
+    let to: String
     let units: UnitCounts
     let general: Bool
+    /// A fleet attack: these ships sail in with this cargo.
+    var ships = 0
+    var cargo = UnitCounts.zero
+    var naval: Bool { ships > 0 }
     var id: String { from + ">" + to }
 }
 
@@ -32,10 +37,13 @@ struct BattlefieldView: View {
         return g
     }
     private var setup: BattleSetup? {
-        engine.attackSetup(human, units: muster.units, into: muster.to, from: muster.from, plan: plan,
-                           general: general, in: state)
+        if muster.naval {
+            return engine.fleetAttackSetup(human, ships: muster.ships, into: muster.to, plan: plan, in: state)
+        }
+        return engine.attackSetup(human, units: muster.units, into: muster.to, from: muster.from, plan: plan,
+                                  general: general, in: state)
     }
-    private var place: String { engine.map.territory(muster.to)?.name ?? muster.to }
+    private var place: String { engine.map.territory(muster.to)?.name ?? engine.map.sea(muster.to)?.name ?? muster.to }
 
     var body: some View {
         NavigationStack {
@@ -50,17 +58,20 @@ struct BattlefieldView: View {
                     field(setup)
                 } else {
                     // The defenders are gone (or the order no longer stands).
-                    ContentUnavailableView("Nobody holds \(place)", systemImage: "flag")
+                    ContentUnavailableView(muster.naval ? "No enemy ships in the \(place)" : "Nobody holds \(place)",
+                                           systemImage: muster.naval ? "sailboat" : "flag")
                         .toolbar { Button("Back") { session.muster = nil } }
                 }
             }
         }
         .onAppear {
             session.message = nil
-            if let army = state.armies[muster.from] {
+            if muster.naval {
+                plan = state.fleet(of: human, in: muster.from)?.plan ?? BattlePlan()
+            } else if let army = state.armies[muster.from] {
                 plan = army.plan
-                if plan.stratagem == .standFast { plan.stratagem = nil }
             }
+            if plan.stratagem == .standFast { plan.stratagem = nil }
             SoundBoard.shared.loop(.wardrums, volume: 0.55)
             updateOdds()
         }
@@ -74,7 +85,8 @@ struct BattlefieldView: View {
         return HStack(spacing: 14) {
             BattleBoard(setup: setup, impassable: impassable, frame: frame, previous: [], tick: 0, state: state)
                 .overlay(alignment: .bottom) {
-                    Text(charging ? "Charge!" : "Your army below · theirs above")
+                    Text(charging ? (muster.naval ? "Ramming speed!" : "Charge!")
+                         : muster.naval ? "Your ships below · theirs above" : "Your army below · theirs above")
                         .font(charging ? .title2.weight(.black) : .caption.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -88,22 +100,23 @@ struct BattlefieldView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Battle of \(place)").font(.title3.weight(.bold)).fontDesign(.serif)
+                            Text(muster.naval ? "Battle in the \(place)" : "Battle of \(place)").font(.title3.weight(.bold)).fontDesign(.serif)
                             Spacer()
                             SoundToggle()
                         }
                         HStack(alignment: .top) {
                             ArmySide(army: setup.defender, label: "Defending", state: state,
-                                     rank: state.armies[muster.to].map { engine.rank(of: $0) })
+                                     rank: muster.naval ? nil : state.armies[muster.to].map { engine.rank(of: $0) }, naval: muster.naval)
                             Spacer()
                             ArmySide(army: setup.attacker, label: "Attacking", state: state,
-                                     rank: state.armies[muster.from].map { engine.rank(of: $0) })
+                                     rank: muster.naval ? nil : state.armies[muster.from].map { engine.rank(of: $0) }, naval: muster.naval)
                         }
                         scouts
                         Divider()
                         Text("Battle plan").font(.headline)
-                        BattlePlanEditor(engine: engine, civ: human, state: state, units: muster.units,
-                                         general: general, plan: $plan, odds: odds)
+                        BattlePlanEditor(engine: engine, civ: human, state: state,
+                                         units: muster.naval ? UnitCounts(infantry: muster.ships) : muster.units,
+                                         general: general, plan: $plan, odds: odds, naval: muster.naval)
                         if let message = session.message {
                             Label(message, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption).foregroundStyle(.red)
@@ -119,7 +132,7 @@ struct BattlefieldView: View {
                     .buttonStyle(.bordered)
                     Spacer()
                     Button(action: charge) {
-                        Label("Charge!", systemImage: "flag.2.crossed.fill").font(.headline)
+                        Label(muster.naval ? "Row in!" : "Charge!", systemImage: muster.naval ? "sailboat.fill" : "flag.2.crossed.fill").font(.headline)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.red)
@@ -146,15 +159,36 @@ struct BattlefieldView: View {
                     .contentTransition(.numericText())
                     .animation(.default, value: outlook.word)
             }
-            ForEach(Scouts.report(engine: engine, state: state, civ: human, units: muster.units, plan: plan,
+            ForEach(muster.naval ? navalScouting : Scouts.report(engine: engine, state: state, civ: human, units: muster.units, plan: plan,
                                   general: general, to: muster.to, from: muster.from), id: \.self) { line in
                 Text("• " + line).font(.caption).foregroundStyle(.secondary)
             }
         }
     }
 
+    private var navalScouting: [String] {
+        guard let setup else { return [] }
+        let ours = Double(muster.ships), theirs = Double(max(1, setup.defender.units.total))
+        var lines = [ours >= theirs * 1.25 ? "We have more ships." : ours * 1.25 <= theirs ? "They have more ships." : "The fleets are about the same size."]
+        let us = setup.attacker.unitPercent[.infantry] ?? 0, them = setup.defender.unitPercent[.infantry] ?? 0
+        if them > us { lines.append("Their crews are better seamen.") }
+        if us > them { lines.append("Our crews are better seamen.") }
+        if muster.cargo.total > 0 { lines.append("\(muster.cargo.total) troops are aboard; sunk ships drown them.") }
+        lines.append("Win, and the sea is ours: troops can land on its coasts.")
+        return lines
+    }
+
     private func updateOdds() {
         var result: [FormationID: Double] = [:]
+        if muster.naval {
+            for f in engine.rules.battle.formations where engine.formationAvailable(f.id, human, general: nil, in: state) {
+                var p = plan
+                p.formation = f.id
+                result[f.id] = engine.fleetAttackOdds(human, ships: muster.ships, into: muster.to, plan: p, in: state) ?? 0
+            }
+            odds = result
+            return
+        }
         for f in engine.rules.battle.formations where engine.formationAvailable(f.id, human, general: general, in: state) {
             result[f.id] = engine.attackOdds(human, units: muster.units, into: muster.to, from: muster.from,
                                              formation: f.id, depth: plan.depth, stratagem: plan.stratagem,
@@ -171,10 +205,18 @@ struct BattlefieldView: View {
         Feedback.impact(1)
         Task {
             try? await Task.sleep(for: .milliseconds(650))
-            if state.armies[muster.from]?.plan != plan {
-                session.order(.setBattlePlan(territory: muster.from, plan: plan))
+            let moved: Bool
+            if muster.naval {
+                if state.fleet(of: human, in: muster.from)?.plan != plan {
+                    session.order(.setFleetPlan(sea: muster.from, plan: plan))
+                }
+                moved = session.order(.moveFleet(from: muster.from, to: muster.to, ships: muster.ships, cargo: muster.cargo))
+            } else {
+                if state.armies[muster.from]?.plan != plan {
+                    session.order(.setBattlePlan(territory: muster.from, plan: plan))
+                }
+                moved = session.order(.move(from: muster.from, to: muster.to, units: muster.units, general: muster.general))
             }
-            let moved = session.order(.move(from: muster.from, to: muster.to, units: muster.units, general: muster.general))
             charging = false
             if moved, let entry = session.replay {
                 withAnimation(.easeInOut(duration: 0.3)) { fought = entry }
