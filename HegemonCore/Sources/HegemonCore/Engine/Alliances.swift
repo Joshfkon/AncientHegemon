@@ -36,15 +36,16 @@ extension Engine {
         state.alliances.contains(CivPair(a, b))
     }
 
-    func militaryStrength(_ civ: CivilizationID, _ state: GameState) -> Int {
-        state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total + $1.ships }
+    /// Soldiers and ships `civ` commands, as far as `observer` can tell (limited sight).
+    func militaryStrength(_ civ: CivilizationID, seenBy observer: CivilizationID, _ state: GameState) -> Int {
+        perceivedStrength(of: civ, by: observer, ships: true, in: state)
     }
 
     /// Whether a civilization would go to war against `enemy` for an ally: not if the enemy is
     /// overwhelming; readily if it already fears or covets them (shared border).
     public func willingToFight(_ civ: CivilizationID, against enemy: CivilizationID, in state: GameState) -> Bool {
-        let mine = max(1, militaryStrength(civ, state))
-        let theirs = militaryStrength(enemy, state)
+        let mine = max(1, militaryStrength(civ, seenBy: civ, state))
+        let theirs = militaryStrength(enemy, seenBy: civ, state)
         return theirs * 100 <= mine * rules.alliances.enemyTooStrongPercent
     }
 
@@ -53,13 +54,14 @@ extension Engine {
     public func wouldAlly(_ civ: CivilizationID, with other: CivilizationID, in state: GameState) -> Bool {
         guard state.atPeace(civ, other), !allied(civ, other, in: state),
               allies(of: civ, in: state).count < rules.alliances.maxAllies else { return false }
-        let mine = militaryStrength(civ, state)
+        let mine = militaryStrength(civ, seenBy: civ, state)
+        let sight = self.sight(of: civ, in: state)
         // Against a menace, any fellow enemy of it will do.
         if let m = menace(in: state), m != civ, m != other, state.atWar(civ, m), state.atWar(other, m) { return true }
         return state.players.contains { enemy in
             enemy != civ && enemy != other && !(state.civs[enemy]?.eliminated ?? true)
                 && state.atWar(civ, enemy) && state.atWar(other, enemy)
-                && militaryStrength(enemy, state) >= mine
+                && perceivedStrength(of: enemy, by: civ, ships: true, sight: sight, in: state) >= mine
         }
     }
 

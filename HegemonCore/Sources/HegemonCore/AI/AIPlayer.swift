@@ -9,7 +9,8 @@ public struct AITurn: Sendable {
 ///
 /// It plays through the same `Command`s as a human. It never reads the game's RNG: its battle
 /// estimates use their own seeds derived from the state, so an AI turn is deterministic and
-/// leaves the game's random sequence untouched.
+/// leaves the game's random sequence untouched. Like a person it judges rivals' armies only
+/// as far as it can see (`Engine.sight`); beyond that it goes by rumour and assumed garrisons.
 public struct AIPlayer: Sendable {
     public let engine: Engine
     public let personality: Personality
@@ -70,17 +71,28 @@ public struct AIPlayer: Sendable {
         return state.atWar(civ, other)
     }
 
-    /// Enemy units on land next to a territory, optionally ignoring one neighbor.
+    /// Enemy units on land next to a territory, as far as `civ` can tell, optionally ignoring
+    /// one neighbor. Pass `sight` when calling it often for land beyond the civ's own.
     func threat(to t: TerritoryID, for civ: CivilizationID, _ state: GameState,
-                        excluding skip: TerritoryID? = nil) -> Int {
-        map.landNeighbors(of: t).filter { $0 != skip }.reduce(0) { total, n in
+                excluding skip: TerritoryID? = nil, sight: Set<TerritoryID>? = nil) -> Int {
+        // Everything next to your own land and armies is in sight.
+        let near = state.owner(of: t) == civ || state.armies[t]?.owner == civ
+        let sight = near ? nil : sight ?? engine.sight(of: civ, in: state)
+        return map.landNeighbors(of: t).filter { $0 != skip }.reduce(0) { total, n in
+            if let sight {
+                guard let army = engine.perceivedArmy(at: n, by: civ, sight: sight, in: state),
+                      hostile(civ, army.owner, state) else { return total }
+                return total + army.units
+            }
             guard let army = state.armies[n], hostile(civ, army.owner, state) else { return total }
             return total + army.units.total
         }
     }
 
-    func strength(of civ: CivilizationID, _ state: GameState) -> Int {
-        state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
+    /// Soldiers on land and aboard ship, as far as `observer` can tell.
+    func strength(of civ: CivilizationID, seenBy observer: CivilizationID, sight: Set<TerritoryID>,
+                  _ state: GameState) -> Int {
+        engine.perceivedStrength(of: civ, by: observer, ships: false, sight: sight, in: state)
     }
 
     func borders(_ a: CivilizationID, _ b: CivilizationID, _ state: GameState) -> Bool {
@@ -109,7 +121,8 @@ public struct AIPlayer: Sendable {
 
     func diplomacy(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         alliances(civ, &state, &turn)
-        let mine = strength(of: civ, state)
+        let sight = engine.sight(of: civ, in: state)
+        let mine = strength(of: civ, seenBy: civ, sight: sight, state)
         // While there's free land to claim, peace is cheap; once it's gone, neighbors are the
         // only way to grow.
         // (Land it won't settle, like a barbarian homeland, doesn't count.)
@@ -123,7 +136,7 @@ public struct AIPlayer: Sendable {
         // other and turn on it together.
         let menace = engine.menace(in: state)
         for other in others {
-            let edge = Double(mine) / Double(max(1, strength(of: other, state)))
+            let edge = Double(mine) / Double(max(1, strength(of: other, seenBy: civ, sight: sight, state)))
             let neighbor = borders(civ, other, state)
             let losing = edge < 0.75
             var prey = neighbor && !room && edge >= warEdge
@@ -314,6 +327,7 @@ public struct AIPlayer: Sendable {
 
     func options(_ civ: CivilizationID, _ state: GameState, _ cache: inout [String: Double]) -> [Option] {
         let home = Set(engine.homeNetwork(of: civ, in: state))
+        let sight = engine.sight(of: civ, in: state)
         var result: [Option] = []
         for (from, _) in state.armies(of: civ) {
             let ready = readyUnits(at: from, state)
@@ -340,12 +354,12 @@ public struct AIPlayer: Sendable {
                     let value = self.value(of: to, for: civ, state) * personality.aggression
                         * (1 + personality.opportunism * weakness(defender.owner, state))
                     let risk = Double(units.total) * (1 - pWin) * 0.6
-                        + Double(max(0, threat(to: to, for: civ, state, excluding: from) - units.total)) * 0.2
+                        + Double(max(0, threat(to: to, for: civ, state, excluding: from, sight: sight) - units.total)) * 0.2
                     let score = (pWin * value - risk) * supplied - 0.5
                     if pWin >= 0.55 { result.append(Option(from: from, to: to, units: units, score: score, battle: true)) }
                 } else {
                     let units = take(1, from: ready)
-                    let exposure = Double(threat(to: to, for: civ, state)) * 0.4 / personality.aggression
+                    let exposure = Double(threat(to: to, for: civ, state, sight: sight)) * 0.4 / personality.aggression
                     let score = (value(of: to, for: civ, state) * personality.aggression - exposure) * supplied
                     result.append(Option(from: from, to: to, units: units, score: score, battle: false))
                 }

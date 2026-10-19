@@ -313,8 +313,7 @@ public struct GameState: Codable, Sendable, Equatable {
 
         let natives = rules.start.natives
         for t in map.territories where land[t.id]!.owner == nil {
-            let island = map.landNeighbors(of: t.id).isEmpty
-            let count = (island ? natives.islandBase ?? natives.base : natives.base) + t.grain / max(1, natives.grainPerUnit)
+            let count = natives.tribe(in: t, island: map.landNeighbors(of: t.id).isEmpty)
             if count > 0 { armies[t.id] = Army(owner: nativesID, units: UnitCounts(infantry: count)) }
         }
 

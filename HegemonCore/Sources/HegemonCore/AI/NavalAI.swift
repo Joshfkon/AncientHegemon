@@ -45,6 +45,7 @@ extension AIPlayer {
         let ports = Set(home.flatMap { map.seas(bordering: $0) })
         guard !ports.isEmpty else { return nil }
         let owned = Set(state.territories(of: civ))
+        let sight = engine.sight(of: civ, in: state)
 
         var best: (SeaCampaign, Double)?
         for t in map.territories where t.isCoastal && !owned.contains(t.id) {
@@ -54,7 +55,9 @@ extension AIPlayer {
             let landing = Set(t.seas)
             let dist = seaDistances(to: landing, ships: 1, civ, state)
             guard let steps = ports.compactMap({ dist[$0] }).min() else { continue }
-            let defenders = state.armies[t.id].map { $0.owner == civ ? 0 : $0.units.total } ?? 0
+            // Across the water the AI often goes by rumour and guesswork.
+            let defenders = engine.perceivedArmy(at: t.id, by: civ, sight: sight, in: state)
+                .map { $0.owner == civ ? 0 : $0.units } ?? 0
                 + (state.owner(of: t.id) != civ ? engine.levy(at: t.id, state) : 0)
             let score = value(of: t.id, for: civ, state) * personality.aggression
                 - Double(defenders) * 0.7 - Double(steps) * 0.75

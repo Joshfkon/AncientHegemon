@@ -672,7 +672,8 @@
     ]
   },
   "sight": {
-    "rumouredArmy": 8
+    "rumouredArmy": 8,
+    "assumedGarrison": 2
   },
   "decisions": {
     "famineLegitimacy": 3,

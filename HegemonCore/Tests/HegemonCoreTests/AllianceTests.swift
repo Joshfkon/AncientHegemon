@@ -43,6 +43,8 @@ import Testing
         s.peace.insert(CivPair("mesopotamia", "greece"))
         s.alliances.insert(CivPair("egypt", "mesopotamia"))
         s.armies["greece"]!.units = UnitCounts(infantry: 40)
+        // Egypt's ships off Greece let its ally see the host in full, not just by rumour.
+        s.fleets.append(Fleet(sea: "aegean", owner: "egypt", ships: 1))
         let events = try engine.apply(.callToWar(ally: "mesopotamia", against: "greece"), to: &s)
         #expect(events == [.warRefused(by: "mesopotamia", ally: "egypt", against: "greece")])
         #expect(s.atPeace("mesopotamia", "greece"))

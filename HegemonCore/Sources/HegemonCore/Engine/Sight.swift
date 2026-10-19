@@ -7,6 +7,8 @@ import Foundation
 public struct SightRules: Codable, Sendable, Equatable {
     /// An army at least this large is rumoured far beyond your sight.
     public let rumouredArmy: Int
+    /// The garrison a court assumes holds each piece of a rival's land it can't see.
+    public let assumedGarrison: Int
 }
 
 extension Engine {
@@ -36,5 +38,39 @@ extension Engine {
     /// Whether an army is large enough to be talked about beyond sight.
     public func rumoured(_ units: UnitCounts) -> Bool {
         units.total >= rules.sight.rumouredArmy
+    }
+
+    /// What `civ` believes stands in `t`: the army it sees there; out of sight, a rumoured host
+    /// at the rumoured size, else the assumed garrison of whoever holds the land, or on
+    /// unclaimed land the tribe that lived there at the start; nil when it sees nothing there.
+    public func perceivedArmy(at t: TerritoryID, by civ: CivilizationID, sight: Set<TerritoryID>,
+                              in state: GameState) -> (owner: CivilizationID, units: Int)? {
+        if sight.contains(t) { return state.armies[t].map { ($0.owner, $0.units.total) } }
+        if let army = state.armies[t], army.owner != civ, rumoured(army.units) {
+            return (army.owner, rules.sight.rumouredArmy)
+        }
+        guard let owner = state.owner(of: t) else {
+            let tribe = rules.start.natives.tribe(in: map.territory(t)!, island: map.landNeighbors(of: t).isEmpty)
+            return tribe > 0 ? (nativesID, tribe) : nil
+        }
+        return owner == civ ? nil : (owner, rules.sight.assumedGarrison)
+    }
+
+    /// The soldiers (and, with `ships`, the hulls) `observer` believes `civ` commands: what it
+    /// sees, rumours, an assumed garrison on land it can't see, and fleets on seas it watches.
+    public func perceivedStrength(of civ: CivilizationID, by observer: CivilizationID, ships: Bool,
+                                  sight: Set<TerritoryID>? = nil, in state: GameState) -> Int {
+        let fleets = state.fleets(of: civ)
+        guard civ != observer else {
+            return state.totalUnits(of: civ).total + fleets.reduce(0) { $0 + $1.cargo.total + (ships ? $1.ships : 0) }
+        }
+        let sight = sight ?? self.sight(of: observer, in: state)
+        let places = Set(state.territories(of: civ)).union(state.armies(of: civ).map(\.territory))
+        let land = places.reduce(0) { total, t in
+            guard let army = perceivedArmy(at: t, by: observer, sight: sight, in: state), army.owner == civ else { return total }
+            return total + army.units
+        }
+        let watched = Set(map.territories.filter { sight.contains($0.id) }.flatMap(\.seas))
+        return land + fleets.filter { watched.contains($0.sea) }.reduce(0) { $0 + $1.cargo.total + (ships ? $1.ships : 0) }
     }
 }
