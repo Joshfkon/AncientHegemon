@@ -106,6 +106,10 @@ extension AIPlayer {
         if !econ.tradePartners.isEmpty {
             plan.append((.harbor, cheapest(.harbor, home.filter { map.territory($0)!.isCoastal })))
         }
+        // A granary at the capital once the harvest outgrows what the store can hold.
+        if econ.grainBalance > 0, econ.granary >= econ.granaryCap, let capital = engine.seat(of: civ, in: state) {
+            plan.append((.granary, cheapest(.granary, [capital] + home)))
+        }
         // Then more farms, to grow.
         plan.append((.farm, cheapest(.farm, home.sorted { (map.territory($0)!.grain, $1) > (map.territory($1)!.grain, $0) })))
 

@@ -28,7 +28,7 @@ extension Engine {
                 let forGrowth = (production - consumption) * growthPercent(civ, state) / 100
                 grown = grow(pocket, surplus: forGrowth, &state)
                 granary = min(granary + production - consumption - grown,
-                              production * granaryTurns(civ, state))
+                              granaryCap(civ, production: production, state))
             } else {
                 var available = production + granary - atSea
                 if isHome {

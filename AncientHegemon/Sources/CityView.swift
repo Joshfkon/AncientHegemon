@@ -230,6 +230,13 @@ struct TownScene: View {
                     Image(systemName: "drop.fill").foregroundStyle(.blue.opacity(0.6))
                         .position(x: w * 0.5, y: h * 0.8)
                 }
+                // The granary: a domed storehouse by the fields.
+                if land.improvements.contains(.granary) {
+                    Image(systemName: "archivebox.fill").font(.system(size: 34))
+                        .foregroundStyle(Color(red: 0.8, green: 0.62, blue: 0.35))
+                        .shadow(radius: 2)
+                        .position(x: w * 0.6, y: h * 0.78)
+                }
                 // The road through town.
                 if land.improvements.contains(.road) {
                     Path { p in

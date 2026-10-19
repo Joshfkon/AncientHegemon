@@ -80,7 +80,7 @@ extension Engine {
         return EconomyReport(
             grainProduced: produced, eatenByPeople: people, eatenByArmies: base, eatenByDistance: total - base,
             eatenAtSea: pockets.isEmpty ? 0 : fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
-            granaryCap: produced * granaryTurns(civ, state),
+            granaryCap: granaryCap(civ, production: produced, state),
             grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, income: gold.total,
             pay: armyPay(of: civ, in: state),

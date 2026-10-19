@@ -106,6 +106,13 @@ extension Engine {
             + (holds("ziggurat", civ, in: state) ? 1 : 0)
     }
 
+    /// The most grain the realm's store can hold, given this turn's home harvest: a turn's
+    /// harvest (more with agriculture or the ziggurat) plus what its granaries add.
+    public func granaryCap(_ civ: CivilizationID, production: Int, _ state: GameState) -> Int {
+        let granaries = homeNetwork(of: civ, in: state).filter { state.land[$0]?.improvements.contains(.granary) ?? false }.count
+        return production * granaryTurns(civ, state) + granaries * rules.projectEffects.granaryGrain
+    }
+
     public func shipCapacity(_ civ: CivilizationID, _ state: GameState) -> Int {
         rules.ships.capacity + (level(.seafaring, of: civ, in: state) >= 1 ? rules.knowledge.effects.galleysCapacity : 0)
             + (holds("lighthouse", civ, in: state) ? 1 : 0)

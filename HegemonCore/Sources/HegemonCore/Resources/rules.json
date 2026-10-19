@@ -1,5 +1,5 @@
 {
-  "version": 16,
+  "version": 17,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -77,6 +77,12 @@
       "stone": 1,
       "timber": 2,
       "turns": 3
+    },
+    "granary": {
+      "gold": 5,
+      "stone": 1,
+      "timber": 1,
+      "turns": 2
     }
   },
   "projectEffects": {
@@ -85,7 +91,8 @@
     "mineBonus": 1,
     "wallsDefensePercent": 35,
     "harborGold": 2,
-    "harborShipDiscount": 2
+    "harborShipDiscount": 2,
+    "granaryGrain": 6
   },
   "knowledge": {
     "populationPerPoint": 10,

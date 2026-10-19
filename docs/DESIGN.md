@@ -1408,3 +1408,14 @@ goals: everything here follows from how real Bronze Age empires held together or
   dominations; the round-10 leader goes on to win only 38% of games, so the lead now changes
   hands. Egypt gains most from great works (two need a river valley). Rules version 16; 228
   tests.
+
+### Granaries (Josh: "do we have granaries?… let's add that")
+
+- The realm already had one grain store, capped at a turn's home harvest (two with the second
+  level of agriculture, one more with the Ziggurat). There is now a granary building too:
+  5 gold, 1 stone, 1 timber, 2 turns, buildable anywhere. Each granary in the home network
+  lets the store hold 6 more grain (`projectEffects.granaryGrain`), to carry the realm through
+  famine, drought and siege, or to open to the hungry when famine strikes.
+- It shows as 🏺 on the map and as a storehouse by the fields in the town view. The AI builds
+  one at its capital when its store is full and the harvest still has grain to spare.
+- Balance (80 games): unchanged within a game or two. Rules version 17; 229 tests.

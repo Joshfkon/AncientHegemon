@@ -32,7 +32,7 @@ extension Engine {
         switch project {
         case .mine: return [.copper, .tin, .iron, .gold, .stone].contains { (t.resources[$0] ?? 0) > 0 }
         case .harbor: return t.isCoastal
-        case .road, .walls, .farm: return true
+        case .road, .walls, .farm, .granary: return true
         }
     }
 

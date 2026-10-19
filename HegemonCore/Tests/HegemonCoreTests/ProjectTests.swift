@@ -124,6 +124,18 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         try engine.apply(.buildShips(territory: "greece", sea: "aegean", count: 1), to: &s)
         #expect(s.civs["greece"]!.gold == 100 - (engine.rules.ships.cost - engine.rules.projectEffects.harborShipDiscount))
     }
+
+    @Test func granariesStoreMoreGrain() throws {
+        var plain = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
+        plain.civs["mesopotamia"]!.granary = 200
+        var stored = plain
+        stored.land["mesopotamia"]!.improvements.insert(.granary)
+        try engine.apply(.endTurn, to: &plain)
+        try engine.apply(.endTurn, to: &stored)
+        #expect(stored.civs["mesopotamia"]!.granary == plain.civs["mesopotamia"]!.granary + engine.rules.projectEffects.granaryGrain)
+        #expect(engine.canBuild(.granary, in: "mesopotamia", plain))
+        #expect(!engine.canBuild(.granary, in: "mesopotamia", stored))
+    }
 }
 
 @Suite struct StockAndGoodsTests {

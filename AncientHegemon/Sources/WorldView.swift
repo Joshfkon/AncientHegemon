@@ -1047,6 +1047,7 @@ extension MapView {
         case .farm: "🌱"
         case .mine: "⛏"
         case .harbor: "⚓"
+        case .granary: "🏺"
         }
     }
 }

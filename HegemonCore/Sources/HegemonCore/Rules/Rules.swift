@@ -85,6 +85,8 @@ public enum ProjectKind: String, Codable, Sendable, CaseIterable, CodingKeyRepre
     case mine
     /// Trade income, and cheaper ships built here.
     case harbor
+    /// Stores more grain against bad years.
+    case granary
 }
 
 public struct ProjectCost: Codable, Sendable, Equatable {
@@ -101,6 +103,8 @@ public struct ProjectEffects: Codable, Sendable, Equatable {
     public let wallsDefensePercent: Int
     public let harborGold: Int
     public let harborShipDiscount: Int
+    /// Extra grain the realm's store can hold for each granary in the home network.
+    public let granaryGrain: Int
 }
 
 public struct SupplyRules: Codable, Sendable, Equatable {

@@ -408,6 +408,7 @@ struct CommandBar: View {
         case .farm: "leaf.fill"
         case .mine: "hammer.fill"
         case .harbor: "ferry.fill"
+        case .granary: "archivebox.fill"
         }
     }
 }

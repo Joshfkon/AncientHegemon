@@ -124,6 +124,7 @@ func projectName(_ kind: ProjectKind) -> String {
     case .farm: "Farm"
     case .mine: "Mine"
     case .harbor: "Harbor"
+    case .granary: "Granary"
     }
 }
 
@@ -134,5 +135,6 @@ func projectPurpose(_ kind: ProjectKind) -> String {
     case .farm: "+1 grain (+2 in a river valley)"
     case .mine: "+1 of each ore here"
     case .harbor: "+2 gold with trade, cheaper ships"
+    case .granary: "stores 6 more grain against bad years"
     }
 }
