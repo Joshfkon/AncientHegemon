@@ -1477,4 +1477,18 @@ goals: everything here follows from how real Bronze Age empires held together or
   "?" token: rumour of a great army, not its size. Rival fleets on unwatched seas are hidden.
   Rivals' marches, battles and raises out of sight aren't drawn; captures still are (news
   travels). The territory panel and quick look say "Beyond your sight" and how to see further.
-- The AI still sees everything (a known simplification). Rules version 18; 234 tests.
+- Rules version 18; 234 tests.
+- The AI plays by the same sight. Within its sight it knows armies' true sizes; beyond it,
+  `Engine.perceivedArmy` gives a rumoured host (8 or more) as exactly `sight.rumouredArmy`, a
+  rival's other land as `sight.assumedGarrison` (2) whether or not anyone is there, and
+  unclaimed land as the tribe that held it at the start. Rival fleets count only on seas it
+  watches. This feeds the AI's war and peace strength comparison (`perceivedStrength`), the
+  danger around land it might take, sea-campaign targets, and an ally's "is this enemy too
+  strong / worth allying against" (`willingToFight`, `wouldAlly`). Garrisons, walls, recruits
+  and defensive formations only look next to the AI's own land and armies, which it always
+  sees. Fleet routing (`sailable`) and levies on unseen land still use the true state (known
+  simplifications). Deterministic: no new randomness.
+- Balance (80 games, seed 501), before → after: Egypt 38% → 42%, Mesopotamia 30% → 22%,
+  Italia 22% → 20%, Greece 8% → 15%; dominations 2 → 2; no rejected commands. Mesopotamia
+  loses a little of its edge (it sizes up rivals by rumour now) and Greece gains, so the
+  field is a little more even. Not tuned. 237 tests.

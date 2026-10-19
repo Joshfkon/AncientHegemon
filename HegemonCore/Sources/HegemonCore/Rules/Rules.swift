@@ -175,6 +175,11 @@ public struct NativeRules: Codable, Sendable, Equatable {
     /// `base` for islands (territories with no land border), if different: island peoples are
     /// fewer and more scattered.
     public let islandBase: Int?
+
+    /// The tribe that holds a territory at the start of the game.
+    public func tribe(in t: Territory, island: Bool) -> Int {
+        (island ? islandBase ?? base : base) + t.grain / max(1, grainPerUnit)
+    }
 }
 
 /// Tunable game rules, loaded from `rules.json`.
