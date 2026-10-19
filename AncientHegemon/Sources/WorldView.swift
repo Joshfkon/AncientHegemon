@@ -241,7 +241,7 @@ struct MapView: View {
         // Army tokens can sit near an edge; a tap on one picks its territory.
         if let token = art.territories.min(by: { distance(t.point($0.value.token), location)
                                                   < distance(t.point($1.value.token), location) }),
-           distance(t.point(token.value.token), location) < 9 * t.detail {
+           distance(t.point(token.value.token), location) < 12 * t.detail {
             return .territory(token.key)
         }
         return map.territories.first { territory in
@@ -362,7 +362,12 @@ struct MapView: View {
         }
 
         // Names in the board's hand lettering, then armies and fleets.
-        var infoPlates: [CGRect] = []
+        // Info plates step aside for each other and for every army token.
+        var infoPlates: [CGRect] = map.territories.compactMap { territory in
+            guard let shape = art.territories[territory.id], (state.armies[territory.id]?.units.total ?? 0) > 0 else { return nil }
+            let c = t.point(shape.token), r = 10 * t.detail
+            return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
+        }
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
             let p = t.point(shape.label)
@@ -379,7 +384,7 @@ struct MapView: View {
                 let c = t.point(shape.token)
                 let k = t.detail
                 let army = (state.armies[territory.id]?.units.total ?? 0) > 0
-                let below: CGFloat = army ? 7.5 * k + (k >= 1.5 ? 8 * k + 10 : 4) + 6 * k : 0
+                let below: CGFloat = army ? 10 * k + (k >= 1.5 ? 10 * k + 10 : 4) + 7 * k : 0
                 drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k, avoiding: &infoPlates)
             }
             if layer == .resources {
@@ -387,13 +392,13 @@ struct MapView: View {
             } else if let army = state.armies[territory.id], army.units.total > 0 {
                 let c = t.point(shape.token)
                 let native = !state.isPlayer(army.owner)
-                let r: CGFloat = (native ? 5.5 : 7.5) * t.detail
+                let r: CGFloat = (native ? 7.5 : 10) * t.detail
                 let led = state.generals.values.contains { $0.location == territory.id }
                 let badge = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
                 context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.8 : 1)))
-                context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 0.7)
+                context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 0.9)
                 context.draw(Text("\(army.units.total)\(led ? "★" : "")")
-                                .font(.system(size: (native ? 7 : 8.5) * t.detail, weight: .heavy))
+                                .font(.system(size: (native ? 9.5 : 12) * t.detail, weight: .heavy))
                                 .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
                              at: c)
                 // Zoomed in, the army's make-up shows under its token.
@@ -469,8 +474,8 @@ extension MapView {
         let land = state.land[id]
         let k = t.detail
         if land?.improvements.contains(.walls) == true {
-            let s = 5.5 * k
-            let o = CGPoint(x: c.x + 6 * k, y: c.y - 9 * k)
+            let s = 6.5 * k
+            let o = CGPoint(x: c.x + 8 * k, y: c.y - 11 * k)
             var shield = Path()
             shield.move(to: CGPoint(x: o.x - s / 2, y: o.y - s / 2))
             shield.addLine(to: CGPoint(x: o.x + s / 2, y: o.y - s / 2))
@@ -483,7 +488,7 @@ extension MapView {
         }
         if let me = focus, state.owner(of: id) == me, let engine,
            !engine.homeNetwork(of: me, in: state).contains(id) {
-            context.draw(Text("⚠️").font(.system(size: 7 * k)), at: CGPoint(x: c.x - 8 * k, y: c.y - 8 * k))
+            context.draw(Text("⚠️").font(.system(size: 8.5 * k)), at: CGPoint(x: c.x - 10 * k, y: c.y - 10 * k))
         }
     }
 
@@ -493,10 +498,14 @@ extension MapView {
         guard let engine else { return }
         let land = state.land[territory.id]
         let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph).joined()
-        let text = Text("🌾\(engine.territoryYield(.grain, territory.id, state)) 👥\(state.population(of: territory.id))"
-                        + (built.isEmpty ? "" : " " + built) + (land?.construction != nil ? "🏗" : ""))
-            .font(.system(size: 7.5 * scale, weight: .semibold))
-            .foregroundStyle(.black.opacity(0.8))
+        var text = Text("🌾\(engine.territoryYield(.grain, territory.id, state)) 👥\(state.population(of: territory.id))")
+        for r in ResourcesView.order {
+            if let n = territory.resources[r], n > 0 { text = text + Text(" ") + Self.icon(r) + Text("\(n)") }
+        }
+        if !built.isEmpty || land?.construction != nil {
+            text = text + Text(" " + built + (land?.construction != nil ? "🏗" : ""))
+        }
+        text = text.font(.system(size: 9.5 * scale, weight: .bold)).foregroundStyle(.black.opacity(0.85))
         let resolved = context.resolve(text)
         let size = resolved.measure(in: CGSize(width: 400, height: 60))
         // Step down past any plate already drawn here, so neighbours don't stack on each other.
@@ -505,7 +514,7 @@ extension MapView {
             rect.origin.y += size.height + 2
         }
         placed.append(rect)
-        context.fill(Path(roundedRect: rect, cornerRadius: 3 * scale), with: .color(.white.opacity(0.7)))
+        context.fill(Path(roundedRect: rect, cornerRadius: 3 * scale), with: .color(.white.opacity(0.85)))
         context.draw(resolved, at: CGPoint(x: rect.midX, y: rect.midY))
     }
 
@@ -531,7 +540,7 @@ extension MapView {
         let pulse = 0.5 + 0.5 * sin(phase * 3.2)
         for id in idle {
             guard let c = token(id, t) else { continue }
-            let r = (10 + 3 * pulse) * t.detail
+            let r = (12.5 + 3 * pulse) * t.detail
             context.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
                            with: .color(.white.opacity(0.4 + 0.5 * pulse)), lineWidth: 1.6)
         }
@@ -675,7 +684,7 @@ extension MapView {
                        _ t: BoardTransform, width: CGFloat = 3.2) {
         let dx = b.x - a.x, dy = b.y - a.y
         let len = max(1, hypot(dx, dy))
-        let inset = 9 * t.detail
+        let inset = 11 * t.detail
         let start = CGPoint(x: a.x + dx / len * inset, y: a.y + dy / len * inset)
         let end = CGPoint(x: b.x - dx / len * inset, y: b.y - dy / len * inset)
         let bend = CGPoint(x: (start.x + end.x) / 2 - dy / len * len * 0.15, y: (start.y + end.y) / 2 + dx / len * len * 0.15)
@@ -809,15 +818,15 @@ extension MapView {
                                      owner: CivilizationID, scale: CGFloat) {
         let types = UnitType.allCases.filter { units[$0] > 0 }
         guard !types.isEmpty else { return }
-        let icon = 8 * scale, step = 17 * scale
+        let icon = 10 * scale, step = 22 * scale
         let width = CGFloat(types.count) * step + 2
         let plate = CGRect(x: top.x - width / 2, y: top.y, width: width, height: icon + 4)
-        context.fill(Path(roundedRect: plate, cornerRadius: 3), with: .color(.white.opacity(0.85)))
+        context.fill(Path(roundedRect: plate, cornerRadius: 3), with: .color(.white.opacity(0.9)))
         for (i, type) in types.enumerated() {
             let x = plate.minX + 2 + CGFloat(i) * step
             let box = CGRect(x: x, y: plate.minY + 2, width: icon, height: icon)
             context.fill(UnitShape(type: type).path(in: box), with: .color(.black.opacity(0.8)))
-            context.draw(Text("\(units[type])").font(.system(size: 7 * scale, weight: .bold)).foregroundStyle(.black),
+            context.draw(Text("\(units[type])").font(.system(size: 9.5 * scale, weight: .bold)).foregroundStyle(.black),
                          at: CGPoint(x: box.maxX + 2, y: box.midY), anchor: .leading)
         }
     }
