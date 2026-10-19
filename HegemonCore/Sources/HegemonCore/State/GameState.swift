@@ -232,6 +232,12 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Units that marched along a road this turn without fighting, by where they are now: they
     /// may make one more move.
     public var roadMoved: [TerritoryID: UnitCounts] = [:]
+    /// Defensive alliances, alliance offers waiting for a person's answer, allies' calls to
+    /// arms waiting for one, and the allies already asked this turn.
+    public var alliances: Set<CivPair> = []
+    public var allianceOffers: Set<PeaceOffer> = []
+    public var warRequests: Set<WarRequest> = []
+    public var calledToWar: Set<CivilizationID> = []
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

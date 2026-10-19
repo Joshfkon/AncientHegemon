@@ -15,6 +15,12 @@ struct Moment: Identifiable, Equatable {
         case unpaid(Int)
         /// The player's ships fought at sea.
         case seaBattle(SeaZoneID, won: Bool, against: CivilizationID)
+        /// An alliance made (or broken by the other side).
+        case ally(CivilizationID, joined: Bool)
+        /// An ally went to war for us.
+        case allyJoins(CivilizationID, CivilizationID)
+        /// An ally calls on us to fight.
+        case callToArms(CivilizationID, CivilizationID)
         /// A rival struck the player's land.
         case attacked(CivilizationID, TerritoryID?)
     }
@@ -100,6 +106,18 @@ struct MomentBanner: View {
                          subtitle: won ? "\(Palette.name(other, state))'s ships driven from the \(water)"
                                        : "\(Palette.name(other, state)) now holds the \(water); its troops can land",
                          color: won ? Color(red: 0.1, green: 0.3, blue: 0.6) : Color(red: 0.35, green: 0.1, blue: 0.1), stamp: !won)
+        case let .ally(other, joined):
+            return Style(icon: joined ? "shield.lefthalf.filled" : "shield.slash",
+                         title: joined ? "Alliance with \(Palette.name(other, state))" : "\(Palette.name(other, state)) abandons us",
+                         subtitle: joined ? "Each fights whoever attacks the other" : "The alliance is broken",
+                         color: joined ? Color(red: 0.15, green: 0.3, blue: 0.6) : Color(red: 0.4, green: 0.1, blue: 0.1), stamp: true)
+        case let .allyJoins(civ, against):
+            return Style(icon: "flag.2.crossed.fill", title: "\(Palette.name(civ, state)) joins the war",
+                         subtitle: "Our ally marches against \(Palette.name(against, state))", color: Palette.color(civ, state), stamp: true)
+        case let .callToArms(from, against):
+            return Style(icon: "megaphone.fill", title: "\(Palette.name(from, state)) calls us to arms",
+                         subtitle: "Answer on the Rivals tab: fight \(Palette.name(against, state)), or break the alliance",
+                         color: Palette.color(from, state), stamp: true)
         case let .attacked(by, t):
             return Style(icon: "flame.fill", title: "\(Palette.name(by, state)) attacks!",
                          subtitle: t.map { "Their army struck \(place($0))" }, color: Palette.color(by, state), stamp: true)

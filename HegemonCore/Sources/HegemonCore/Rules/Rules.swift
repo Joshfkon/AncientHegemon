@@ -184,6 +184,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let knowledge: KnowledgeRules
     public let collapse: CollapseRules
     public let tribes: TribeRules
+    public let alliances: AllianceRules
     public let throneRoom: ThroneRoomRules
     public let veterans: VeteranRules
     public let supply: SupplyRules

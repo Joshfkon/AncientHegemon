@@ -1,5 +1,5 @@
 {
-  "version": 14,
+  "version": 15,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -663,6 +663,11 @@
       { "id": "statue", "name": "Statue of the ruler", "gold": 10, "stock": { "stone": 4 }, "magnificence": 3 },
       { "id": "throne", "name": "Gilded throne", "gold": 14, "stock": {}, "magnificence": 3 }
     ]
+  },
+  "alliances": {
+    "enemyTooStrongPercent": 200,
+    "betrayalLegitimacy": 8,
+    "maxAllies": 2
   },
   "tribes": {
     "giftGoldBase": 3,

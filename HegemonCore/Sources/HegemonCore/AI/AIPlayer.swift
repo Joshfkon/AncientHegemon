@@ -106,6 +106,7 @@ public struct AIPlayer: Sendable {
     // MARK: Diplomacy
 
     func diplomacy(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        alliances(civ, &state, &turn)
         let mine = strength(of: civ, state)
         // While there's free land to claim, peace is cheap; once it's gone, neighbors are the
         // only way to grow.
@@ -122,12 +123,16 @@ public struct AIPlayer: Sendable {
             let losing = edge < 0.75
             let prey = neighbor && !room && edge >= warEdge
             if state.atPeace(civ, other) {
+                // Allies keep faith.
+                if engine.allied(civ, other, in: state) { continue }
                 if prey, personality.trade < 0.9 || edge >= 2 {
                     issue(.declareWar(on: other), &state, &turn)
                 }
                 continue
             }
-            let wantsPeace = losing || (!prey && (!neighbor || personality.trade >= 0.8))
+            var wantsPeace = losing || (!prey && (!neighbor || personality.trade >= 0.8))
+            // Not while an ally is at war with them: a separate peace betrays it.
+            if engine.allies(of: civ, in: state).contains(where: { state.atWar($0, other) && $0 != other }) { wantsPeace = losing }
             // A splendid court's envoys are hard to turn away.
             let awed = engine.magnificence(of: other, in: state) >= rules.throneRoom.peaceMagnificence && edge < 2
             if state.peaceOffers.contains(PeaceOffer(from: other, to: civ)) {
@@ -161,6 +166,26 @@ public struct AIPlayer: Sendable {
             .filter { home.contains($0.territory) && !led.contains($0.territory) && $0.units.total >= 4 }
             .max { ($0.units.total, $1.territory) < ($1.units.total, $0.territory) }
         if let candidate { issue(.appointGeneral(territory: candidate.territory), &state, &turn) }
+    }
+
+    // MARK: Alliances
+
+    /// Seeks an ally against a common, dangerous enemy: AI courts answer at once; a person is
+    /// asked now and then rather than every turn.
+    func alliances(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        // Accept a person's offer on the same terms it would make one.
+        for offer in state.allianceOffers.filter({ $0.to == civ }).sorted(by: { $0.from < $1.from }) {
+            if engine.wouldAlly(civ, with: offer.from, in: state) { _ = attempt(.acceptAlliance(from: offer.from), &state, &turn) }
+        }
+        guard engine.allies(of: civ, in: state).count < rules.alliances.maxAllies else { return }
+        let candidates = state.players.filter { other in
+            other != civ && !(state.civs[other]?.eliminated ?? true) && engine.wouldAlly(civ, with: other, in: state)
+        }.sorted()
+        for other in candidates {
+            let human = state.civs[other]?.isHuman == true
+            if human, state.turn % 4 != 0 || state.allianceOffers.contains(PeaceOffer(from: civ, to: other)) { continue }
+            if attempt(.offerAlliance(to: other), &state, &turn) { return }
+        }
     }
 
     // MARK: Recruitment

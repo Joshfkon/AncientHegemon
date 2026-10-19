@@ -16,6 +16,22 @@ struct DiplomacyView: View {
             let rivals = engine.standings(in: state).filter { $0 != human && !(state.civs[$0]?.eliminated ?? true) }
             VStack(alignment: .leading, spacing: 10) {
                 Text("Diplomacy").font(.subheadline.bold())
+                ForEach(Array(state.warRequests.filter { $0.to == human }).sorted { $0.from < $1.from }, id: \.self) { r in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("\(Palette.name(r.from, state)) calls you to war against \(Palette.name(r.against, state))",
+                              systemImage: "megaphone.fill").font(.callout.bold())
+                        Text("Your alliance promised it. Refusing breaks the alliance and costs \(engine.rules.alliances.betrayalLegitimacy) legitimacy; ignoring it until they move again counts as refusing.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                        HStack {
+                            Button("Join the war") { session.order(.answerCallToWar(from: r.from, against: r.against, join: true)) }
+                                .buttonStyle(.borderedProminent).tint(.red).controlSize(.small)
+                            Button("Refuse") { session.order(.answerCallToWar(from: r.from, against: r.against, join: false)) }
+                                .buttonStyle(.bordered).controlSize(.small)
+                        }
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.red.opacity(0.12)))
+                }
                 if rivals.isEmpty {
                     Text("No rivals remain.").font(.caption).foregroundStyle(.secondary)
                 }
@@ -91,6 +107,7 @@ struct DiplomacyView: View {
             Text("\(cs.ruler.name) rules, \(legitimacyWord(cs.legitimacy)) on the throne.")
                 .font(.caption).foregroundStyle(.secondary)
             Text(neighborhood(human, other)).font(.caption).foregroundStyle(.secondary)
+            alliance(human, other)
             if let route {
                 let flows = engine.goods(along: route, in: state)
                 HStack(spacing: 4) {
@@ -108,6 +125,53 @@ struct DiplomacyView: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+    }
+
+    /// The alliance row: offer, answer an offer, call the ally to a war, or leave.
+    @ViewBuilder private func alliance(_ human: CivilizationID, _ other: CivilizationID) -> some View {
+        let allied = engine.allied(human, other, in: state)
+        if allied {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Allies: each fights whoever attacks the other", systemImage: "shield.lefthalf.filled")
+                    .font(.caption.bold()).foregroundStyle(.blue)
+                let enemies = state.players.filter { e in
+                    e != human && e != other && !(state.civs[e]?.eliminated ?? true) && state.atWar(human, e) && state.atPeace(other, e)
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(enemies, id: \.self) { e in
+                            Button("Ask to fight \(Palette.name(e, state))") {
+                                session.order(.callToWar(ally: other, against: e))
+                            }
+                            .buttonStyle(.bordered).controlSize(.small)
+                            .disabled(state.calledToWar.contains(other))
+                        }
+                        Button("Leave alliance") { session.order(.leaveAlliance(with: other)) }
+                            .buttonStyle(.bordered).tint(.orange).controlSize(.small)
+                    }
+                }
+                if !enemies.isEmpty {
+                    Text("They'll join a war if the enemy isn't more than twice their strength. Leaving costs \(engine.rules.alliances.betrayalLegitimacy) legitimacy.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+        } else if state.allianceOffers.contains(PeaceOffer(from: other, to: human)) {
+            HStack {
+                Text("\(Palette.name(other, state)) proposes an alliance.").font(.caption.bold())
+                Spacer()
+                Button("Ally") { session.order(.acceptAlliance(from: other)) }
+                    .buttonStyle(.borderedProminent).tint(.blue).controlSize(.small)
+            }
+        } else if state.atPeace(human, other) {
+            let likely = engine.wouldAlly(other, with: human, in: state)
+            HStack {
+                Text(likely ? "We share an enemy: they would likely ally." : "No common enemy worries them yet.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Propose alliance") { session.order(.offerAlliance(to: other)) }
+                    .buttonStyle(.bordered).controlSize(.small)
+            }
+        }
     }
 
     @ViewBuilder private func action(_ human: CivilizationID, _ other: CivilizationID) -> some View {

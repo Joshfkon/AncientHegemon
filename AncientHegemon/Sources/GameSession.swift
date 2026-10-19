@@ -378,6 +378,13 @@ final class GameSession {
         case .projectUnavailable(let t, let p): return "Can't build \(projectName(p).lowercased()) in \(place(t))."
         case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."
         case .alreadyDecorated: return "That already adorns the hall."
+        case .alreadyAllied: return "You are already allies."
+        case .notAllied: return "You have no alliance with them."
+        case .noAllianceOffer: return "That offer has lapsed."
+        case .tooManyAllies: return "Your realm can keep only \(engine.rules.alliances.maxAllies) allies."
+        case .notAtWar: return "You are not at war with them."
+        case .alreadyAsked: return "You already asked them this turn."
+        case .noWarRequest: return "That call to arms has lapsed."
         case .unknownDecoration: return "No such decoration."
         case .noTribe(let t): return "There is no tribe in \(place(t)) you can treat with: your land must border theirs."
         case .alreadyParleyed(let t): return "Your envoys have already spoken with \(place(t)) this turn."
@@ -435,6 +442,14 @@ final class GameSession {
             case let .navalBattle(sea, r) where r.attacker == me || r.defender == me:
                 new.append(Moment(kind: .seaBattle(sea, won: (r.winner == .attacker) == (r.attacker == me),
                                                    against: r.attacker == me ? r.defender : r.attacker)))
+            case let .allianceMade(pair) where pair.a == me || pair.b == me:
+                new.append(Moment(kind: .ally(pair.a == me ? pair.b : pair.a, joined: true)))
+            case let .joinedWar(civ, against, ally) where ally == me:
+                new.append(Moment(kind: .allyJoins(civ, against)))
+            case let .allianceEnded(pair, by) where (pair.a == me || pair.b == me) && by != me:
+                new.append(Moment(kind: .ally(by, joined: false)))
+            case let .calledToWar(r) where r.to == me:
+                new.append(Moment(kind: .callToArms(r.from, r.against)))
             case let .armyPaid(civ, _, deserted) where civ == me && deserted > 0:
                 new.append(Moment(kind: .unpaid(deserted)))
             case let .event(r) where r.civ == me:
@@ -495,7 +510,12 @@ final class GameSession {
             return civ == me
         case let .event(r): return r.civ == me || r.partner == me || r.territory.map { before.owner(of: $0) == me } ?? false
         case let .peaceOffered(from, to): return from == me || to == me
-        case let .peaceMade(pair): return pair.a == me || pair.b == me
+        case let .peaceMade(pair), let .allianceMade(pair): return pair.a == me || pair.b == me
+        case let .allianceEnded(pair, _): return pair.a == me || pair.b == me
+        case let .calledToWar(r): return r.from == me || r.to == me || r.against == me
+        case let .joinedWar(civ, against, ally): return civ == me || against == me || ally == me
+        case let .warRefused(by, ally, _): return by == me || ally == me
+        case let .allianceOffered(from, to), let .allianceRefused(from, to): return from == me || to == me
         case let .warDeclared(by, on): return by == me || on == me
         case let .navalBattle(_, r): return r.attacker == me || r.defender == me
         case let .generalKilled(id): return before.generals[id]?.owner == me
@@ -589,6 +609,13 @@ final class GameSession {
             case let .recruited(civ, t, unit, count) where civ == human:
                 add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))", at: t)
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")
+            case let .allianceMade(pair): add(pair.a, "\(name(pair.a)) and \(name(pair.b)) swear an alliance")
+            case let .allianceRefused(by, to): add(by, "\(name(by)) declines an alliance with \(name(to))")
+            case let .allianceOffered(from, to): add(from, "\(name(from)) proposes an alliance to \(name(to))")
+            case let .allianceEnded(pair, by): add(by, "\(name(by)) breaks the alliance with \(name(pair.a == by ? pair.b : pair.a))")
+            case let .calledToWar(r): add(r.from, "\(name(r.from)) calls on \(name(r.to)) to fight \(name(r.against))")
+            case let .joinedWar(civ, against, ally): add(civ, "\(name(civ)) goes to war on \(name(against)) for its ally \(name(ally))")
+            case let .warRefused(by, ally, against): add(by, "\(name(by)) refuses to fight \(name(against)) for \(name(ally))")
             case let .warDeclared(by, on): add(by, "\(name(by)) declares war on \(name(on))")
             case let .navalBattle(sea, r):
                 let winner = r.winner == .attacker ? r.attacker : r.defender

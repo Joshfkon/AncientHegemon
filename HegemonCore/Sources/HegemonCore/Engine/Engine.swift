@@ -41,6 +41,16 @@ public struct Engine: Sendable {
             return try parley(territory, kind, &state)
         case let .setFleetPlan(sea, plan):
             return try setFleetPlan(sea, plan, &state)
+        case let .offerAlliance(to):
+            return try offerAlliance(to, &state)
+        case let .acceptAlliance(from):
+            return try acceptAlliance(from, &state)
+        case let .leaveAlliance(with):
+            return try leaveAlliance(with, &state)
+        case let .callToWar(ally, against):
+            return try callToWar(ally, against: against, &state)
+        case let .answerCallToWar(from, against, join):
+            return try answerCallToWar(from, against: against, join: join, &state)
         case let .decorate(id):
             return try decorate(id, &state)
         case let .disband(territory, units):
@@ -239,6 +249,7 @@ public struct Engine: Sendable {
     private func endTurn(_ state: inout GameState) -> [GameEvent] {
         state.moved = [:]
         state.roadMoved = [:]
+        state.calledToWar = []
         state.parleyed = []
         state.generalsMoved = []
         for i in state.fleets.indices { state.fleets[i].movedShips = 0 }
@@ -261,6 +272,8 @@ public struct Engine: Sendable {
 
         let civ = state.activePlayer
         var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)]
+        events += expireWarRequests(from: civ, &state)
+        state.allianceOffers = state.allianceOffers.filter { $0.from != civ }
         // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
         // on turn 1, so every civ starts on equal terms whatever its seat.
         if state.turn > 1 {
@@ -313,6 +326,13 @@ public struct Engine: Sendable {
         state.peace.remove(CivPair(civ, on))
         state.peaceOffers.remove(PeaceOffer(from: civ, to: on))
         state.peaceOffers.remove(PeaceOffer(from: on, to: civ))
-        return [.warDeclared(by: civ, on: on)]
+        var events: [GameEvent] = [.warDeclared(by: civ, on: on)]
+        // Turning on an ally ends the alliance, with the shame of it.
+        if allied(civ, on, in: state) {
+            state.alliances.remove(CivPair(civ, on))
+            adjustLegitimacy(civ, -rules.alliances.betrayalLegitimacy, &state)
+            events.append(.allianceEnded(CivPair(civ, on), by: civ))
+        }
+        return events + rallyAllies(of: on, against: civ, &state)
     }
 }

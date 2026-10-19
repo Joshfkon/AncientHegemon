@@ -1347,3 +1347,24 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   road network gives two steps a turn, not unlimited. Attacks never get the bonus.
 - The AI uses it automatically (it reads readiness the same way). Roads also still carry
   supply free. Rules version 14; three tests.
+
+### Alliances (Josh: "set up defence alliances and try to get the AIs to join us in a war")
+
+- Empires at peace can swear a defensive alliance (at most 2 allies each). Whoever attacks a
+  member (declares war on them, or fights them in a land battle) calls the others to arms:
+  - an AI ally joins unless the attacker is more than twice its strength; refusing ends the
+    alliance;
+  - a person gets a call to answer on the Rivals tab (a banner and a notice say so). Joining
+    declares war with no legitimacy cost. Refusing, or ignoring it until the ally moves again,
+    ends the alliance and costs 8 legitimacy.
+- You can also ask an ally to join one of your wars (once per ally per turn). It weighs the
+  enemy's strength the same way, and a refusal doesn't end the alliance. Leaving an alliance,
+  or declaring war on an ally, costs 8 legitimacy.
+- AI courts accept or propose an alliance when they share an enemy at least as strong as
+  themselves. They offer one to a person now and then (every fourth round), not every turn.
+  An AI never attacks its ally, and won't make a separate peace while its ally fights that
+  enemy (unless it's losing).
+- The Rivals tab shows, for each rival, whether they'd likely ally, plus Propose / Ally / Ask
+  to fight X / Leave alliance. There are banners for alliances made and broken, allies joining
+  wars, and calls to arms, and chronicle lines for each.
+- Balance (80 games): unchanged within noise. Rules version 15; 219 tests.

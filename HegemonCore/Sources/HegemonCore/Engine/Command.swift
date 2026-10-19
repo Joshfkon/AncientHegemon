@@ -6,6 +6,12 @@ public enum Command: Codable, Sendable, Equatable {
     case parley(territory: TerritoryID, Parley)
     /// How a fleet fights at sea.
     case setFleetPlan(sea: SeaZoneID, plan: BattlePlan)
+    /// Alliances: offer, accept, leave; ask an ally to join a war; answer an ally's call.
+    case offerAlliance(to: CivilizationID)
+    case acceptAlliance(from: CivilizationID)
+    case leaveAlliance(with: CivilizationID)
+    case callToWar(ally: CivilizationID, against: CivilizationID)
+    case answerCallToWar(from: CivilizationID, against: CivilizationID, join: Bool)
     /// Adorns the throne room.
     case decorate(DecorationID)
     /// Sends soldiers home: on the empire's own land they go back to the fields as people.
@@ -61,6 +67,13 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case bronzeMade(civ: CivilizationID, amount: Int)
     case peaceOffered(from: CivilizationID, to: CivilizationID)
     case peaceMade(CivPair)
+    case allianceOffered(from: CivilizationID, to: CivilizationID)
+    case allianceMade(CivPair)
+    case allianceRefused(by: CivilizationID, to: CivilizationID)
+    case allianceEnded(CivPair, by: CivilizationID)
+    case calledToWar(WarRequest)
+    case joinedWar(civ: CivilizationID, against: CivilizationID, ally: CivilizationID)
+    case warRefused(by: CivilizationID, ally: CivilizationID, against: CivilizationID)
     case warDeclared(by: CivilizationID, on: CivilizationID)
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
@@ -150,6 +163,13 @@ public enum GameError: Error, Equatable, Sendable {
     case alreadyAtPeace(CivilizationID)
     case notAtPeace(CivilizationID)
     case noPeaceOffer(CivilizationID)
+    case alreadyAllied(CivilizationID)
+    case notAllied(CivilizationID)
+    case noAllianceOffer(CivilizationID)
+    case tooManyAllies
+    case notAtWar(CivilizationID)
+    case alreadyAsked(CivilizationID)
+    case noWarRequest(CivilizationID)
     /// Recruiting needs a territory in the home supply network.
     case outOfSupply(TerritoryID)
     /// Armies can't enter a peace partner's territory; declare war first.

@@ -108,6 +108,7 @@ extension Engine {
         let report = BattleSimulator(rules: rules).resolve(setup)
         let won = report.winner == .attacker
         var events: [GameEvent] = [.battle(report)]
+        events += rallyAllies(of: defender.owner, against: civ, &state)
         battleExperience(setup.attacker, &state)
         battleExperience(setup.defender, &state)
         let l = rules.government.legitimacy

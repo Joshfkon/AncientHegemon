@@ -297,6 +297,12 @@ struct GameScreen: View {
             }
             if !session.showReport, tip != .map, session.isHumanTurn, session.moments.isEmpty {
                 HStack(spacing: 8) {
+                    if let human = session.human, let call = state.warRequests.first(where: { $0.to == human }) {
+                        notice("📯 \(Palette.name(call.from, state)) calls you to arms", "Answer") { open(.diplomacy) }
+                    }
+                    if let human = session.human, let offer = state.allianceOffers.first(where: { $0.to == human }) {
+                        notice("🛡️ \(Palette.name(offer.from, state)) proposes an alliance", "View") { open(.diplomacy) }
+                    }
                     if offerCount > 0 {
                         notice("🕊️ \(offerCount) peace offer\(offerCount == 1 ? "" : "s")", "View") { open(.diplomacy) }
                     }
@@ -414,6 +420,9 @@ struct GameScreen: View {
         case .disaster: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(1)
         case .unpaid: SoundBoard.shared.play(.coins, volume: 0.6); Feedback.outcome(false)
         case .attacked: SoundBoard.shared.play(.horn, volume: 0.7); Feedback.impact(1)
+        case .ally(_, let joined): SoundBoard.shared.play(joined ? .horn : .defeat, volume: 0.5); Feedback.outcome(joined)
+        case .allyJoins: SoundBoard.shared.play(.roar, volume: 0.6); Feedback.outcome(true)
+        case .callToArms: SoundBoard.shared.play(.wardrums, volume: 0.5); Feedback.impact(0.7)
         case let .seaBattle(_, won, _): SoundBoard.shared.play(won ? .victory : .defeat, volume: 0.5); Feedback.outcome(won)
         }
         let fx = MomentBanner.effect(moment.kind)
