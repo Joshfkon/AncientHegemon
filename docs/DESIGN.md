@@ -1263,3 +1263,22 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   even than before (each side wins 41–54%), and more of them are fought (beaten fleets now
   live to fight again). Egypt's 15% is within noise of its 19–20%. Debug launch argument:
   `-demoSeaBattle YES`. 206 tests.
+
+### Command bar and the title screen's look in play (Josh: "you have to scroll so far to see what you can build… a horizontal menu on the bottom… look more like the splash page")
+
+- Selecting a territory or sea no longer opens the side panel. A command bar slides up along the
+  bottom instead:
+  - on the left, the place's name in bronze serif capitals, its owner, people, grain, army,
+    rank and a one-line hint;
+  - on the right, every action as a parchment card in a row you slide through, grouped
+    Recruit · Build · Ships · Command (general, defence plan, disband), or Diplomacy for
+    tribal land, or Fleet (the fleet's battle plan) for a sea.
+  - Cards show cost and effect. Cards you can't afford stay readable with the cost in red; a
+    tap on one gives a warning buzz. Recruit cards show "+N" raised this turn.
+  - Plans and disbanding open as popovers.
+- The side panel is now only for orders being composed (march, board, land) and the
+  Realm / Rivals / Chronicle tabs.
+- Everything floating over the map uses the title screen's dark wood with a bronze edge
+  (`woodPanel`): the status box, layer picker, toolbar, notices, round buttons, side panel and
+  the "rivals move" pill. End turn is a bronze button in serif type, like Continue on the
+  title screen.

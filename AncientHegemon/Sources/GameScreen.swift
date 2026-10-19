@@ -154,8 +154,7 @@ struct GameScreen: View {
                 switch target {
                 case let .territory(t)?:
                     selected = .territory(t)
-                    tab = .orders
-                    panelOpen = true
+                    if tab == .orders { panelOpen = false }
                     mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
                 case .diplomacy?: open(.diplomacy)
                 case .realm?: open(.empire)
@@ -274,6 +273,14 @@ struct GameScreen: View {
                 }
             }
             Spacer(minLength: 0)
+            if let selected, pending == nil, session.human != nil {
+                HStack(alignment: .bottom, spacing: 10) {
+                    CommandBar(session: session, pick: selected) { self.selected = nil }
+                        .id(selected)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    turnControls
+                }
+            } else {
             HStack(alignment: .bottom) {
                 if let quickLook {
                     QuickLookCard(id: quickLook, session: session) { self.quickLook = nil }
@@ -291,29 +298,36 @@ struct GameScreen: View {
                     legend
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    HStack(spacing: 8) {
-                        if session.isHumanTurn {
-                            if session.canUndo {
-                                circleButton("arrow.uturn.backward", "Undo") {
-                                    pending = nil
-                                    session.undo()
-                                }
-                            }
-                            if !idleArmies.isEmpty {
-                                circleButton("figure.walk", "Next army that can move") { nextIdle() }
-                            }
-                        }
-                        turnButton
-                    }
-                }
+                turnControls
+            }
             }
         }
         .padding(10)
+        .animation(.spring(duration: 0.3), value: selected)
         .animation(.easeInOut(duration: 0.25), value: tip)
         .animation(.spring(duration: 0.3), value: session.toast?.id)
         .animation(.easeInOut(duration: 0.25), value: session.showReport)
         .animation(.easeInOut(duration: 0.25), value: quickLook)
+    }
+
+    /// Undo, next idle army, and End turn.
+    private var turnControls: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            if session.isHumanTurn {
+                HStack(spacing: 8) {
+                    if session.canUndo {
+                        circleButton("arrow.uturn.backward", "Undo") {
+                            pending = nil
+                            session.undo()
+                        }
+                    }
+                    if !idleArmies.isEmpty {
+                        circleButton("figure.walk", "Next army that can move") { nextIdle() }
+                    }
+                }
+            }
+            turnButton
+        }
     }
 
     private func circleButton(_ symbol: String, _ label: String, action: @escaping () -> Void) -> some View {
@@ -321,7 +335,7 @@ struct GameScreen: View {
             Image(systemName: symbol)
                 .font(.callout.weight(.semibold))
                 .frame(width: 40, height: 40)
-                .background(.ultraThinMaterial, in: Circle())
+                .woodPanel(Circle())
         }
         .accessibilityLabel(label)
     }
@@ -335,7 +349,7 @@ struct GameScreen: View {
             }
             .font(.callout)
             .padding(.horizontal, 12).padding(.vertical, 7)
-            .background(.regularMaterial, in: Capsule())
+            .woodPanel(Capsule())
             .shadow(radius: 3)
         }
         .buttonStyle(.plain)
@@ -439,8 +453,7 @@ struct GameScreen: View {
         idleIndex = (idleIndex + 1) % list.count
         pending = nil
         selected = .territory(list[idleIndex])
-        tab = .orders
-        panelOpen = true
+        if tab == .orders { panelOpen = false }
     }
 
     /// A gentle reminder before ending the turn: armies that could act, gold piling up.
@@ -470,7 +483,7 @@ struct GameScreen: View {
         .frame(minWidth: 300, maxWidth: 340)
         .layoutPriority(1)
         .padding(4)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .woodPanel(RoundedRectangle(cornerRadius: 10))
     }
 
     /// The player's empire at a glance: who, when, and the three numbers that matter.
@@ -529,7 +542,7 @@ struct GameScreen: View {
         }
         .padding(10)
         .fixedSize()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .woodPanel(RoundedRectangle(cornerRadius: 12))
     }
 
     private var toolbar: some View {
@@ -551,7 +564,7 @@ struct GameScreen: View {
             }
         }
         .padding(4)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .woodPanel(RoundedRectangle(cornerRadius: 12))
     }
 
     /// Advisors with something urgent to say.
@@ -595,7 +608,7 @@ struct GameScreen: View {
                     }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: Capsule())
+                .woodPanel(Capsule())
             } else if session.isHumanTurn {
                 Button {
                     selected = nil
@@ -607,18 +620,20 @@ struct GameScreen: View {
                 } label: {
                     VStack(spacing: 0) {
                         Label("End turn", systemImage: "hourglass")
-                            .font(.callout.bold())
+                            .font(.system(.callout, design: .serif).weight(.bold))
                         if let nudge {
-                            Text(nudge).font(.caption2).opacity(0.85)
+                            Text(nudge).font(.caption2).opacity(0.8)
                         }
                     }
                     .lineLimit(1)
                     .fixedSize()
-                    .padding(.horizontal, 4).padding(.vertical, 2)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 18).padding(.vertical, 9)
+                    .background(Bronze.gradient, in: Capsule())
+                    .overlay(Capsule().stroke(Color(red: 0.4, green: 0.25, blue: 0.1), lineWidth: 1))
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .shadow(radius: 4)
+                .buttonStyle(.plain)
+                .shadow(color: .black.opacity(0.4), radius: 5, y: 2)
             }
         } else {
             HStack {
@@ -632,7 +647,7 @@ struct GameScreen: View {
                     .disabled(session.busy || session.playing || session.isOver)
             }
             .padding(6)
-            .background(.ultraThinMaterial, in: Capsule())
+            .woodPanel(Capsule())
         }
     }
 
@@ -709,7 +724,8 @@ struct GameScreen: View {
                 // The order composer scrolls its own choices and keeps its buttons in view.
                 OrderComposer(session: session, order: pending) { done in
                     self.pending = nil
-                    if let done { selected = done } else if selected == nil { panelOpen = false }
+                    if let done { selected = done }
+                    panelOpen = false
                 }
                 .id(pending)
             } else {
@@ -731,10 +747,12 @@ struct GameScreen: View {
         .frame(maxHeight: .infinity)
         .background {
             UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.25), radius: 10)
+                .fill(Wood.gradient)
+                .overlay(UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16).stroke(Bronze.gradient, lineWidth: 2))
+                .shadow(color: .black.opacity(0.4), radius: 10)
                 .ignoresSafeArea()
         }
+        .environment(\.colorScheme, .dark)
     }
 
     /// A labeled number with its change per turn, red when falling.
@@ -843,11 +861,7 @@ struct GameScreen: View {
         pending = nil
         selected = pick == selected ? nil : pick
         if pick != nil { SoundBoard.shared.play(.click, volume: 0.35) }
-        if selected != nil {
-            tab = .orders
-            panelOpen = true
-        } else if tab == .orders {
-            panelOpen = false
-        }
+        // Selections show along the bottom; the side panel is for orders being composed and tabs.
+        if tab == .orders { panelOpen = false }
     }
 }

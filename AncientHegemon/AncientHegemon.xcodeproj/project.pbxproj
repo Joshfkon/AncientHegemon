@@ -40,6 +40,7 @@
 		D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */; };
 		E0E3C7D4ADB7EC0596F234C6 /* EndScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698F3135FF252AFF8CF0C79B /* EndScreen.swift */; };
 		E1DBC00849377F7EFEFCCFA8 /* ResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA988893EB7B67616AC6394 /* ResourcesView.swift */; };
+		E42D185130EDA0A316B69986 /* CommandBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C531F5931E1FB610194769C0 /* CommandBar.swift */; };
 		E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */; };
 		E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */; };
 		F38B5FFD26C968F15B7E66DD /* victory.wav in Resources */ = {isa = PBXBuildFile; fileRef = D2374D4F4DD8663AC2D35069 /* victory.wav */; };
@@ -78,6 +79,7 @@
 		AD395B564F5864E92AF2E613 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
 		BD6DDA213A9E31B4C7C20FF7 /* click.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = click.wav; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C531F5931E1FB610194769C0 /* CommandBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBar.swift; sourceTree = "<group>"; };
 		C7087D3414E9471A080F99F9 /* horn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = horn.wav; sourceTree = "<group>"; };
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
 		D0154D70203F3EB68C8F8532 /* HegemonCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HegemonCore; path = ../HegemonCore; sourceTree = SOURCE_ROOT; };
@@ -154,6 +156,7 @@
 				AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */,
 				13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */,
 				3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */,
+				C531F5931E1FB610194769C0 /* CommandBar.swift */,
 				0ECFFACBAD68C2C31E4A376E /* Council.swift */,
 				2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */,
 				CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */,
@@ -281,6 +284,7 @@
 				811367309C8774DE014E4391 /* BattlePlan.swift in Sources */,
 				E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */,
 				25CE013F01E7910FDB8B203E /* BattlefieldView.swift in Sources */,
+				E42D185130EDA0A316B69986 /* CommandBar.swift in Sources */,
 				27FB2A89E777BFECC518BFC5 /* Council.swift in Sources */,
 				E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */,
 				BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */,
