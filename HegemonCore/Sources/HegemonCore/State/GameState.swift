@@ -229,6 +229,9 @@ public struct GameState: Codable, Sendable, Equatable {
     public var disruptedRoutes: [CivPair: Int]
     /// Tribes already approached this turn.
     public var parleyed: Set<TerritoryID> = []
+    /// Units that marched along a road this turn without fighting, by where they are now: they
+    /// may make one more move.
+    public var roadMoved: [TerritoryID: UnitCounts] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

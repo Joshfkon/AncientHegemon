@@ -285,7 +285,7 @@ struct CodexView: View {
         ("arrow.triangle.turn.up.right.diamond.fill", "A turn",
          "Your turn starts with events and the harvest. Then move armies (each unit once), recruit, build, sail and make peace or war. End the turn and every rival moves in turn."),
         ("leaf.fill", "Grain and supply",
-         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn, and every 4 soldiers draw 1 gold a turn in pay. Carting grain overland eats it: armies 3+ land steps from the capital eat more, unless roads or ships carry the supply. Keep supply lines open: land cut off from the capital can't recruit, pays no taxes, and its armies waste away a unit a turn."),
+         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn, and every 4 soldiers draw 1 gold a turn in pay. Roads let troops march twice a turn through your land. Carting grain overland eats it: armies 3+ land steps from the capital eat more, unless roads or ships carry the supply. Keep supply lines open: land cut off from the capital can't recruit, pays no taxes, and its armies waste away a unit a turn."),
         ("arrow.left.arrow.right", "Trade and resources",
          "Empires at peace that can reach each other trade automatically, sharing ore, horses, timber and more. Copper and tin make bronze, which arms your troops; it wears out without fresh tin. Iron needs Ironworking."),
         ("shield.lefthalf.filled", "Battles",

@@ -1338,3 +1338,12 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   - grain a turn, with the carted extra shown separately, and its share of army pay;
   - one line on why, and what would fix it (a road, ships in the sea between, retaking the
     land).
+
+### Roads speed marches (Josh: "roads should speed troop movement - maybe you get 2 moves without fighting")
+
+- A march from a territory with a road to another with a road, both yours and with nobody to
+  fight at the far end, doesn't use up the troops' move: they may march once more that turn
+  (`GameState.roadMoved`, `Engine.roadLinks`). The second move is the last, road or not, so a
+  road network gives two steps a turn, not unlimited. Attacks never get the bonus.
+- The AI uses it automatically (it reads readiness the same way). Roads also still carry
+  supply free. Rules version 14; three tests.

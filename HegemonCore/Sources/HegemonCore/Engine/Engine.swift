@@ -160,6 +160,15 @@ public struct Engine: Sendable {
             state.generalsMoved.insert(g.id)
         }
 
+        // Units that already took a road step this turn are on their second move.
+        let onRoad = state.roadMoved[from] ?? .zero
+        var second = UnitCounts.zero
+        for type in UnitType.allCases { second[type] = min(units[type], onRoad[type]) }
+        state.roadMoved[from] = onRoad - second
+        if state.roadMoved[from]!.isEmpty { state.roadMoved[from] = nil }
+        // A road march: from road to road, through our own land, with no one to fight.
+        let roadMarch = roadLinks(from, to, for: civ, in: state)
+
         state.armies[from]!.units -= units
         if state.armies[from]!.units.isEmpty { state.armies[from] = nil }
         let approach: Approach = switch map.crossing(between: from, and: to) {
@@ -168,8 +177,27 @@ public struct Engine: Sendable {
         case nil: .overland
         }
         let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
-        return events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
-                                from: .territory(from), approach: approach, &state)
+        let result = events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
+                                      from: .territory(from), approach: approach, &state)
+        // Fresh units that marched by road may move once more this turn.
+        if roadMarch, state.armies[to]?.owner == civ {
+            let fresh = units - second
+            if let moved = state.moved[to] {
+                var left = moved
+                for type in UnitType.allCases { left[type] = max(0, moved[type] - fresh[type]) }
+                state.moved[to] = left.isEmpty ? nil : left
+            }
+            state.roadMoved[to, default: .zero] += fresh
+        }
+        return result
+    }
+
+    /// Whether a march from `from` to `to` runs along a road: both have one, both are the civ's,
+    /// and nobody would fight at the far end.
+    public func roadLinks(_ from: TerritoryID, _ to: TerritoryID, for civ: CivilizationID, in state: GameState) -> Bool {
+        let road = { (t: TerritoryID) in state.land[t]?.improvements.contains(.road) == true }
+        return road(from) && road(to) && state.owner(of: from) == civ && state.owner(of: to) == civ
+            && defenders(of: to, against: civ, state) == nil
     }
 
     private func setFormation(_ territory: TerritoryID, _ formation: FormationID,
@@ -210,6 +238,7 @@ public struct Engine: Sendable {
 
     private func endTurn(_ state: inout GameState) -> [GameEvent] {
         state.moved = [:]
+        state.roadMoved = [:]
         state.parleyed = []
         state.generalsMoved = []
         for i in state.fleets.indices { state.fleets[i].movedShips = 0 }

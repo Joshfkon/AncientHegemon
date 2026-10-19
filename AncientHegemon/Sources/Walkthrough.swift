@@ -22,7 +22,7 @@ struct WalkthroughView: View {
         Page(title: "Armies and marching", picture: AnyView(Picture.march), steps: [
             "Your army is the token in your colour (★ means a general leads it). Tap it.",
             "The land it can reach glows. Tap one, choose how many go, and tap March.",
-            "Each soldier moves once a turn. Empty land is yours as soon as one soldier walks in.",
+            "Each soldier moves once a turn, or twice along roads through your own land. Empty land is yours as soon as one soldier walks in.",
         ]),
         Page(title: "Battle", picture: AnyView(Picture.battle), steps: [
             "Tap land with enemies or a tribe in it to attack. Choose who goes, then tap To the battlefield.",

@@ -134,6 +134,9 @@ struct CommandBar: View {
                 return "Grain is carted \(haul.steps) steps here: each soldier eats \(haul.extraGrain) extra. Roads or ships carry it free."
             }
             guard ready.total > 0 else { return "These troops have moved this turn." }
+            if let onRoad = state.roadMoved[id], onRoad.total > 0 {
+                return "\(min(onRoad.total, ready.total)) came by road and can march once more this turn."
+            }
             let coastal = !(engine.map.territory(id)?.seas.isEmpty ?? true)
             let routes = engine.seaRoutes(from: id, for: human, in: state)
             if !routes.isEmpty { return "Tap white land to march, or a blue coast ⛵ to sail there and attack in one go." }
