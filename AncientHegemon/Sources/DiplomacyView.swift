@@ -108,6 +108,15 @@ struct DiplomacyView: View {
                 .font(.caption).foregroundStyle(.secondary)
             Text(neighborhood(human, other)).font(.caption).foregroundStyle(.secondary)
             alliance(human, other)
+            if let answer = session.answers[other], answer.round == state.turn {
+                Label(answer.text, systemImage: answer.good ? "checkmark.seal.fill" : "xmark.seal.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(answer.good ? Color.green : Color.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 8).fill((answer.good ? Color.green : Color.red).opacity(0.12)))
+            }
             if let route {
                 let flows = engine.goods(along: route, in: state)
                 HStack(spacing: 4) {

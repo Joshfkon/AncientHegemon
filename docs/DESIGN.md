@@ -1367,6 +1367,9 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
 - The Rivals tab shows, for each rival, whether they'd likely ally, plus Propose / Ally / Ask
   to fight X / Leave alliance. There are banners for alliances made and broken, allies joining
   wars, and calls to arms, and chronicle lines for each.
+- A court's answer to your proposal (an alliance, or a call to join your war) shows at once: a
+  toast, and a note on that rival's card for the rest of the turn saying yes or no and why
+  (Josh: "they declined my alliance, but it wasn't immediately clear that they had").
 - Balance (80 games): unchanged within noise. Rules version 15; 219 tests.
 
 ### Holding an empire together, great works, patronage and the court's dilemmas (Josh: "let's do all of these"; "maybe you need to garrison troops to prevent rebellions")

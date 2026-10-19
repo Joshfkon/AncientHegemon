@@ -94,6 +94,8 @@ final class GameSession {
     var plannedOdds: Double?
     /// A short confirmation of the player's last order ("Raised 1 infantry in Egypt").
     var toast: (text: String, id: Int, bad: Bool)?
+    /// A rival's answer to the player's latest proposal, shown on its diplomacy card for the turn.
+    var answers: [CivilizationID: (round: Int, text: String, good: Bool)] = [:]
     /// Big moments waiting to be shown, one at a time.
     var moments: [Moment] = []
     /// Territories that just changed hands, with when, for a colour sweep on the map.
@@ -245,6 +247,22 @@ final class GameSession {
                 case let .tribeRefused(_, t, _):
                     toast = ("\(engine.map.territory(t)?.name ?? t) refuses", (toast?.id ?? 0) + 1, true)
                     Feedback.outcome(false)
+                // A rival court's answer to the player's proposal.
+                case let .allianceRefused(by, _):
+                    let why = Self.allianceRefusal(by, state: before, engine: engine)
+                    answers[by] = (state.turn, "They declined: \(why)", false)
+                    toast = ("\(Palette.name(by, state)) declines your alliance", (toast?.id ?? 0) + 1, true)
+                    SoundBoard.shared.play(.defeat, volume: 0.4)
+                    Feedback.outcome(false)
+                case let .allianceMade(pair) where pair.a == human || pair.b == human:
+                    let other = pair.a == human ? pair.b : pair.a
+                    answers[other] = (state.turn, "They accepted: you are allies.", true)
+                case let .warRefused(by, ally, against) where ally == human:
+                    answers[by] = (state.turn, "They won't fight \(Palette.name(against, state)): it's more than twice their strength. The alliance stands.", false)
+                    toast = ("\(Palette.name(by, state)) won't join your war", (toast?.id ?? 0) + 1, true)
+                    Feedback.outcome(false)
+                case let .joinedWar(civ, against, ally) where ally == human:
+                    answers[civ] = (state.turn, "They marched to war against \(Palette.name(against, state)) for you.", true)
                 default: break
                 }
             }
@@ -351,6 +369,14 @@ final class GameSession {
     }
 
     /// The engine's refusals, in words.
+    /// Why a rival court turned down an alliance, in its own terms.
+    static func allianceRefusal(_ civ: CivilizationID, state: GameState, engine: Engine) -> String {
+        if engine.allies(of: civ, in: state).count >= engine.rules.alliances.maxAllies {
+            return "they already have all the allies they can keep."
+        }
+        return "no shared enemy worries them. Courts ally against a common foe at least as strong as they are."
+    }
+
     /// The chronicle's line for how the player answered the court's dilemma.
     static func decisionLine(_ kind: DecisionKind, _ accepted: Bool, _ state: GameState, _ engine: Engine) -> String {
         switch kind {
