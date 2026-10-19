@@ -391,6 +391,9 @@ final class GameSession {
                 new.append(Moment(kind: .peace(pair.a == me ? pair.b : pair.a)))
             case let .warDeclared(by, on) where by == me || on == me:
                 new.append(Moment(kind: .war(by == me ? on : by)))
+            case let .navalBattle(sea, r) where r.attacker == me || r.defender == me:
+                new.append(Moment(kind: .seaBattle(sea, won: (r.winner == .attacker) == (r.attacker == me),
+                                                   against: r.attacker == me ? r.defender : r.attacker)))
             case let .armyPaid(civ, _, deserted) where civ == me && deserted > 0:
                 new.append(Moment(kind: .unpaid(deserted)))
             case let .event(r) where r.civ == me:
@@ -533,7 +536,9 @@ final class GameSession {
             case let .warDeclared(by, on): add(by, "\(name(by)) declares war on \(name(on))")
             case let .navalBattle(sea, r):
                 let winner = r.winner == .attacker ? r.attacker : r.defender
-                add(winner, "Sea battle in the \(engine.map.sea(sea)?.name ?? sea): \(name(winner)) wins")
+                add(winner, "Sea battle in the \(engine.map.sea(sea)?.name ?? sea): \(name(r.attacker)) (\(r.attackerShips) ships) "
+                    + "\(r.winner == .attacker ? "beat" : "beaten off by") \(name(r.defender)) (\(r.defenderShips)); "
+                    + "\(r.attackerShips - r.attackerShipsLeft + r.defenderShips - r.defenderShipsLeft) ships sunk")
             case let .generalKilled(id):
                 if let g = after.generals[id] { add(g.owner, "General \(g.name) of \(name(g.owner)) falls") }
             case let .discovery(civ, field, level):

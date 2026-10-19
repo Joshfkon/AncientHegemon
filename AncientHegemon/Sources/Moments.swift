@@ -13,6 +13,8 @@ struct Moment: Identifiable, Equatable {
         case disaster(EventKind, TerritoryID?)
         /// The treasury couldn't pay the army and soldiers went home.
         case unpaid(Int)
+        /// The player's ships fought at sea.
+        case seaBattle(SeaZoneID, won: Bool, against: CivilizationID)
         /// A rival struck the player's land.
         case attacked(CivilizationID, TerritoryID?)
     }
@@ -91,6 +93,13 @@ struct MomentBanner: View {
         case let .war(other):
             return Style(icon: "flame.fill", title: "War with \(Palette.name(other, state))",
                          subtitle: nil, color: Color(red: 0.6, green: 0.1, blue: 0.08), stamp: true)
+        case let .seaBattle(sea, won, other):
+            let water = engine.map.sea(sea)?.name ?? sea
+            return Style(icon: "sailboat.fill",
+                         title: won ? "Victory at sea" : "Our fleet is beaten",
+                         subtitle: won ? "\(Palette.name(other, state))'s ships driven from the \(water)"
+                                       : "\(Palette.name(other, state)) now holds the \(water); its troops can land",
+                         color: won ? Color(red: 0.1, green: 0.3, blue: 0.6) : Color(red: 0.35, green: 0.1, blue: 0.1), stamp: !won)
         case let .attacked(by, t):
             return Style(icon: "flame.fill", title: "\(Palette.name(by, state)) attacks!",
                          subtitle: t.map { "Their army struck \(place($0))" }, color: Palette.color(by, state), stamp: true)
@@ -123,6 +132,7 @@ struct MomentBanner: View {
         case .disaster(.plague, _): (false, Color(red: 0.35, green: 0.5, blue: 0.2))
         case .disaster, .lost: (true, Color(red: 0.5, green: 0.05, blue: 0.05))
         case .war, .attacked: (true, nil)
+        case .seaBattle(_, false, _): (true, Color(red: 0.1, green: 0.2, blue: 0.5))
         default: (false, nil)
         }
     }

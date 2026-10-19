@@ -100,10 +100,38 @@ extension Engine {
         if let owner = state.owner(of: territory), state.atPeace(civ, owner) { throw GameError.atPeace(territory) }
         try checkOmen(civ, attacking: territory, state)
 
+        // Enemy ships in these waters must be beaten before anyone goes ashore.
+        var events: [GameEvent] = []
+        var units = units
+        let enemies = state.fleets.filter { $0.sea == sea && $0.ships > 0 && state.atWar(civ, $0.owner) }.map(\.owner).sorted()
+        if !enemies.isEmpty {
+            var fleet = state.fleets.remove(at: i)
+            for enemy in enemies where state.fleets.contains(where: { $0.owner == enemy && $0.sea == sea }) {
+                let result = navalBattle(civ, ships: fleet.ships, cargo: fleet.cargo, from: sea, against: enemy, in: sea, &state)
+                events += result.events
+                fleet.ships = result.ships
+                fleet.cargo = result.cargo
+                guard result.won, fleet.ships > 0 else {
+                    if fleet.ships > 0 {
+                        addToFleet(civ, sea, ships: fleet.ships, moved: fleet.ships, cargo: fleet.cargo, &state)
+                        if let j = fleetIndex(civ, sea, state) { state.fleets[j].cargoBattles = fleet.cargoBattles }
+                    }
+                    return events
+                }
+            }
+            fleet.movedShips = fleet.ships
+            state.fleets.append(fleet)
+            state.fleets.sort { ($0.sea, $0.owner) < ($1.sea, $1.owner) }
+            guard let k = fleetIndex(civ, sea, state) else { return events }
+            // Troops drowned in the fight can't land.
+            for type in UnitType.allCases { units[type] = min(units[type], state.fleets[k].cargo[type]) }
+            guard !units.isEmpty else { return events }
+        }
+        guard let i = fleetIndex(civ, sea, state) else { return events }
         let honours = state.fleets[i].cargoBattles ?? 0
         state.fleets[i].cargo -= units
         if state.fleets[i].cargo.isEmpty { state.fleets[i].cargoBattles = nil }
-        let events: [GameEvent] = [.landed(civ: civ, sea: sea, territory: territory, units: units)]
+        events.append(.landed(civ: civ, sea: sea, territory: territory, units: units))
         return events + advance(civ, units, general: nil, plan: BattlePlan(), battles: honours, into: territory,
                                 from: .sea(sea), approach: .amphibious, &state)
     }

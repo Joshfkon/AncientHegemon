@@ -94,6 +94,13 @@ struct OrderComposer: View {
                     if isBattle, destination != nil {
                         odds
                     }
+                    if case let .land(sea, _) = order,
+                       let enemy = state.fleets.first(where: { $0.sea == sea && $0.ships > 0 && state.atWar(human, $0.owner) }) {
+                        Label("\(Palette.name(enemy.owner, state))'s \(enemy.ships) ship\(enemy.ships == 1 ? "" : "s") guard these waters: your fleet must beat them at sea before anyone lands.",
+                              systemImage: "sailboat.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     if let warning = garrisonWarning {
                         Label(warning, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption).foregroundStyle(.orange)

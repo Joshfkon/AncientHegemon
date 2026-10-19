@@ -1235,3 +1235,14 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
 - **Balance** (120 games, seeds 501–620): Mesopotamia 46%, Italia 30%, Egypt 19%, Greece 3%.
   Veterans favour the realms that fight most, so Egypt slipped from 24%. Rules version 13.
   202 tests.
+
+### No landing past a defending fleet (Josh: "an enemy shouldn't be able to attack a coastal area and land troops until they defeat your naval ships first")
+
+- Sailing into a sea that holds an enemy fleet already forced a sea battle. The gap was a landing
+  from a sea where both sides' ships already sat (fleets that met while at peace). Now the
+  landing fleet must fight every enemy fleet in those waters first. If it loses, the troops stay
+  aboard (or drown with sunk ships); if it wins, the survivors land.
+- Every sea battle your ships fight now raises a banner: "Victory at sea", or "Our fleet is
+  beaten: X now holds the sea; its troops can land". The chronicle gives both sides' ships
+  and how many sank. The landing order warns when enemy ships guard the water.
+- Balance unchanged (120 games: Mesopotamia 44%, Italia 31%, Egypt 20%, Greece 2%). 205 tests.

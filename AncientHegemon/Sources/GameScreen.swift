@@ -365,6 +365,7 @@ struct GameScreen: View {
         case .disaster: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(1)
         case .unpaid: SoundBoard.shared.play(.coins, volume: 0.6); Feedback.outcome(false)
         case .attacked: SoundBoard.shared.play(.horn, volume: 0.7); Feedback.impact(1)
+        case let .seaBattle(_, won, _): SoundBoard.shared.play(won ? .victory : .defeat, volume: 0.5); Feedback.outcome(won)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
