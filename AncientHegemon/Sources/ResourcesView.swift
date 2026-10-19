@@ -38,7 +38,7 @@ struct ResourcesView: View {
         let locked = r == .iron && engine.level(.metallurgy, of: human, in: state) < 2
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                Text(MapView.glyph(r)).font(.title3)
+                MapView.icon(r).font(.title3)
                 Text(r.rawValue.capitalized).font(.headline)
                 Spacer()
                 Text(locked ? "unusable" : "\(total) a turn")

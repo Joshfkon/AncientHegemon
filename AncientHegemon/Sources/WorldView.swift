@@ -773,10 +773,9 @@ extension MapView {
             let flows = engine.goods(along: route, in: state)
             var lines: [Text] = []
             for to in [route.partners.a, route.partners.b] {
-                let goods = Resource.allCases.compactMap { r in flows[to]?[r].map { _ in Self.glyph(r) } }
+                let goods = Resource.allCases.filter { flows[to]?[$0] != nil }
                 guard !goods.isEmpty else { continue }
-                lines.append(Text("▸ ").foregroundStyle(Palette.color(to, state))
-                             + Text(goods.joined(separator: " ")).foregroundStyle(.black))
+                lines.append(goods.reduce(Text("▸").foregroundStyle(Palette.color(to, state))) { $0 + Text(" ") + Self.icon($1) })
             }
             guard !lines.isEmpty else { continue }
             let resolved = lines.map { context.resolve($0.font(.system(size: 6.5, weight: .bold))) }
@@ -823,6 +822,17 @@ extension MapView {
         }
     }
 
+    /// A resource as an inline icon: an emoji, or for the metals a drawn ingot in the metal's
+    /// colour (there are no emoji for copper or tin).
+    static func icon(_ r: Resource) -> Text {
+        switch r {
+        case .copper: Text(Image("copper.ingot")).foregroundStyle(Color(red: 0.78, green: 0.42, blue: 0.16))
+        case .tin: Text(Image("tin.ingot")).foregroundStyle(Color(red: 0.55, green: 0.6, blue: 0.66))
+        case .iron: Text(Image("iron.bloom")).foregroundStyle(Color(red: 0.36, green: 0.3, blue: 0.3))
+        default: Text(glyph(r))
+        }
+    }
+
     static func glyph(_ r: Resource) -> String {
         switch r {
         case .grain: "🌾"
@@ -845,7 +855,7 @@ extension MapView {
                                          .iron: Color(red: 0.45, green: 0.2, blue: 0.2)]
         for resource in Resource.allCases where resource != .grain {
             if let n = territory.resources[resource], n > 0 {
-                parts.append(Text(" \(Self.glyph(resource))\(n)").foregroundStyle(metals[resource] ?? .black))
+                parts.append(Text(" ") + Self.icon(resource) + Text("\(n)").foregroundStyle(metals[resource] ?? .black))
             }
         }
         let label = context.resolve(parts.dropFirst().reduce(parts[0]) { $0 + $1 }.font(.system(size: 8.5 * scale, weight: .bold)))

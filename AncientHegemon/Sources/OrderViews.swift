@@ -367,15 +367,15 @@ struct TerritoryPanel: View {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("Raise \(type.rawValue)").font(.callout.bold())
                                 if let allowance, let r = stats.requires {
-                                    Text(blocked ? "No \(r.rawValue): tap to see where"
-                                                 : "\(MapView.glyph(r)) \(allowance.left) left this turn")
+                                    (blocked ? Text("No \(r.rawValue): tap to see where")
+                                             : Text("\(MapView.icon(r)) \(allowance.left) left this turn"))
                                         .font(.caption2)
                                         .multilineTextAlignment(.leading)
                                         .foregroundStyle(blocked ? .orange : .secondary)
                                 }
                             }
                             Spacer(minLength: 4)
-                            Text("\(stats.cost) gold · 1 👥" + (stats.requires.map { " · 1 \(MapView.glyph($0))" } ?? ""))
+                            (Text("\(stats.cost) gold · 1 👥") + (stats.requires.map { Text(" · 1 \(MapView.icon($0))") } ?? Text("")))
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.primary)
                         }

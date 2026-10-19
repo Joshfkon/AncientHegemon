@@ -482,7 +482,7 @@ struct GameScreen: View {
                         ForEach([Resource.horses, .timber, .copper, .tin, .stone], id: \.self) { r in
                             let n = econ.resources[r] ?? 0
                             HStack(spacing: 1) {
-                                Text(MapView.glyph(r)).font(.body)
+                                MapView.icon(r).font(.body)
                                 Text("\(n)").font(.subheadline.bold().monospacedDigit())
                             }
                             .foregroundStyle(n == 0 ? Color.red.opacity(0.8) : Color.primary)
@@ -612,7 +612,7 @@ struct GameScreen: View {
                 spotlit = nil
             } label: {
                 HStack(spacing: 6) {
-                    Text("\(MapView.glyph(r)) Where to find \(r.rawValue)")
+                    Text("\(MapView.icon(r)) Where to find \(r.rawValue)")
                     Image(systemName: "xmark.circle.fill")
                 }
                 .font(.callout.bold())
