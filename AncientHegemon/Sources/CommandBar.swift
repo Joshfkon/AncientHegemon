@@ -505,3 +505,26 @@ extension View {
             .environment(\.colorScheme, .dark)
     }
 }
+
+/// The title screen's bronze button, for the main action on a card.
+struct BronzeButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.callout, design: .serif).weight(.bold))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 16).padding(.vertical, 6)
+            .background(Bronze.gradient, in: Capsule())
+            .overlay(Capsule().stroke(Color(red: 0.4, green: 0.25, blue: 0.1), lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+    }
+}
+
+/// A card's heading in the game's voice: bronze serif capitals.
+struct CardTitle: View {
+    let text: String
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(.subheadline, design: .serif).weight(.bold)).tracking(2)
+            .foregroundStyle(Bronze.gradient)
+    }
+}

@@ -163,7 +163,8 @@ struct MapView: View {
                             Image(systemName: "arrow.down.right.and.arrow.up.left")
                                 .font(.callout.weight(.semibold))
                                 .padding(9)
-                                .background(.ultraThinMaterial, in: Circle())
+                                .foregroundStyle(.white)
+                                .woodPanel(Circle())
                         }
                         .padding(10)
                         .transition(.opacity)

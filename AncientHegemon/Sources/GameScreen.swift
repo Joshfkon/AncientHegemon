@@ -274,11 +274,10 @@ struct GameScreen: View {
             }
             if let toast = session.toast {
                 Label(toast.text, systemImage: toast.bad ? "xmark.circle.fill" : "checkmark.circle.fill")
-                    .font(.callout.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background((toast.bad ? Color(red: 0.6, green: 0.15, blue: 0.12) : Color(red: 0.15, green: 0.5, blue: 0.3)).opacity(0.95), in: Capsule())
-                    .shadow(radius: 4)
+                    .font(.system(.callout, design: .serif).weight(.bold))
+                    .foregroundStyle(toast.bad ? Color(red: 1, green: 0.55, blue: 0.45) : Color(red: 0.6, green: 0.95, blue: 0.6))
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .woodPanel(Capsule())
                     .id(toast.id)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .task(id: toast.id) {
@@ -287,11 +286,11 @@ struct GameScreen: View {
                     }
             }
             if let message = session.message {
-                Text(message)
+                Label(message, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(.red.opacity(0.9), in: Capsule())
-                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .foregroundStyle(Color(red: 1, green: 0.6, blue: 0.5))
+                    .woodPanel(Capsule())
                     .onTapGesture { session.message = nil }
                     .transition(.opacity)
             }
@@ -374,6 +373,7 @@ struct GameScreen: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.callout.weight(.semibold))
+                .foregroundStyle(Bronze.gradient)
                 .frame(width: 40, height: 40)
                 .woodPanel(Circle())
         }
@@ -604,7 +604,7 @@ struct GameScreen: View {
                 Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
                 Button("New game", role: .destructive) { session.quit() }
             } label: {
-                Image(systemName: "ellipsis").frame(width: 34, height: 34)
+                Image(systemName: "ellipsis").foregroundStyle(Bronze.gradient).frame(width: 34, height: 34)
             }
         }
         .padding(4)
@@ -621,6 +621,7 @@ struct GameScreen: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
+                .foregroundStyle(Bronze.gradient)
                 .frame(width: 34, height: 34)
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {

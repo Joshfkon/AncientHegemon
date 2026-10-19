@@ -18,7 +18,7 @@ struct QuickLookCard: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Circle().fill(Palette.color(owner, state)).frame(width: 9, height: 9)
-                Text(t.name).font(.headline)
+                Text(t.name).font(.system(.headline, design: .serif))
                 Text(owner.map { Palette.name($0, state) } ?? "Unclaimed").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
@@ -65,7 +65,7 @@ struct QuickLookCard: View {
         }
         .padding(12)
         .frame(width: 330)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .woodPanel(RoundedRectangle(cornerRadius: 14), border: 2)
         .shadow(radius: 8)
     }
 }
@@ -85,10 +85,10 @@ struct TurnReportCard: View {
         let others = session.report.filter { $0.mine != true }
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Since your last turn").font(.headline)
+                CardTitle(text: "Since your last turn")
                 Spacer()
                 Button("Got it") { session.showReport = false }
-                    .buttonStyle(.borderedProminent).controlSize(.small)
+                    .buttonStyle(BronzeButtonStyle())
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
@@ -101,8 +101,8 @@ struct TurnReportCard: View {
                             Image(systemName: showOthers ? "chevron.down" : "chevron.right")
                             Text("\(others.count) other event\(others.count == 1 ? "" : "s") across the world")
                         }
-                        .font(.callout)
-                        .foregroundStyle(Color.accentColor)
+                        .font(.callout.bold())
+                        .foregroundStyle(Bronze.gradient)
                         .padding(.top, 4)
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation { showOthers.toggle() } }
@@ -119,7 +119,7 @@ struct TurnReportCard: View {
         }
         .padding(14)
         .frame(width: 440)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .woodPanel(RoundedRectangle(cornerRadius: 16), border: 2)
         .shadow(radius: 10)
     }
 
@@ -264,14 +264,13 @@ struct TipBanner: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "lightbulb.fill").foregroundStyle(.yellow)
-            Text(tip.text).font(.callout).fixedSize(horizontal: false, vertical: true)
-            Button(action: dismiss) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
+            Image(systemName: "lightbulb.fill").foregroundStyle(Bronze.gradient)
+            Text(tip.text).font(.callout).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
+            Button(action: dismiss) { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)) }
         }
-        .padding(10)
+        .padding(12)
         .frame(minWidth: 260, maxWidth: 400)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .shadow(radius: 6)
+        .woodPanel(RoundedRectangle(cornerRadius: 12))
     }
 }
 
