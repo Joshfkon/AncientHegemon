@@ -368,8 +368,16 @@ final class GameSession {
     private func noteMoments(_ events: [GameEvent], before: GameState, after: GameState) {
         guard let me = human else { return }
         var new: [Moment] = []
+        var target: TerritoryID?
+        var attackers: Set<CivilizationID> = []
         for event in events {
             switch event {
+            case let .moved(_, _, to, _), let .landed(_, _, to, _):
+                target = to
+            case let .battle(r) where r.setup.defender.civ == me && before.isPlayer(r.setup.attacker.civ)
+                && !attackers.contains(r.setup.attacker.civ):
+                attackers.insert(r.setup.attacker.civ)
+                new.append(Moment(kind: .attacked(r.setup.attacker.civ, target)))
             case let .captured(civ, t, from):
                 flashes[t] = .now
                 if civ == me { new.append(Moment(kind: .captured(t))) }
@@ -508,7 +516,7 @@ final class GameSession {
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
             case let .decorated(civ, d) where civ == human:
                 add(civ, "The throne room is adorned with \(engine.rules.throneRoom.decoration(d)?.name.lowercased() ?? d)")
-            case let .trophyWon(civ, kind) where civ == human:
+            case let .trophyWon(civ, kind) where civ == human && !{ if case .spoils = kind { true } else { false } }():
                 add(civ, "A trophy for the throne room: \(ThroneRoomView.trophyName(kind, engine, after).lowercased())")
             case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
                 add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
@@ -531,7 +539,7 @@ final class GameSession {
             case let .discovery(civ, field, level):
                 if civ == human || level >= 2 {
                     add(civ, "\(name(civ)) discover\(civ == human ? "" : "s") \(engine.levelName(field, level) ?? field.rawValue)"
-                        + (civ == human ? ": \(KnowledgeView.effect(field, level))" : ""))
+                        + (civ == human ? ". \(KnowledgeView.benefit(field, level))" : ""))
                 }
             case let .projectStarted(civ, t, kind) where civ == human:
                 add(civ, "Work begins on \(projectName(kind).lowercased()) in \(place(t))")

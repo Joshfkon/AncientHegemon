@@ -13,6 +13,8 @@ struct Moment: Identifiable, Equatable {
         case disaster(EventKind, TerritoryID?)
         /// The treasury couldn't pay the army and soldiers went home.
         case unpaid(Int)
+        /// A rival struck the player's land.
+        case attacked(CivilizationID, TerritoryID?)
     }
     let id = UUID()
     let kind: Kind
@@ -81,7 +83,7 @@ struct MomentBanner: View {
                          color: Color(red: 0.45, green: 0.08, blue: 0.08), stamp: false)
         case let .discovery(field, level):
             return Style(icon: "sparkles", title: engine.levelName(field, level) ?? "Discovery",
-                         subtitle: KnowledgeView.effect(field, level).capitalizedFirst,
+                         subtitle: KnowledgeView.benefit(field, level),
                          color: Color(red: 0.62, green: 0.45, blue: 0.12), stamp: false)
         case let .peace(other):
             return Style(icon: "dove.fill", title: "Peace with \(Palette.name(other, state))",
@@ -89,6 +91,9 @@ struct MomentBanner: View {
         case let .war(other):
             return Style(icon: "flame.fill", title: "War with \(Palette.name(other, state))",
                          subtitle: nil, color: Color(red: 0.6, green: 0.1, blue: 0.08), stamp: true)
+        case let .attacked(by, t):
+            return Style(icon: "flame.fill", title: "\(Palette.name(by, state)) attacks!",
+                         subtitle: t.map { "Their army struck \(place($0))" }, color: Palette.color(by, state), stamp: true)
         case let .unpaid(n):
             return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
                          subtitle: "Every \(engine.rules.economy.soldiersPerGold) soldiers need 1 gold a turn",
@@ -117,7 +122,7 @@ struct MomentBanner: View {
         case .disaster(.seaPeoples, _), .disaster(.flood, _): (true, Color(red: 0.1, green: 0.3, blue: 0.7))
         case .disaster(.plague, _): (false, Color(red: 0.35, green: 0.5, blue: 0.2))
         case .disaster, .lost: (true, Color(red: 0.5, green: 0.05, blue: 0.05))
-        case .war: (true, nil)
+        case .war, .attacked: (true, nil)
         default: (false, nil)
         }
     }

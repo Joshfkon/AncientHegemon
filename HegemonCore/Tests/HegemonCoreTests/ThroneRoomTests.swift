@@ -36,6 +36,29 @@ import Testing
         #expect(engine.magnificence(of: "egypt", in: s) == 2)
     }
 
+    @Test func everyConquestBringsSpoils() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        for t in ["libya", "cyrenaica"] {
+            _ = engine.awardTrophies([.captured(civ: "egypt", territory: t, from: nil)], &s)
+        }
+        #expect(s.civs["egypt"]!.trophies.map(\.kind) == [.spoils("libya"), .spoils("cyrenaica")])
+        #expect(engine.magnificence(of: "egypt", in: s) == 2)
+        // Spoils stop counting past the cap.
+        for i in 0..<20 { s.civs["egypt"]!.trophies.append(Trophy(kind: .spoils("x\(i)"), round: 1)) }
+        #expect(engine.magnificence(of: "egypt", in: s) == engine.rules.throneRoom.spoilsCap)
+    }
+
+    @Test func aSplendidCourtShoresUpTheThroneAndCharmsTribes() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        s.land["libya"]!.owner = nil
+        let plainLegitimacy = engine.taxAndLuxuryLegitimacy("egypt", s)
+        let plainGifts = engine.giftChance(at: "libya", for: "egypt", in: s)
+        s.civs["egypt"]!.decorations = ["throne", "statue", "hangings", "mosaic"]  // magnificence 10
+        #expect(engine.courtLegitimacy(of: "egypt", in: s) == 2)
+        #expect(engine.taxAndLuxuryLegitimacy("egypt", s) == plainLegitimacy + 2)
+        #expect(engine.giftChance(at: "libya", for: "egypt", in: s) >= min(engine.rules.tribes.giftChanceMax, plainGifts + 10))
+    }
+
     @Test func splendourEasesSuccession() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
         s.civs["egypt"]!.decorations = ["throne", "statue", "hangings", "mosaic"]

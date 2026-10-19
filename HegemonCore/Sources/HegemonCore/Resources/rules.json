@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 13,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -637,11 +637,23 @@
       "revoltPerDistantTerritory": 10
     }
   },
+  "veterans": {
+    "rankAt": [1, 2, 4],
+    "strengthPercentPerRank": 6,
+    "moralePerRank": 5,
+    "maxBattles": 8
+  },
   "throneRoom": {
     "trophyMagnificence": 2,
     "prestigePerMagnificence": 2,
     "magnificencePerSuccessionPoint": 2,
     "successionEaseCap": 10,
+    "spoilsMagnificence": 1,
+    "spoilsCap": 8,
+    "magnificencePerLegitimacy": 5,
+    "legitimacyCap": 2,
+    "magnificencePerGiftPercent": 1,
+    "peaceMagnificence": 10,
     "decorations": [
       { "id": "braziers", "name": "Bronze braziers", "gold": 5, "stock": {}, "magnificence": 1 },
       { "id": "hangings", "name": "Purple hangings", "gold": 10, "stock": {}, "magnificence": 2 },

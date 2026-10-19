@@ -142,6 +142,8 @@ public struct Army: Codable, Sendable, Equatable {
     public var stratagem: Stratagem?
     /// Holds the field rather than chasing a broken enemy (nil or false: pursue).
     public var holdBack: Bool?
+    /// The soldiers' average number of battles survived (nil: green).
+    public var battles: Int?
 
     public init(owner: CivilizationID, units: UnitCounts, formation: FormationID? = nil) {
         self.owner = owner
@@ -163,6 +165,8 @@ public struct Fleet: Codable, Sendable, Equatable {
     /// Ships that have already sailed or been built this turn.
     public var movedShips: Int = 0
     public var cargo: UnitCounts = .zero
+    /// Battle honours of the troops aboard.
+    public var cargoBattles: Int?
 }
 
 /// Everything that changes during a game. Fully Codable so a game can be saved, reloaded,

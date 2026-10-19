@@ -37,6 +37,32 @@ struct DiplomacyView: View {
         }
     }
 
+    /// How their court regards us, read from what moves the AI: relative strength, a shared
+    /// border, trade, offers on the table and our court's splendour.
+    private func attitude(_ human: CivilizationID, _ other: CivilizationID, trading: Bool)
+        -> (text: String, icon: String, color: Color) {
+        func strength(_ c: CivilizationID) -> Int {
+            state.totalUnits(of: c).total + state.fleets(of: c).reduce(0) { $0 + $1.cargo.total }
+        }
+        let edge = Double(strength(other)) / Double(max(1, strength(human)))
+        let border = state.territories(of: other).contains { t in
+            engine.map.landNeighbors(of: t).contains { state.owner(of: $0) == human }
+        }
+        let peace = state.atPeace(human, other)
+        let awed = engine.magnificence(of: human, in: state) >= engine.rules.throneRoom.peaceMagnificence
+        if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
+            return ("They want peace", "dove.fill", .green)
+        }
+        if border && edge >= 1.3 {
+            return (peace ? "They think we are weak, and covet our land" : "They think we are weak", "exclamationmark.triangle.fill", .red)
+        }
+        if edge < 0.75 { return ("They fear our armies", "shield.fill", .blue) }
+        if peace && trading { return ("Good friends: trade binds us", "heart.fill", .green) }
+        if awed { return ("Awed by our court", "sparkles", .orange) }
+        if peace { return (border ? "Wary neighbours" : "Distant but cordial", "hand.raised.fill", .secondary) }
+        return (border ? "Hostile, at our border" : "Hostile, but far away", "flame.fill", .orange)
+    }
+
     private func card(_ human: CivilizationID, _ other: CivilizationID) -> some View {
         let peace = state.atPeace(human, other)
         let cs = state.civs[other]!
@@ -59,6 +85,9 @@ struct DiplomacyView: View {
                 fact("shield.lefthalf.filled", "\(troops) troop\(troops == 1 ? "" : "s")")
                 fact("crown", "\(engine.prestige(of: other, in: state)) prestige")
             }
+            let mood = attitude(human, other, trading: route != nil)
+            Label(mood.text, systemImage: mood.icon)
+                .font(.caption.bold()).foregroundStyle(mood.color)
             Text("\(cs.ruler.name) rules, \(legitimacyWord(cs.legitimacy)) on the throne.")
                 .font(.caption).foregroundStyle(.secondary)
             Text(neighborhood(human, other)).font(.caption).foregroundStyle(.secondary)

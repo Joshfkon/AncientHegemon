@@ -93,7 +93,7 @@ struct TurnReportCard: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
                     if mine.isEmpty {
-                        Text("Nothing touched your realm.").font(.callout).foregroundStyle(.secondary)
+                        Text("Nothing touched your realm.").font(.callout).foregroundStyle(Color.primary.opacity(0.6))
                     }
                     ForEach(mine) { line in row(line, state, strong: true) }
                     if !others.isEmpty {
@@ -112,8 +112,8 @@ struct TurnReportCard: View {
                     }
                 }
             }
-            .frame(height: min(240, CGFloat(mine.count) * 30 + (mine.isEmpty ? 24 : 0)
-                                + (others.isEmpty ? 0 : 34) + (showOthers ? CGFloat(others.count) * 24 : 0) + 6))
+            .frame(height: min(260, CGFloat(mine.count) * 30 + (mine.isEmpty ? 24 : 0)
+                                + (others.isEmpty ? 0 : 34) + (showOthers ? CGFloat(others.count) * 30 : 0) + 6))
             Text("Arrows and markers on the map show these until you end your turn.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
@@ -132,10 +132,11 @@ struct TurnReportCard: View {
                 Text(line.text)
                     .font(strong ? .callout.weight(.semibold) : .footnote)
                     .multilineTextAlignment(.leading)
-                    .foregroundStyle(strong ? .primary : .secondary)
+                    // Explicit colours: .secondary turns invisible on this material inside a button.
+                    .foregroundStyle(strong ? Color.primary : Color.primary.opacity(0.7))
                 Spacer(minLength: 0)
                 if line.territory != nil {
-                    Image(systemName: "scope").font(.caption).foregroundStyle(.secondary)
+                    Image(systemName: "scope").font(.caption).foregroundStyle(Color.primary.opacity(0.5))
                 }
             }
         }
@@ -147,7 +148,7 @@ struct TurnReportCard: View {
 // MARK: Explaining the numbers
 
 enum StatTopic: String, Identifiable {
-    case gold, grain, legitimacy
+    case gold, grain, people, legitimacy
     var id: String { rawValue }
 }
 
@@ -188,10 +189,29 @@ struct StatExplainer: View {
                     .font(.caption).foregroundStyle(.orange)
                 Text("Each soldier eats 1 grain a turn, plus 1 for every 3 steps grain must be carted overland to him. Roads and sea routes carry it free. When the granary runs dry, people and soldiers starve.")
                     .font(.caption).foregroundStyle(.secondary)
+            case .people:
+                Text("People").font(.headline)
+                if let human = session.human {
+                    let state = session.state, engine = session.engine
+                    let land = state.territories(of: human).sorted { state.population(of: $0) > state.population(of: $1) }
+                    let cap = land.reduce(0) { $0 + engine.populationCap(of: $1) }
+                    row("In your realm", state.totalPopulation(of: human), bold: true)
+                    Text("Room for \(cap) on the land you hold.").font(.caption)
+                    ForEach(land.prefix(5), id: \.self) { t in
+                        HStack {
+                            Text(engine.map.territory(t)?.name ?? t)
+                            Spacer()
+                            Text("\(state.population(of: t)) of \(engine.populationCap(of: t))").monospacedDigit()
+                        }
+                        .font(.caption)
+                    }
+                }
+                Text("People pay taxes, eat grain and become soldiers (each recruit takes one). They grow when there's grain to spare and taxes aren't too high.")
+                    .font(.caption).foregroundStyle(.secondary)
             case .legitimacy:
                 Text("Legitimacy").font(.headline)
                 if let e = econ {
-                    row("From taxes and luxuries, each turn", e.taxLegitimacy)
+                    row("From taxes, luxuries and your court, each turn", e.taxLegitimacy)
                 }
                 Text("How firmly your ruler holds the throne. It rises with victories, low taxes and luxuries, and falls with defeats, famine, lost capitals and broken peace. Low legitimacy brings bad omens, disloyal generals and civil war when a ruler dies.")
                     .font(.caption).foregroundStyle(.secondary)

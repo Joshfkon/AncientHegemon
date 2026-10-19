@@ -143,7 +143,7 @@ extension Engine {
             + coasts.count * rules.trade.grainPerCoast + harbors.count * rules.trade.grainPerHarbor
     }
 
-    func populationCap(of territory: TerritoryID) -> Int {
+    public func populationCap(of territory: TerritoryID) -> Int {
         rules.populationCap(grain: map.territory(territory)!.grain)
     }
 

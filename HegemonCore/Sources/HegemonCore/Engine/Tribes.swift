@@ -54,6 +54,7 @@ extension Engine {
         let writing = level(.administration, of: civ, in: state) >= 1 ? 10 : 0
         let p = r.giftChanceBase + r.giftChancePerTroop * (troopsNextTo(territory, for: civ, in: state) - warriors)
             + legitimacy / 2 + writing
+            + magnificence(of: civ, in: state) / max(1, rules.throneRoom.magnificencePerGiftPercent)
         return min(r.giftChanceMax, max(r.giftChanceMin, p))
     }
 

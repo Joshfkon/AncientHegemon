@@ -80,8 +80,11 @@ extension Engine {
             throw GameError.overCapacity(sea)
         }
 
+        let honours = army.battles ?? 0
         state.armies[territory]!.units -= units
         if state.armies[territory]!.units.isEmpty { state.armies[territory] = nil }
+        let f = state.fleets[i]
+        state.fleets[i].cargoBattles = mergedBattles(f.cargoBattles ?? 0, f.cargo.total, honours, units.total)
         state.fleets[i].cargo += units
         return [.embarked(civ: civ, territory: territory, sea: sea, units: units)]
     }
@@ -97,9 +100,11 @@ extension Engine {
         if let owner = state.owner(of: territory), state.atPeace(civ, owner) { throw GameError.atPeace(territory) }
         try checkOmen(civ, attacking: territory, state)
 
+        let honours = state.fleets[i].cargoBattles ?? 0
         state.fleets[i].cargo -= units
+        if state.fleets[i].cargo.isEmpty { state.fleets[i].cargoBattles = nil }
         let events: [GameEvent] = [.landed(civ: civ, sea: sea, territory: territory, units: units)]
-        return events + advance(civ, units, general: nil, plan: BattlePlan(), into: territory,
+        return events + advance(civ, units, general: nil, plan: BattlePlan(), battles: honours, into: territory,
                                 from: .sea(sea), approach: .amphibious, &state)
     }
 

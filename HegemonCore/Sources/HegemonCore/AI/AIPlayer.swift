@@ -128,8 +128,10 @@ public struct AIPlayer: Sendable {
                 continue
             }
             let wantsPeace = losing || (!prey && (!neighbor || personality.trade >= 0.8))
+            // A splendid court's envoys are hard to turn away.
+            let awed = engine.magnificence(of: other, in: state) >= rules.throneRoom.peaceMagnificence && edge < 2
             if state.peaceOffers.contains(PeaceOffer(from: other, to: civ)) {
-                if wantsPeace { issue(.acceptPeace(from: other), &state, &turn) }
+                if wantsPeace || awed { issue(.acceptPeace(from: other), &state, &turn) }
             } else if wantsPeace, !state.peaceOffers.contains(PeaceOffer(from: civ, to: other)) {
                 issue(.offerPeace(to: other), &state, &turn)
             }

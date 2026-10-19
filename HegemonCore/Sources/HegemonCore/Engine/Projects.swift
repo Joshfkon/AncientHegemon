@@ -118,6 +118,7 @@ extension Engine {
         let taxes = (e.defaultTax - state.civs[civ]!.taxRate) / max(1, e.taxLegitimacyStep)
         let luxuries = effectiveYield(of: .luxuries, for: civ, in: state)
         return taxes + min(e.luxuryLegitimacyCap, luxuries / max(1, e.luxuriesPerLegitimacy))
+            + courtLegitimacy(of: civ, in: state)
     }
 
     /// Share of surplus grain that goes into population growth: less when taxes are high.

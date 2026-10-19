@@ -137,7 +137,7 @@ extension Engine {
 
     /// The army as it fights with a plan, after dropping anything it can't actually use.
     public func battleArmy(_ civ: CivilizationID, _ units: UnitCounts, plan: BattlePlan, general: General?,
-                           _ state: GameState) -> BattleArmy {
+                           battles: Int = 0, _ state: GameState) -> BattleArmy {
         let plan = effectivePlan(plan, civ, units, general: general, state)
         let e = rules.knowledge.effects
         var percent: [UnitType: Int] = [:]
@@ -151,6 +151,7 @@ extension Engine {
                           unitPercent: percent, morale: war >= 3 ? e.tacticsMorale : 0,
                           depth: plan.depth, stratagem: plan.stratagem)
         army.pursue = plan.pursue
+        applyVeterancy(&army, battles: battles)
         return army
     }
 

@@ -292,7 +292,7 @@ struct TerritoryPanel: View {
         let human = session.human
         let mine = human != nil && state.owner(of: territory) == human
         VStack(alignment: .leading, spacing: 10) {
-            TerritoryCard(id: territory, state: state, map: engine.map) {}
+            TerritoryCard(id: territory, state: state, map: engine.map, engine: engine) {}
             if mine, session.isHumanTurn, let human {
                 actions(human)
             }

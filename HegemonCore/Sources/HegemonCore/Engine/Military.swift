@@ -33,7 +33,7 @@ extension Engine {
     public func defendingArmy(of territory: TerritoryID, against civ: CivilizationID, _ state: GameState) -> BattleArmy? {
         guard let d = defenders(of: territory, against: civ, state) else { return nil }
         var army = battleArmy(d.owner, d.army.units, plan: d.army.plan,
-                              general: state.general(of: d.owner, at: territory), state)
+                              general: state.general(of: d.owner, at: territory), battles: d.army.battles ?? 0, state)
         army.levy = d.levy
         return army
     }
@@ -41,26 +41,28 @@ extension Engine {
     /// Units (and optionally a general) entering `to`, by land or from the sea. Fights the army
     /// there if it belongs to an enemy, then occupies and captures the territory if they won.
     func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
-                 into to: TerritoryID, from origin: Origin, approach: Approach,
+                 battles: Int = 0, into to: TerritoryID, from origin: Origin, approach: Approach,
                  _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
         var units = units
+        var battles = battles
         var general = general
 
         if defenders(of: to, against: civ, state) != nil {
-            let result = fight(civ, units, general: general, plan: plan, at: to,
+            let result = fight(civ, units, general: general, plan: plan, battles: battles, at: to,
                                approach: approach, &state)
             events += result.events
             units = result.survivors
+            battles = seasoned(battles)
             if let g = general { general = state.generals[g.id]!.isAlive ? state.generals[g.id] : nil }
             if !result.won {
-                fallBack(civ, units, to: origin, &state)
+                fallBack(civ, units, battles: battles, to: origin, &state)
                 return events
             }
         }
 
         if !units.isEmpty {
-            state.armies[to, default: Army(owner: civ, units: .zero)].units += units
+            join(units, battles: battles, to: to, owner: civ, &state)
             state.moved[to, default: .zero] += units
         }
         if let g = general { state.generals[g.id]!.location = to }
@@ -93,13 +95,13 @@ extension Engine {
     /// Resolves a land battle for `to` and applies its results to the defender and the generals.
     /// The attacker's survivors are returned for the caller to place.
     func fight(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
-                       at to: TerritoryID, approach: Approach, _ state: inout GameState)
+                       battles: Int = 0, at to: TerritoryID, approach: Approach, _ state: inout GameState)
         -> (won: Bool, survivors: UnitCounts, events: [GameEvent]) {
         let d = defenders(of: to, against: civ, state)!
         let defender = d.army
         let defenderGeneral = state.general(of: defender.owner, at: to)
         let setup = BattleSetup(
-            attacker: battleArmy(civ, units, plan: plan, general: general, state),
+            attacker: battleArmy(civ, units, plan: plan, general: general, battles: battles, state),
             defender: defendingArmy(of: to, against: civ, state)!,
             terrain: map.territory(to)!.terrain, approach: approach, seed: state.rng.next(),
             fortification: fortification(at: to, state))
@@ -128,22 +130,24 @@ extension Engine {
         if fallen > 0 {
             state.land[to]!.population = max(rules.economy.minPopulation, state.population(of: to) - fallen)
         }
+        let defenderBattles = seasoned(defender.battles ?? 0)
         if won {
             state.armies[to] = nil
             if !report.defenderSurvivors.isEmpty {
-                events += retreat(defender.owner, report.defenderSurvivors, from: to, &state)
+                events += retreat(defender.owner, report.defenderSurvivors, battles: defenderBattles, from: to, &state)
             }
         } else if report.defenderSurvivors.isEmpty {
             state.armies[to] = nil
         } else {
             state.armies[to]!.units = report.defenderSurvivors
+            state.armies[to]!.battles = defenderBattles
         }
         return (won, report.attackerSurvivors, events)
     }
 
     /// A beaten defender falls back to an adjacent territory it holds with no foreign army,
     /// preferring its home network. With nowhere to go, the army and its general are lost.
-    private func retreat(_ civ: CivilizationID, _ units: UnitCounts, from territory: TerritoryID,
+    private func retreat(_ civ: CivilizationID, _ units: UnitCounts, battles: Int, from territory: TerritoryID,
                          _ state: inout GameState) -> [GameEvent] {
         let home = Set(homeNetwork(of: civ, in: state))
         let options = map.landNeighbors(of: territory).filter { t in
@@ -159,23 +163,23 @@ extension Engine {
             }
             return events
         }
-        if !units.isEmpty {
-            state.armies[target, default: Army(owner: civ, units: .zero)].units += units
-        }
+        join(units, battles: battles, to: target, owner: civ, &state)
         if let general { state.generals[general.id]!.location = target }
         return units.isEmpty ? [] : [.retreated(civ: civ, from: territory, to: target, units: units)]
     }
 
     /// A repulsed attacker returns where it came from, its move spent.
-    private func fallBack(_ civ: CivilizationID, _ units: UnitCounts, to origin: Origin,
+    private func fallBack(_ civ: CivilizationID, _ units: UnitCounts, battles: Int, to origin: Origin,
                           _ state: inout GameState) {
         guard !units.isEmpty else { return }
         switch origin {
         case .territory(let from):
-            state.armies[from, default: Army(owner: civ, units: .zero)].units += units
+            join(units, battles: battles, to: from, owner: civ, &state)
             state.moved[from, default: .zero] += units
         case .sea(let sea):
             if let i = state.fleets.firstIndex(where: { $0.owner == civ && $0.sea == sea }) {
+                let f = state.fleets[i]
+                state.fleets[i].cargoBattles = mergedBattles(f.cargoBattles ?? 0, f.cargo.total, battles, units.total)
                 state.fleets[i].cargo += units
             }
         }
@@ -228,7 +232,9 @@ extension Engine {
             case nil: .overland
             }
         }
-        return BattleSetup(attacker: battleArmy(civ, units, plan: plan, general: general, state),
+        // The force carries its army's battle honours (a landing, the fleet's cargo's).
+        let honours = origin.flatMap { state.armies[$0]?.owner == civ ? state.armies[$0]?.battles : nil } ?? 0
+        return BattleSetup(attacker: battleArmy(civ, units, plan: plan, general: general, battles: honours, state),
                            defender: defending, terrain: map.territory(to)!.terrain, approach: approach,
                            seed: 0, fortification: fortification(at: to, state))
     }

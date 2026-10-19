@@ -224,6 +224,7 @@ struct ArmySide: View {
     let army: BattleArmy
     let label: String
     let state: GameState
+    var rank: VeteranRank?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -233,6 +234,7 @@ struct ArmySide: View {
                 Text(Palette.name(army.civ, state)).font(.headline)
             }
             UnitRow(units: army.units, showZero: true).font(.caption)
+            if let rank, rank > .green { VeteranBadge(rank: rank) }
             if army.levy > 0 { Text("+ \(army.levy) militia").font(.caption) }
             Text(army.formation.replacingOccurrences(of: "_", with: " ").capitalized
                  + (army.general.map { " · \($0.name)" } ?? ""))

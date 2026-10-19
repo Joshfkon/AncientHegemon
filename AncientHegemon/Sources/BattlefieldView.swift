@@ -93,9 +93,11 @@ struct BattlefieldView: View {
                             SoundToggle()
                         }
                         HStack(alignment: .top) {
-                            ArmySide(army: setup.defender, label: "Defending", state: state)
+                            ArmySide(army: setup.defender, label: "Defending", state: state,
+                                     rank: state.armies[muster.to].map { engine.rank(of: $0) })
                             Spacer()
-                            ArmySide(army: setup.attacker, label: "Attacking", state: state)
+                            ArmySide(army: setup.attacker, label: "Attacking", state: state,
+                                     rank: state.armies[muster.from].map { engine.rank(of: $0) })
                         }
                         scouts
                         Divider()
@@ -216,6 +218,10 @@ enum Scouts {
             if theirArmy.general != nil, leader == nil { lines.append("A general leads them; none leads us.") }
             if leader != nil, theirArmy.general == nil { lines.append("Our general leads; they have none.") }
         }
+        let ourRank = from.flatMap { state.armies[$0] }.map { engine.rank(of: $0) } ?? .green
+        let theirRank = engine.rank(of: defender)
+        if theirRank > ourRank { lines.append("Their troops are \(theirRank.name.lowercased()) soldiers, hardened by battle.") }
+        if ourRank > theirRank { lines.append("Our \(ourRank.name.lowercased()) soldiers have seen more fighting.") }
         if d.levy > 0 {
             lines.append(defender.units.total == 0 ? "No soldiers, but the people will take up arms." : "The people will take up arms beside them.")
         }

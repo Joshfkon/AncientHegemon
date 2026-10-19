@@ -364,6 +364,7 @@ struct GameScreen: View {
         case .lost, .war: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
         case .disaster: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(1)
         case .unpaid: SoundBoard.shared.play(.coins, volume: 0.6); Feedback.outcome(false)
+        case .attacked: SoundBoard.shared.play(.horn, volume: 0.7); Feedback.impact(1)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -377,7 +378,9 @@ struct GameScreen: View {
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
         }
         // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
-        do { try await Task.sleep(for: .milliseconds(1900)) } catch { return }
+        // Discoveries stay up longer: there's something to read.
+        let linger = if case .discovery = moment.kind { 4200 } else { 1900 }
+        do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }
     }
@@ -487,6 +490,7 @@ struct GameScreen: View {
                     Button { explain = .grain } label: {
                         stat(harvestHit ? "Grain ⚠" : "Grain", "\(econ.granary)", change: econ.grainBalance, color: .green)
                     }
+                    Button { explain = .people } label: { stat("People", "\(state.totalPopulation(of: human))", change: nil, color: .teal) }
                     Button { explain = .legitimacy } label: { stat("Legitimacy", "\(cs.legitimacy)", change: nil, color: .purple) }
                 }
                 .buttonStyle(.plain)

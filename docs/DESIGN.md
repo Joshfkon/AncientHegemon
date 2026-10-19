@@ -1198,3 +1198,40 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
     - Mesopotamia 40% → 44%;
     - Greece 6% → 3%;
     - games 39 → 46 rounds, dominations 41 → 15.
+
+### Veterans, spoils, court influence, and readability (Josh, playtesting build 12)
+
+- **Veterans** ("armies should also get a veteran status and improve as they survive battles"):
+  - Each army carries its soldiers' average number of battles survived (`Army.battles`; for
+    troops at sea, `Fleet.cargoBattles`). Every survivor of a battle, on either side, gains one.
+  - Recruits are green and dilute the average (rounded to nearest). Marches, landings,
+    retreats and fall-backs carry their honours with them.
+  - Ranks: Blooded at 1 battle, Veteran at 2, Elite at 4. Each rank adds +6% strength to every
+    unit type and +5 morale. The map shows gold chevrons, one per rank; the territory card
+    shows the rank and battles to the next; the battlefield and the scouts compare ranks.
+- **Spoils**: every territory taken by force adds a spoils trophy (1 magnificence each, 8 at
+  most). A rival's capital still gives its standard (2).
+- **A splendid court**:
+  - +1 legitimacy a turn per 5 magnificence (at most +2);
+  - tribes are 1% likelier to take gifts per point;
+  - at magnificence 10, rivals accept your peace offers even when they'd rather fight,
+    unless they're twice your strength.
+- **Readability**:
+  - **People** total in the status bar (tap for the breakdown and room to grow).
+  - **People counter** on every territory at every zoom.
+  - **Buildings on the map**: roads, walls and harbors always shown beside the token; farms,
+    mines and works in progress too once zoomed in.
+  - **Sea names** on the map in italic, brighter for the seas next to the selected territory.
+  - **Fleets** shown as coloured chips with what's aboard.
+  - **Discoveries** say in a sentence what they do ("Drill: your infantry fight 10% harder"),
+    stay up longer, and the chronicle says it too.
+  - **Turn report**: "events elsewhere" were invisible (.secondary inside a button on
+    material), so they now use explicit colours.
+  - **Being attacked**: rivals start the game at war, so they never declared it. Now the first
+    attack by each rival in a turn raises a "Mesopotamia attacks!" banner with a horn.
+  - **Rivals tab**: a mood line for each rival, read from what moves the AI: "They want peace",
+    "They think we are weak", "They fear our armies", "Good friends: trade binds us",
+    "Awed by our court", wary or hostile.
+- **Balance** (120 games, seeds 501–620): Mesopotamia 46%, Italia 30%, Egypt 19%, Greece 3%.
+  Veterans favour the realms that fight most, so Egypt slipped from 24%. Rules version 13.
+  202 tests.

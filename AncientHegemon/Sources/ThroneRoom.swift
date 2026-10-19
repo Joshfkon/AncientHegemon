@@ -67,7 +67,7 @@ struct ThroneRoomView: View {
                                     .font(.caption)
                             }
                         } else {
-                            Text("Trophies come from taking a rival's capital, beating off raiders, and winning tribes over.")
+                            Text("Trophies come from every territory you take, a rival's capital, beating off raiders, and winning tribes over.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -88,8 +88,14 @@ struct ThroneRoomView: View {
                 Image(systemName: "sparkles").foregroundStyle(Bronze.gradient)
                 Text("Magnificence \(m)").font(.subheadline.bold())
             }
-            Text("+\(m * engine.rules.throneRoom.prestigePerMagnificence) prestige"
-                 + (ease > 0 ? " · an heir needs \(ease) less legitimacy to be crowned smoothly" : ""))
+            let r = engine.rules.throneRoom
+            let court = engine.courtLegitimacy(of: civ, in: state)
+            Text(["+\(m * r.prestigePerMagnificence) prestige",
+                  court > 0 ? "+\(court) legitimacy a turn" : "legitimacy a turn at \(r.magnificencePerLegitimacy)",
+                  m >= r.magnificencePerGiftPercent ? "tribes \(m / max(1, r.magnificencePerGiftPercent))% likelier to take gifts" : nil,
+                  m >= r.peaceMagnificence ? "rivals rarely refuse your peace offers" : "rivals heed your envoys at \(r.peaceMagnificence)",
+                  ease > 0 ? "an heir needs \(ease) less legitimacy to be crowned smoothly" : nil]
+                    .compactMap { $0 }.joined(separator: " · "))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(10)
@@ -139,6 +145,7 @@ struct ThroneRoomView: View {
         case let .standard(civ): "The standard of \(Palette.name(civ, state))"
         case .raiderShield: "A raider's shield"
         case let .totem(t): "The totem of \(engine.map.territory(t)?.name ?? t)"
+        case let .spoils(t): "Spoils of \(engine.map.territory(t)?.name ?? t)"
         }
     }
 
@@ -147,6 +154,7 @@ struct ThroneRoomView: View {
         case .standard: "flag.fill"
         case .raiderShield: "shield.fill"
         case .totem: "figure.stand"
+        case .spoils: "shippingbox.fill"
         }
     }
 }
@@ -300,7 +308,7 @@ struct Hall: View {
                 }
                 // Trophies on a shelf along the wall.
                 HStack(spacing: 10) {
-                    ForEach(trophies.indices, id: \.self) { i in trophy(trophies[i].kind) }
+                    ForEach(trophies.indices.prefix(14), id: \.self) { i in trophy(trophies[i].kind) }
                 }
                 .frame(width: w)
                 .offset(y: h * 0.21)
@@ -419,6 +427,8 @@ struct Hall: View {
             Image(systemName: "shield.fill").font(.title2).foregroundStyle(Color(red: 0.5, green: 0.35, blue: 0.2)).shadow(radius: 2)
         case .totem:
             Image(systemName: "figure.stand").font(.title2).foregroundStyle(Color(red: 0.35, green: 0.25, blue: 0.15)).shadow(radius: 2)
+        case .spoils:
+            Image(systemName: "shippingbox.fill").font(.title3).foregroundStyle(Bronze.gradient).shadow(radius: 2)
         }
     }
 }

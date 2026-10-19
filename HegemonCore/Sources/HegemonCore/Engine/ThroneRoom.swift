@@ -21,6 +21,16 @@ public struct ThroneRoomRules: Codable, Sendable, Equatable {
     /// Legitimacy a smooth succession needs is lowered by magnificence ÷ this, up to the cap.
     public let magnificencePerSuccessionPoint: Int
     public let successionEaseCap: Int
+    /// Spoils of a conquered territory are worth this much, up to `spoilsCap` in all.
+    public let spoilsMagnificence: Int
+    public let spoilsCap: Int
+    /// Legitimacy +1 a turn per this many magnificence, up to the cap: a splendid court awes.
+    public let magnificencePerLegitimacy: Int
+    public let legitimacyCap: Int
+    /// Tribes' chance of taking gifts rises by magnificence ÷ this (percent points).
+    public let magnificencePerGiftPercent: Int
+    /// Rivals accept peace from a court at least this magnificent even when they'd rather not.
+    public let peaceMagnificence: Int
 
     public func decoration(_ id: DecorationID) -> Decoration? { decorations.first { $0.id == id } }
 }
@@ -32,6 +42,8 @@ public enum TrophyKind: Codable, Sendable, Hashable {
     case raiderShield
     /// A tribe's totem, given when it swore to you.
     case totem(TerritoryID)
+    /// Spoils carried home from a territory taken by force.
+    case spoils(TerritoryID)
 }
 
 public struct Trophy: Codable, Sendable, Equatable {
@@ -43,8 +55,16 @@ extension Engine {
     public func magnificence(of civ: CivilizationID, in state: GameState) -> Int {
         guard let cs = state.civs[civ] else { return 0 }
         let r = rules.throneRoom
+        let spoils = cs.trophies.filter { if case .spoils = $0.kind { true } else { false } }.count
         return cs.decorations.reduce(0) { $0 + (r.decoration($1)?.magnificence ?? 0) }
-            + cs.trophies.count * r.trophyMagnificence
+            + (cs.trophies.count - spoils) * r.trophyMagnificence
+            + min(r.spoilsCap, spoils * r.spoilsMagnificence)
+    }
+
+    /// Legitimacy a turn from the court's splendour.
+    public func courtLegitimacy(of civ: CivilizationID, in state: GameState) -> Int {
+        let r = rules.throneRoom
+        return min(r.legitimacyCap, magnificence(of: civ, in: state) / max(1, r.magnificencePerLegitimacy))
     }
 
     /// How much less legitimacy a smooth succession needs thanks to the court's splendour.
@@ -81,8 +101,9 @@ extension Engine {
         }
         for event in events {
             switch event {
-            case let .captured(civ, t, from?):
-                if map.civilization(from)?.capital == t { give(civ, .standard(from)) }
+            case let .captured(civ, t, from):
+                if let from, map.civilization(from)?.capital == t { give(civ, .standard(from)) }
+                else { give(civ, .spoils(t)) }
             case let .battle(report):
                 let a = report.setup.attacker.civ, d = report.setup.defender.civ
                 if a == barbariansID, report.winner == .defender { give(d, .raiderShield) }

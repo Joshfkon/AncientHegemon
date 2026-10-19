@@ -106,7 +106,8 @@ public struct Engine: Sendable {
         state.land[territory]!.population -= count
         var added = UnitCounts.zero
         added[unit] = count
-        state.armies[territory, default: Army(owner: civ, units: .zero)].units += added
+        // Recruits are green: they dilute the army's battle honours.
+        join(added, battles: 0, to: territory, owner: civ, &state)
         return [.recruited(civ: civ, territory: territory, unit: unit, count: count)]
     }
 
@@ -165,7 +166,7 @@ public struct Engine: Sendable {
         case nil: .overland
         }
         let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
-        return events + advance(civ, units, general: general, plan: army.plan, into: to,
+        return events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
                                 from: .territory(from), approach: approach, &state)
     }
 

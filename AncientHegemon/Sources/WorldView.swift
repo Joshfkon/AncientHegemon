@@ -363,10 +363,15 @@ struct MapView: View {
 
         // Names in the board's hand lettering, then armies and fleets.
         // Info plates step aside for each other and for every army token.
-        var infoPlates: [CGRect] = map.territories.compactMap { territory in
-            guard let shape = art.territories[territory.id], (state.armies[territory.id]?.units.total ?? 0) > 0 else { return nil }
-            let c = t.point(shape.token), r = 10 * t.detail
-            return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
+        var infoPlates: [CGRect] = map.territories.flatMap { territory -> [CGRect] in
+            guard let shape = art.territories[territory.id] else { return [] }
+            let c = t.point(shape.token), k = t.detail
+            let army = (state.armies[territory.id]?.units.total ?? 0) > 0
+            // The people counter sits beside the army, or in its place.
+            let people = army ? CGPoint(x: c.x - 15 * k, y: c.y + 7 * k) : c
+            var spots = [CGRect(x: people.x - 9 * k, y: people.y - 7 * k, width: 18 * k, height: 14 * k)]
+            if army { spots.append(CGRect(x: c.x - 10 * k, y: c.y - 10 * k, width: 20 * k, height: 20 * k)) }
+            return spots
         }
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
@@ -384,7 +389,7 @@ struct MapView: View {
                 let c = t.point(shape.token)
                 let k = t.detail
                 let army = (state.armies[territory.id]?.units.total ?? 0) > 0
-                let below: CGFloat = army ? 10 * k + (k >= 1.5 ? 10 * k + 10 : 4) + 7 * k : 0
+                let below: CGFloat = army ? 10 * k + (k >= 1.5 ? 10 * k + 10 : 4) + 7 * k : 14 * k
                 drawInfoLine(&context, territory, at: CGPoint(x: c.x, y: c.y + below), scale: k, avoiding: &infoPlates)
             }
             if layer == .resources {
@@ -401,12 +406,25 @@ struct MapView: View {
                                 .font(.system(size: (native ? 9.5 : 12) * t.detail, weight: .heavy))
                                 .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
                              at: c)
+                // Veterans wear chevrons above the token, one per rank.
+                if let engine, engine.rank(of: army) > .green {
+                    let n = engine.rank(of: army).rawValue
+                    for i in 0..<n {
+                        var v = Path()
+                        let y = c.y - r - 2.5 * t.detail - CGFloat(i) * 2.6 * t.detail
+                        v.move(to: CGPoint(x: c.x - 4 * t.detail, y: y + 1.5 * t.detail))
+                        v.addLine(to: CGPoint(x: c.x, y: y - 1 * t.detail))
+                        v.addLine(to: CGPoint(x: c.x + 4 * t.detail, y: y + 1.5 * t.detail))
+                        context.stroke(v, with: .color(.black.opacity(0.6)), style: StrokeStyle(lineWidth: 2.6 * t.detail, lineCap: .round, lineJoin: .round))
+                        context.stroke(v, with: .color(Color(red: 0.98, green: 0.8, blue: 0.3)), style: StrokeStyle(lineWidth: 1.4 * t.detail, lineCap: .round, lineJoin: .round))
+                    }
+                }
                 // Zoomed in, the army's make-up shows under its token.
                 if t.detail >= 1.5 {
                     drawComposition(&context, army.units, below: CGPoint(x: c.x, y: c.y + r + 2), owner: army.owner, scale: t.detail)
                 }
             }
-            if layer != .resources { drawBadges(&context, territory.id, at: t.point(shape.token), t) }
+            if layer != .resources, engine != nil { drawBadges(&context, territory.id, at: t.point(shape.token), t) }
         }
         if let planned { drawPlanned(&context, planned, t) }
         for (sea, label) in art.seas {
@@ -417,12 +435,26 @@ struct MapView: View {
                                style: StrokeStyle(lineWidth: selected == .sea(sea) ? 2.5 : 1.6,
                                                   dash: selected == .sea(sea) ? [] : [4, 3]))
             }
-            // The board doesn't name its seas, so only fleets are drawn there.
+            // The sea's name in the old maps' italic, so it's clear where ships are built and sail.
+            if engine != nil, let name = map.sea(sea)?.name {
+                let selectedHere: Bool = {
+                    if case .territory(let t)? = selected { return map.territory(t)?.seas.contains(sea) ?? false }
+                    return selected == .sea(sea)
+                }()
+                context.draw(Text(name)
+                                .font(.system(size: 8 * t.detail, weight: .semibold, design: .serif).italic())
+                                .foregroundStyle(.white.opacity(selectedHere ? 0.95 : 0.6)),
+                             at: CGPoint(x: p.x, y: p.y - 9 * t.detail))
+            }
             for (i, fleet) in state.fleets.filter({ $0.sea == sea }).enumerated() {
-                context.draw(Text("⛵\(fleet.ships)\(fleet.cargo.total > 0 ? "+\(fleet.cargo.total)" : "")")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(Palette.color(fleet.owner, state)),
-                             at: CGPoint(x: p.x, y: p.y + 10 + CGFloat(i) * 11))
+                let label = context.resolve(Text("⛵\(fleet.ships)\(fleet.cargo.total > 0 ? " · \(fleet.cargo.total) aboard" : "")")
+                                .font(.system(size: 9 * t.detail, weight: .bold)).foregroundStyle(.white))
+                let size = label.measure(in: CGSize(width: 300, height: 40))
+                let at = CGPoint(x: p.x, y: p.y + 6 * t.detail + CGFloat(i) * (size.height + 4))
+                context.fill(Path(roundedRect: CGRect(x: at.x - size.width / 2 - 4, y: at.y - size.height / 2 - 1,
+                                                      width: size.width + 8, height: size.height + 2), cornerRadius: (size.height + 2) / 2),
+                             with: .color(Palette.color(fleet.owner, state)))
+                context.draw(label, at: at)
             }
         }
     }
@@ -473,18 +505,33 @@ extension MapView {
     fileprivate func drawBadges(_ context: inout GraphicsContext, _ id: TerritoryID, at c: CGPoint, _ t: BoardTransform) {
         let land = state.land[id]
         let k = t.detail
-        if land?.improvements.contains(.walls) == true {
-            let s = 6.5 * k
-            let o = CGPoint(x: c.x + 8 * k, y: c.y - 11 * k)
-            var shield = Path()
-            shield.move(to: CGPoint(x: o.x - s / 2, y: o.y - s / 2))
-            shield.addLine(to: CGPoint(x: o.x + s / 2, y: o.y - s / 2))
-            shield.addLine(to: CGPoint(x: o.x + s / 2, y: o.y))
-            shield.addQuadCurve(to: CGPoint(x: o.x, y: o.y + s * 0.7), control: CGPoint(x: o.x + s / 2, y: o.y + s * 0.5))
-            shield.addQuadCurve(to: CGPoint(x: o.x - s / 2, y: o.y), control: CGPoint(x: o.x - s / 2, y: o.y + s * 0.5))
-            shield.closeSubpath()
-            context.fill(shield, with: .color(Color(white: 0.85)))
-            context.stroke(shield, with: .color(.black.opacity(0.8)), lineWidth: 0.8)
+        let army = (state.armies[id]?.units.total ?? 0) > 0
+        // People: a round counter like the army's, beside it (or in its place).
+        let people = state.population(of: id)
+        if people > 0 {
+            let r = 6.5 * k
+            let p = army ? CGPoint(x: c.x - 15 * k, y: c.y + 7 * k) : c
+            let disc = Path(ellipseIn: CGRect(x: p.x - r * 1.25, y: p.y - r, width: r * 2.5, height: r * 2))
+            context.fill(disc, with: .color(Color(red: 0.98, green: 0.95, blue: 0.86)))
+            context.stroke(disc, with: .color(.black.opacity(0.55)), lineWidth: 0.8)
+            context.draw(Text("\(Image(systemName: "person.fill"))\(people)")
+                            .font(.system(size: 8 * k, weight: .heavy)).foregroundStyle(Color(red: 0.25, green: 0.2, blue: 0.15)),
+                         at: p)
+        }
+        // Roads, walls and harbors always, beside the token; farms, mines and works in progress
+        // too once zoomed in.
+        let always: Set<ProjectKind> = [.road, .walls, .harbor]
+        var built = ProjectKind.allCases.filter { (land?.improvements.contains($0) ?? false) && (k >= 1.3 || always.contains($0)) }
+            .map(Self.projectGlyph)
+        if land?.construction != nil, k >= 1.3 { built.append("🏗") }
+        if !built.isEmpty {
+            let label = context.resolve(Text(built.joined()).font(.system(size: 9 * k)))
+            let size = label.measure(in: CGSize(width: 200, height: 40))
+            let p = CGPoint(x: c.x + (army ? 12 : 9) * k + size.width / 2, y: c.y + 6 * k)
+            context.fill(Path(roundedRect: CGRect(x: p.x - size.width / 2 - 2, y: p.y - size.height / 2,
+                                                  width: size.width + 4, height: size.height), cornerRadius: 3 * k),
+                         with: .color(.white.opacity(0.75)))
+            context.draw(label, at: p)
         }
         if let me = focus, state.owner(of: id) == me, let engine,
            !engine.homeNetwork(of: me, in: state).contains(id) {
@@ -492,18 +539,13 @@ extension MapView {
         }
     }
 
-    /// "🌾3 👥2 🧱🌱" under a territory's name.
+    /// "🌾3 + resources" under a territory's token.
     fileprivate func drawInfoLine(_ context: inout GraphicsContext, _ territory: Territory, at p: CGPoint, scale: CGFloat,
                                   avoiding placed: inout [CGRect]) {
         guard let engine else { return }
-        let land = state.land[territory.id]
-        let built = ProjectKind.allCases.filter { land?.improvements.contains($0) ?? false }.map(Self.projectGlyph).joined()
-        var text = Text("🌾\(engine.territoryYield(.grain, territory.id, state)) 👥\(state.population(of: territory.id))")
+        var text = Text("🌾\(engine.territoryYield(.grain, territory.id, state))")
         for r in ResourcesView.order {
             if let n = territory.resources[r], n > 0 { text = text + Text(" ") + Self.icon(r) + Text("\(n)") }
-        }
-        if !built.isEmpty || land?.construction != nil {
-            text = text + Text(" " + built + (land?.construction != nil ? "🏗" : ""))
         }
         text = text.font(.system(size: 9.5 * scale, weight: .bold)).foregroundStyle(.black.opacity(0.85))
         let resolved = context.resolve(text)
@@ -945,6 +987,7 @@ struct TerritoryCard: View {
     let id: TerritoryID
     let state: GameState
     let map: GameMap
+    var engine: Engine?
     let onClose: () -> Void
 
     var body: some View {
@@ -974,11 +1017,37 @@ struct TerritoryCard: View {
                     Text("\(Palette.name(army.owner, state)):")
                     UnitRow(units: army.units, size: 12)
                     if let g = state.generals.values.first(where: { $0.location == id }) { Text("· \(g.name)") }
+                    if let engine, engine.rank(of: army) > .green {
+                        VeteranBadge(rank: engine.rank(of: army))
+                    }
                 }
                 .font(.caption)
+                if let engine, state.isPlayer(army.owner) {
+                    let b = army.battles ?? 0
+                    let next = engine.rules.veterans.rankAt.first { $0 > b }
+                    Text("\(engine.rank(of: army).name): \(b) battle\(b == 1 ? "" : "s") survived"
+                         + (next.map { " · \($0 - b) more to \(engine.rank(battles: $0).name.lowercased())" } ?? "")
+                         + ". New recruits are green and dilute it.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
             }
         }
         .padding(10)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// Gold chevrons and the rank's name.
+struct VeteranBadge: View {
+    let rank: VeteranRank
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: rank == .elite ? "chevron.up.2" : "chevron.up")
+            Text(rank.name)
+        }
+        .font(.caption2.bold())
+        .foregroundStyle(Color(red: 0.6, green: 0.42, blue: 0.05))
+        .padding(.horizontal, 5).padding(.vertical, 1)
+        .background(Capsule().fill(Color(red: 0.98, green: 0.85, blue: 0.45).opacity(0.5)))
     }
 }

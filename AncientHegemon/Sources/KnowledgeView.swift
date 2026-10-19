@@ -85,6 +85,20 @@ struct KnowledgeView: View {
         ]
         return table[field]?[level - 1] ?? ""
     }
+
+    /// What a discovery does, in a sentence, for the banner and the chronicle.
+    static func benefit(_ field: KnowledgeField, _ level: Int) -> String {
+        let table: [KnowledgeField: [String]] = [
+            .agriculture: ["River-valley land grows 1 more grain.", "Granaries hold two turns of harvest.", "Farms grow 1 more grain."],
+            .metallurgy: ["Copper and tin make half again as much bronze.", "Your smiths can use iron ore to arm troops.", "Steel: iron arms twice as many troops."],
+            .horsemanship: ["Chariots: your cavalry fight 15% harder.", "Each horse lets you raise 2 cavalry a turn.", "Horse archers: cavalry 15% harder again."],
+            .seafaring: ["Each ship carries 1 more troop.", "Your ships fight 30% better.", "Your ships fight 30% better again."],
+            .construction: ["Building projects finish a turn sooner.", "Walls protect defenders 15% more.", "Building projects cost less."],
+            .warfare: ["Drill: your infantry fight 10% harder.", "Better bows: your archers fight 15% harder.", "Tactics: all your troops hold 10 morale longer."],
+            .administration: ["Writing: generals are 10 points more loyal.", "Coinage: taxes bring in 20% more.", "Your ruler gains 1 legitimacy a turn."],
+        ]
+        return table[field]?[level - 1] ?? effect(field, level).capitalizedFirst
+    }
 }
 
 /// How far the Bronze Age world has fallen apart.
