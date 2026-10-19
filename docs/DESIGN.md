@@ -1436,3 +1436,14 @@ goals: everything here follows from how real Bronze Age empires held together or
 - Resources use one drawn icon set (new symbols for grain, timber, stone, gold and wine,
   alongside the metal ingots), tinted per resource, in the HUD, command bar, town view, trade
   view and the Resources legend as well as on the map.
+
+### Succession crises, restyled, and rebellions you can't miss (Josh: "I paid off a general - but it didn't work and he still rebelled (I like that) but it wasn't immediately clear… the event screen didn't match the style")
+
+- Paying off claimants still settles the crisis at once, but a general whose loyalty sinks
+  low enough can rise later anyway. The choice now says so ("bought loyalty can sour").
+- The crisis is a wood card over the dimmed map with three parchment choices, like the
+  court's other dilemmas, in place of the system sheet.
+- When one of your generals rebels there's a stamped red banner ("Horemheb rebels! He seizes
+  …"), war drums, the seized land flashes and the map turns to it. If you had paid him off,
+  it says "Your gold bought only a season."
+- Debug launch arguments: `-demoCrisis YES`, `-demoRebellion YES`.

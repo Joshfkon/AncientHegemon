@@ -104,6 +104,12 @@ public struct SuccessionCrisis: Codable, Sendable, Equatable {
     public let bribeCost: Int
     /// The new ruler (the heir or regent) if the crisis is weathered.
     public let ruler: String
+
+    public init(claimants: [GeneralID], bribeCost: Int, ruler: String) {
+        self.claimants = claimants
+        self.bribeCost = bribeCost
+        self.ruler = ruler
+    }
 }
 
 public struct Ruler: Codable, Sendable, Equatable {

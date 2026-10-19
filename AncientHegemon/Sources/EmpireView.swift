@@ -199,7 +199,8 @@ struct ChronicleView: View {
     }
 }
 
-/// A contested succession: the player chooses how to settle it.
+/// A contested succession: the player chooses how to settle it, on a wood card over the map
+/// like the court's other dilemmas.
 struct CrisisView: View {
     let session: GameSession
 
@@ -207,47 +208,75 @@ struct CrisisView: View {
         let engine = session.engine
         let state = session.state
         if let human = session.human, let crisis = session.crisis {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("The throne is contested").font(.title2.bold())
-                    Text("The old ruler is dead. \(crisis.ruler) should rule \(Palette.name(human, state)), "
-                         + "but powerful generals press their own claims, each at the head of an army.")
-                        .font(.callout)
-                    ForEach(crisis.claimants, id: \.self) { id in
-                        if let g = state.generals[id] {
-                            let army = g.location.flatMap { state.armies[$0] }?.units.total ?? 0
-                            Text("• \(g.name), renown \(g.renown), loyalty \(g.loyalty), \(army) troops in "
+            let gold = state.civs[human]!.gold
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Image(systemName: "crown.fill").font(.title2).foregroundStyle(Bronze.gradient)
+                    CardTitle(text: "The throne is contested")
+                }
+                Text("The old ruler is dead. \(crisis.ruler) should rule \(Palette.name(human, state)), "
+                     + "but powerful generals press their own claims, each at the head of an army.")
+                    .font(.callout).foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(crisis.claimants, id: \.self) { id in
+                    if let g = state.generals[id] {
+                        let army = g.location.flatMap { state.armies[$0] }?.units.total ?? 0
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.badge.exclamationmark").foregroundStyle(Bronze.gradient)
+                            Text(g.name).font(.system(.callout, design: .serif).weight(.bold)).foregroundStyle(.white)
+                            Text("renown \(g.renown) · loyalty \(g.loyalty) · \(army) troops in "
                                  + "\(g.location.flatMap { engine.map.territory($0)?.name } ?? "?")")
-                                .font(.callout)
+                                .font(.caption).foregroundStyle(.white.opacity(0.75))
                         }
                     }
-                    let gold = state.civs[human]!.gold
-                    choice("Pay them off", "Costs \(crisis.bribeCost) gold (you have \(gold)). The claimants stand down; "
-                           + "legitimacy suffers a little.", enabled: gold >= crisis.bribeCost, .payOff)
-                    if let first = crisis.claimants.first.flatMap({ state.generals[$0] }) {
-                        choice("Crown \(first.name)", "A new dynasty without bloodshed. \(first.name) leaves the army "
-                               + "for the throne; the other claimants accept.", enabled: true, .crownClaimant)
-                    }
-                    choice("Stand firm", "\(crisis.ruler) takes the throne, and every claimant rises in civil war, "
-                           + "taking the lands nearest him.", enabled: true, .standFirm)
                 }
-                .padding()
+                HStack(alignment: .top, spacing: 10) {
+                    choice("banknote.fill", "Pay them off", "The claimants stand down, for now. Bought loyalty can sour: "
+                           + "a general who stays disloyal may still rise later.",
+                           cost: "\(crisis.bribeCost) gold (you have \(gold))", enabled: gold >= crisis.bribeCost, .payOff)
+                    if let first = crisis.claimants.first.flatMap({ state.generals[$0] }) {
+                        choice("crown.fill", "Crown \(first.name)", "A new dynasty without bloodshed. \(first.name) leaves the army "
+                               + "for the throne; the others accept.", cost: "Legitimacy suffers", enabled: true, .crownClaimant)
+                    }
+                    choice("shield.lefthalf.filled", "Stand firm", "\(crisis.ruler) takes the throne, and every claimant rises "
+                           + "in civil war, taking the lands nearest him.", cost: "Civil war", enabled: true, .standFirm)
+                }
             }
+            .padding(16)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 620)
+            .woodPanel(RoundedRectangle(cornerRadius: 16), border: 2)
         }
     }
 
-    private func choice(_ title: String, _ detail: String, enabled: Bool, _ choice: CrisisChoice) -> some View {
+    private func choice(_ symbol: String, _ title: String, _ detail: String, cost: String, enabled: Bool,
+                        _ choice: CrisisChoice) -> some View {
         Button {
-            session.order(.resolveCrisis(choice))
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(detail).font(.caption).multilineTextAlignment(.leading)
+            if enabled {
+                if session.order(.resolveCrisis(choice)) { SoundBoard.shared.play(choice == .standFirm ? .wardrums : .coins, volume: 0.6) }
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: symbol).foregroundStyle(Color(red: 0.45, green: 0.3, blue: 0.12))
+                    Text(title).font(.system(.subheadline, design: .serif).weight(.bold))
+                        .foregroundStyle(Color(red: 0.2, green: 0.14, blue: 0.08))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                Text(detail).font(.caption2).foregroundStyle(Color(red: 0.3, green: 0.24, blue: 0.16))
+                    .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Text(cost).font(.caption2.bold())
+                    .foregroundStyle(enabled ? Color(red: 0.45, green: 0.3, blue: 0.12) : Color(red: 0.65, green: 0.15, blue: 0.1))
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color(red: 0.95, green: 0.89, blue: 0.74)))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Bronze.gradient, lineWidth: 1.2))
         }
-        .buttonStyle(.bordered)
-        .disabled(!enabled)
+        .buttonStyle(.plain)
     }
 }
 

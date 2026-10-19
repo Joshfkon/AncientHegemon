@@ -94,6 +94,8 @@ final class GameSession {
     var plannedOdds: Double?
     /// A short confirmation of the player's last order ("Raised 1 infantry in Egypt").
     var toast: (text: String, id: Int, bad: Bool)?
+    /// Generals the player bought off in a succession crisis, so a later revolt can say so.
+    var bribed: Set<GeneralID> = []
     /// A rival's answer to the player's latest proposal, shown on its diplomacy card for the turn.
     var answers: [CivilizationID: (round: Int, text: String, good: Bool)] = [:]
     /// Big moments waiting to be shown, one at a time.
@@ -200,6 +202,7 @@ final class GameSession {
     func order(_ command: Command) -> Bool {
         guard isHumanTurn else { return false }
         let before = state
+        if case .resolveCrisis(.payOff) = command, let c = crisis { bribed.formUnion(c.claimants) }
         let snapshot = (state: state, log: log, battles: battles, nextID: nextID, marks: marks.count)
         do {
             var s = state
@@ -495,6 +498,10 @@ final class GameSession {
                 new.append(Moment(kind: .ally(by, joined: false)))
             case let .calledToWar(r) where r.to == me:
                 new.append(Moment(kind: .callToArms(r.from, r.against)))
+            case let .civilWar(civ, rebel, general, lands) where civ == me:
+                for t in lands { flashes[t] = .now }
+                let name = after.generals[general]?.name ?? before.generals[general]?.name ?? "A general"
+                new.append(Moment(kind: .rebellion(general: name, lands: lands, rebel: rebel, bribed: bribed.contains(general))))
             case let .monumentCompleted(civ, _, id):
                 new.append(Moment(kind: .monument(id, civ)))
             case let .monumentLost(civ, _, id) where civ == me:
@@ -716,4 +723,15 @@ final class GameSession {
         if log.count > 300 { log.removeLast(log.count - 300) }
         if battles.count > 100 { battles.removeLast(battles.count - 100) }
     }
+
+    #if DEBUG
+    /// Launch with -demoCrisis YES: the player's generals contest the throne.
+    func demoCrisis() {
+        guard let human else { return }
+        let claimants = state.generals.values.filter { $0.owner == human && $0.isAlive }.map(\.id).sorted()
+        guard !claimants.isEmpty else { return }
+        state.civs[human]!.crisis = SuccessionCrisis(claimants: claimants, bribeCost: 12, ruler: "Prince Merneptah")
+    }
+    #endif
+
 }

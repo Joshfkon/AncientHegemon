@@ -97,6 +97,13 @@ struct GameScreen: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .task(id: moment.id) { await play(moment) }
             }
+            if session.crisis != nil, session.replay == nil, session.muster == nil, session.moments.isEmpty {
+                ZStack {
+                    Color.black.opacity(0.45).ignoresSafeArea()
+                    CrisisView(session: session)
+                }
+                .transition(.opacity)
+            }
             if let human = session.human, let kind = state.civs[human]?.decision, session.isHumanTurn,
                session.moments.isEmpty, !session.showReport {
                 DecisionCard(session: session, kind: kind)
@@ -130,9 +137,6 @@ struct GameScreen: View {
                 }
                 .id(entry.id)
             }
-        }
-        .sheet(isPresented: .constant(session.crisis != nil && session.replay == nil && session.muster == nil)) {
-            CrisisView(session: session).interactiveDismissDisabled()
         }
         .sheet(isPresented: $showKnowledge) {
             if let human = session.human {
@@ -216,6 +220,11 @@ struct GameScreen: View {
                                    Moment(kind: .war(state.players.first { $0 != human } ?? human)),
                                    Moment(kind: .disaster(.earthquake, seat))]
                 session.demoFlash(seat)
+            }
+            if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
+            if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
+               let seat = engine.seat(of: human, in: state) {
+                session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
             }
             if UserDefaults.standard.bool(forKey: "demoSeaBattle") { session.muster = session.demoSeaBattle() }
             // Launch with -demoBattle YES to draw the capital's army up against a neighbouring tribe.
@@ -436,6 +445,7 @@ struct GameScreen: View {
             let ours = civ == session.human
             SoundBoard.shared.play(ours ? .victory : .horn, volume: 0.5); Feedback.outcome(ours)
         case .monumentLost: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
+        case .rebellion: SoundBoard.shared.play(.wardrums, volume: 0.7); Feedback.impact(1)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -448,9 +458,12 @@ struct GameScreen: View {
         if case let .captured(t) = moment.kind {
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
         }
+        if case let .rebellion(_, lands, _, _) = moment.kind, let t = lands.first {
+            mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
         // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
         // Discoveries stay up longer: there's something to read.
-        let linger = switch moment.kind { case .discovery, .monument: 4200; default: 1900 }
+        let linger = switch moment.kind { case .discovery, .monument, .rebellion: 4200; default: 1900 }
         do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }

@@ -27,6 +27,8 @@ struct Moment: Identifiable, Equatable {
         case monument(MonumentID, CivilizationID)
         /// A rival finished first: our site is abandoned.
         case monumentLost(MonumentID)
+        /// One of our generals rose in revolt and took land with him (and had he been paid off?).
+        case rebellion(general: String, lands: [TerritoryID], rebel: CivilizationID, bribed: Bool)
     }
     let id = UUID()
     let kind: Kind
@@ -137,6 +139,12 @@ struct MomentBanner: View {
             return Style(icon: "hammer.circle", title: "Our \(m?.name ?? id) is abandoned",
                          subtitle: "A rival finished first; half the cost is recovered",
                          color: Color(red: 0.35, green: 0.22, blue: 0.12), stamp: false)
+        case let .rebellion(general, lands, _, bribed):
+            let names = lands.prefix(3).map(place).joined(separator: ", ") + (lands.count > 3 ? " and more" : "")
+            return Style(icon: "flame.fill", title: "\(general) rebels!",
+                         subtitle: (bribed ? "Your gold bought only a season. " : "")
+                            + (lands.isEmpty ? "His army turns on you" : "He seizes \(names)"),
+                         color: Color(red: 0.55, green: 0.08, blue: 0.08), stamp: true)
         case let .unpaid(n):
             return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
                          subtitle: "Every \(engine.rules.economy.soldiersPerGold) soldiers need 1 gold a turn",
@@ -166,6 +174,7 @@ struct MomentBanner: View {
         case .disaster(.plague, _): (false, Color(red: 0.35, green: 0.5, blue: 0.2))
         case .disaster, .lost: (true, Color(red: 0.5, green: 0.05, blue: 0.05))
         case .war, .attacked: (true, nil)
+        case .rebellion: (true, Color(red: 0.5, green: 0.05, blue: 0.05))
         case .seaBattle(_, false, _): (true, Color(red: 0.1, green: 0.2, blue: 0.5))
         default: (false, nil)
         }
