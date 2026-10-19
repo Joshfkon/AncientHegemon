@@ -1182,5 +1182,19 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   The crown button shows a badge for advisors who sound the alarm.
 - **Balance** (40 games × 2): Mesopotamia 50/42%, Italia 27/25%, Egypt 17/17%, Greece 5/15%.
   Rules version 11.
-- **Open**: Egypt has fallen from about 30% to 17% since army pay and the overland haul. It
-  collapses in 57–75% of games.
+- **Egypt fixed** (Josh: "fix egypt"). Over 120 games Egypt sat at 16–18% with pay and the
+  haul on or off, so neither caused it; the earlier 42% on seed 1 was noise. Its land was being
+  lost to barbarian migrations: 77 of 175 lost territories over 30 games went to raiders out of
+  Sahara and Arabia. Those are barbarian homelands, and the AI kept settling them and the land
+  bordering them, and every such front draws more migrations. Historically Egypt was the realm
+  that weathered the collapse.
+  - The AI now values unclaimed homelands at −2.5, and −1.2 for each new homeland border a
+    claim would open. Rival land is valued as before.
+  - Land the AI won't settle no longer counts as room to expand, so it still turns on its
+    neighbours once the good land is gone.
+  - 120 games, seeds 501–620:
+    - Egypt 16% → 24%, collapses 55% → 44%;
+    - Italia 35% → 28%;
+    - Mesopotamia 40% → 44%;
+    - Greece 6% → 3%;
+    - games 39 → 46 rounds, dominations 41 → 15.

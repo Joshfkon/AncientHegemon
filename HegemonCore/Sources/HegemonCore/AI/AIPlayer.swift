@@ -109,8 +109,9 @@ public struct AIPlayer: Sendable {
         let mine = strength(of: civ, state)
         // While there's free land to claim, peace is cheap; once it's gone, neighbors are the
         // only way to grow.
+        // (Land it won't settle, like a barbarian homeland, doesn't count.)
         let room = state.territories(of: civ).contains { t in
-            map.landNeighbors(of: t).contains { state.owner(of: $0) == nil }
+            map.landNeighbors(of: t).contains { state.owner(of: $0) == nil && value(of: $0, for: civ, state) > 0 }
         }
         // Strength edge needed to start a war: 1.0 for a conqueror, about 1.3 for a turtle.
         let warEdge = 1.6 - 0.4 * personality.aggression
@@ -170,7 +171,7 @@ public struct AIPlayer: Sendable {
             // Only raise soldiers the treasury can keep paying: income, or savings for a while.
             let soldiers = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
             let pay = engine.armyPay(soldiers: soldiers + 1)
-            guard pay <= income * 3 / 4 + max(0, state.civs[civ]!.gold - cheapest) / 10 else { return }
+            guard pay <= income + max(0, state.civs[civ]!.gold - cheapest) / 6 else { return }
             let home = engine.homeNetwork(of: civ, in: state)
             // Don't raise more mouths than the home granary can carry for a few turns.
             let production = engine.yield(of: .grain, in: home, state)
@@ -343,6 +344,16 @@ public struct AIPlayer: Sendable {
         for c in map.chokepoints where c.heldBy.contains(t) {
             if c.heldBy.allSatisfy({ $0 == t || state.owner(of: $0) == civ }) { v += 3 }
         }
+        // Unclaimed barbarian homelands breed migrations: settling one, or a new border with
+        // one, invites hordes for the rest of the game. (A rival's land is worth taking anyway.)
+        guard state.owner(of: t) == nil else { return v }
+        if territory.has(.barbarianHomeland) { v -= 2.5 }
+        let ours = Set(state.territories(of: civ))
+        let newFronts = map.landNeighbors(of: t).filter { n in
+            map.territory(n)!.has(.barbarianHomeland) && !ours.contains(n)
+                && !map.landNeighbors(of: n).contains(where: ours.contains)
+        }.count
+        v -= Double(newFronts) * 1.2
         return v
     }
 
