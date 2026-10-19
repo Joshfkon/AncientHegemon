@@ -15,6 +15,7 @@ extension Engine {
             + cs.gold / max(1, p.goldDivisor)
             + cs.legitimacy / max(1, p.legitimacyDivisor)
             + (capital.map { state.owner(of: $0) == civ } == true ? p.capitalHeld : 0)
+            + magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence
     }
 
     /// Survivors by prestige, then the fallen, the last to fall first.

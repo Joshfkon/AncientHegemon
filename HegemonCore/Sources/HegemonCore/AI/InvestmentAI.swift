@@ -29,7 +29,15 @@ extension AIPlayer {
         for _ in 0..<maxProjectsPerTurn {
             guard let (kind, territory) = nextProject(civ, state),
                   state.civs[civ]!.gold - engine.projectCost(kind, for: civ, state).gold >= reserve,
-                  attempt(.build(territory: territory, project: kind), &state, &turn) else { return }
+                  attempt(.build(territory: territory, project: kind), &state, &turn) else { break }
+        }
+        // A rich court adorns its hall: only gold well beyond any need, one piece a turn.
+        let cs = state.civs[civ]!
+        if let d = rules.throneRoom.decorations.first(where: { d in
+            !cs.decorations.contains(d.id) && cs.gold - d.gold >= 3 * reserve
+                && d.stock.allSatisfy { (cs.stock[$0.key] ?? 0) >= $0.value }
+        }) {
+            _ = attempt(.decorate(d.id), &state, &turn)
         }
     }
 

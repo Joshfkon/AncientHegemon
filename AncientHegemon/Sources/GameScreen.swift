@@ -25,6 +25,7 @@ struct GameScreen: View {
     @State private var showKnowledge = false
     @State private var showCodex = false
     @State private var showWalkthrough = false
+    @State private var showThrone = false
     @State private var layer = MapLayer.armies
     @State private var quickLook: TerritoryID?
     @State private var explain: StatTopic?
@@ -144,6 +145,21 @@ struct GameScreen: View {
                 EndScreen(session: session, victory: victory) {
                     endDismissed = true
                     session.quit()
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showThrone) {
+            ThroneRoomView(session: session) { target in
+                showThrone = false
+                switch target {
+                case let .territory(t)?:
+                    selected = .territory(t)
+                    tab = .orders
+                    panelOpen = true
+                    mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+                case .diplomacy?: open(.diplomacy)
+                case .realm?: open(.empire)
+                case nil: break
                 }
             }
         }
@@ -513,6 +529,7 @@ struct GameScreen: View {
     private var toolbar: some View {
         HStack(spacing: 4) {
             if session.human != nil {
+                toolButton("Throne room", "crown.fill", badge: councilAlarms) { showThrone = true }
                 toolButton("Empire", "building.columns.fill") { open(.empire) }
                 toolButton("Diplomacy", "person.2.fill", badge: offerCount) { open(.diplomacy) }
                 toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
@@ -529,6 +546,12 @@ struct GameScreen: View {
         }
         .padding(4)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Advisors with something urgent to say.
+    private var councilAlarms: Int {
+        guard session.isHumanTurn else { return 0 }
+        return Council.advice(session, quick: true).filter { $0.mood == .alarm }.count
     }
 
     private func toolButton(_ title: String, _ symbol: String, badge: Int = 0, action: @escaping () -> Void) -> some View {

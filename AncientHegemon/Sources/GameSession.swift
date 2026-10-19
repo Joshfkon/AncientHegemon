@@ -349,6 +349,8 @@ final class GameSession {
         case .invalidTaxRate: return "Taxes go from 0 to 100% in steps of 10."
         case .projectUnavailable(let t, let p): return "Can't build \(projectName(p).lowercased()) in \(place(t))."
         case .insufficientStock(let r, let needed, let available): return "Not enough \(r.rawValue): \(needed) needed, \(available) in store."
+        case .alreadyDecorated: return "That already adorns the hall."
+        case .unknownDecoration: return "No such decoration."
         case .noTribe(let t): return "There is no tribe in \(place(t)) you can treat with: your land must border theirs."
         case .alreadyParleyed(let t): return "Your envoys have already spoken with \(place(t)) this turn."
         default: return "That can't be done (\(e))."
@@ -504,6 +506,10 @@ final class GameSession {
                 add(civ, "The throne of \(name(civ)) is contested by \(claimants.count) general\(claimants.count == 1 ? "" : "s")")
             case let .peaceOffered(from, to):
                 if to == human || from == human { add(from, "\(name(from)) offers peace to \(name(to))") }
+            case let .decorated(civ, d) where civ == human:
+                add(civ, "The throne room is adorned with \(engine.rules.throneRoom.decoration(d)?.name.lowercased() ?? d)")
+            case let .trophyWon(civ, kind) where civ == human:
+                add(civ, "A trophy for the throne room: \(ThroneRoomView.trophyName(kind, engine, after).lowercased())")
             case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
                 add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
             case let .disbanded(civ, t, units, rejoined) where civ == human:

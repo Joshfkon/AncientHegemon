@@ -86,6 +86,9 @@ public struct CivState: Codable, Sendable, Equatable {
     /// A contested succession awaiting the human ruler's decision. Nothing else can be ordered
     /// until it is resolved.
     public var crisis: SuccessionCrisis?
+    /// The throne room: decorations bought and trophies won.
+    public var decorations: Set<DecorationID> = []
+    public var trophies: [Trophy] = []
 }
 
 /// Rival claimants to a contested throne, and what buying them off would cost.

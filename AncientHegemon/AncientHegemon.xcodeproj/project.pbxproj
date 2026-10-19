@@ -12,6 +12,7 @@
 		1D02DB9FAF4598900FB0AC6F /* wardrums.wav in Resources */ = {isa = PBXBuildFile; fileRef = 84160A606F9979A055583705 /* wardrums.wav */; };
 		25CE013F01E7910FDB8B203E /* BattlefieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */; };
 		27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD395B564F5864E92AF2E613 /* SoundBoard.swift */; };
+		27FB2A89E777BFECC518BFC5 /* Council.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ECFFACBAD68C2C31E4A376E /* Council.swift */; };
 		2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FFEA270691335D57E5FC99 /* GameScreen.swift */; };
 		357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */; };
 		3F4DDE666430DE97564563A8 /* defeat.wav in Resources */ = {isa = PBXBuildFile; fileRef = 8174C96AEEC6F7CD3E672281 /* defeat.wav */; };
@@ -22,6 +23,7 @@
 		50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */; };
 		54C9133A6A5FA07E5DBC30D9 /* arrows.wav in Resources */ = {isa = PBXBuildFile; fileRef = 81666E7D20EECA8701512537 /* arrows.wav */; };
 		58AA774DC005708C95E2CDA5 /* Moments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90FA72590070862E642AFFAE /* Moments.swift */; };
+		63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */; };
 		6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B35133F6C1422877D8A459 /* UnitIcons.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
@@ -48,10 +50,12 @@
 
 /* Begin PBXFileReference section */
 		095BFA7DCC2670D90123446F /* MapMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarks.swift; sourceTree = "<group>"; };
+		0ECFFACBAD68C2C31E4A376E /* Council.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Council.swift; sourceTree = "<group>"; };
 		13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlePlan.swift; sourceTree = "<group>"; };
 		185BAB29A57542F88154144A /* Guidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Guidance.swift; sourceTree = "<group>"; };
 		2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyView.swift; sourceTree = "<group>"; };
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
+		34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThroneRoom.swift; sourceTree = "<group>"; };
 		3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleViews.swift; sourceTree = "<group>"; };
 		56A2A90E394E1F771A7B0376 /* clash.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clash.wav; sourceTree = "<group>"; };
 		5C556F203B94E6D2190DFCCC /* gallop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = gallop.wav; sourceTree = "<group>"; };
@@ -150,6 +154,7 @@
 				AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */,
 				13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */,
 				3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */,
+				0ECFFACBAD68C2C31E4A376E /* Council.swift */,
 				2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */,
 				CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */,
 				698F3135FF252AFF8CF0C79B /* EndScreen.swift */,
@@ -165,6 +170,7 @@
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
 				98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */,
+				34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */,
 				FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */,
 				D1B35133F6C1422877D8A459 /* UnitIcons.swift */,
 				87DF88279096FCF589EA9D0E /* Walkthrough.swift */,
@@ -275,6 +281,7 @@
 				811367309C8774DE014E4391 /* BattlePlan.swift in Sources */,
 				E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */,
 				25CE013F01E7910FDB8B203E /* BattlefieldView.swift in Sources */,
+				27FB2A89E777BFECC518BFC5 /* Council.swift in Sources */,
 				E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */,
 				BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */,
 				E0E3C7D4ADB7EC0596F234C6 /* EndScreen.swift in Sources */,
@@ -290,6 +297,7 @@
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,
 				50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */,
+				63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */,
 				D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */,
 				6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */,
 				94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */,

@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -636,6 +636,21 @@
       "barbariansPerExposure": 20,
       "revoltPerDistantTerritory": 10
     }
+  },
+  "throneRoom": {
+    "trophyMagnificence": 2,
+    "prestigePerMagnificence": 2,
+    "magnificencePerSuccessionPoint": 2,
+    "successionEaseCap": 10,
+    "decorations": [
+      { "id": "braziers", "name": "Bronze braziers", "gold": 5, "stock": {}, "magnificence": 1 },
+      { "id": "hangings", "name": "Purple hangings", "gold": 10, "stock": {}, "magnificence": 2 },
+      { "id": "columns", "name": "Painted columns", "gold": 6, "stock": { "stone": 3 }, "magnificence": 2 },
+      { "id": "ceiling", "name": "Cedar ceiling", "gold": 8, "stock": { "timber": 3 }, "magnificence": 2 },
+      { "id": "mosaic", "name": "Mosaic floor", "gold": 8, "stock": { "stone": 3 }, "magnificence": 2 },
+      { "id": "statue", "name": "Statue of the ruler", "gold": 10, "stock": { "stone": 4 }, "magnificence": 3 },
+      { "id": "throne", "name": "Gilded throne", "gold": 14, "stock": {}, "magnificence": 3 }
+    ]
   },
   "tribes": {
     "giftGoldBase": 3,

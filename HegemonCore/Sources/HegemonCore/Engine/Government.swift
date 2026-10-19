@@ -106,7 +106,7 @@ extension Engine {
                 $0.renown >= 1 && $0.loyalty < g.claimantLoyalty && canRebel($0, civ, state)
             }
             let heir = state.civs[civ]!.heir
-            if let heir, heir.age >= g.adultAge, state.civs[civ]!.legitimacy >= g.minSmoothLegitimacy,
+            if let heir, heir.age >= g.adultAge, state.civs[civ]!.legitimacy + successionEase(of: civ, in: state) >= g.minSmoothLegitimacy,
                claimants.isEmpty {
                 state.civs[civ]!.ruler = Ruler(name: heir.name, age: heir.age, trait: trait)
                 state.civs[civ]!.heir = nil

@@ -4,6 +4,8 @@ public enum Command: Codable, Sendable, Equatable {
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
     /// Talk to the tribe on unclaimed land next to yours.
     case parley(territory: TerritoryID, Parley)
+    /// Adorns the throne room.
+    case decorate(DecorationID)
     /// Sends soldiers home: on the empire's own land they go back to the fields as people.
     case disband(territory: TerritoryID, units: UnitCounts)
     /// Move units across a land border. Each unit moves once per turn. Entering an unowned or
@@ -61,6 +63,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
     case tribeJoined(civ: CivilizationID, territory: TerritoryID, parley: Parley, warriors: Int)
+    case decorated(civ: CivilizationID, decoration: DecorationID)
+    case trophyWon(civ: CivilizationID, trophy: TrophyKind)
     case tribeRefused(civ: CivilizationID, territory: TerritoryID, parley: Parley)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
@@ -179,6 +183,8 @@ public enum GameError: Error, Equatable, Sendable {
     case invalidTaxRate
     /// The formation or stratagem isn't unlocked for this army.
     case planLocked
+    case unknownDecoration(DecorationID)
+    case alreadyDecorated(DecorationID)
     case noTribe(TerritoryID)
     /// Each tribe hears one embassy a turn.
     case alreadyParleyed(TerritoryID)

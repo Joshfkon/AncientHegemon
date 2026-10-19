@@ -1150,3 +1150,37 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   Italia 30/32% → 32/22%, Egypt 42/15% → 22/20% (it collapses more; its westward desert push
   is a long haul), Greece 0/12% → 2/12%. Armies are smaller (Italia's median 18–20 units at
   round 30). Rules version 10.
+
+### Throne room and council (Josh: "a throne room you can decorate + a council of advisors")
+
+- **Throne room** (crown button on the toolbar): the ruler's hall drawn in the empire's style
+  (Egyptian sandstone, Greek painted megaron, Italic timber, Mesopotamian glazed brick).
+- **Decorations**: seven pieces, bought with gold and stockpiled stone or timber:
+  - braziers 5 gold;
+  - purple hangings 10 gold;
+  - painted columns 6 gold + 3 stone;
+  - cedar ceiling 8 gold + 3 timber;
+  - mosaic floor 8 gold + 3 stone;
+  - statue of the ruler 10 gold + 4 stone;
+  - gilded throne 14 gold.
+  Each adds 1–3 magnificence, and each appears in the hall.
+- **Trophies**, won automatically and shown on a shelf, 2 magnificence each:
+  - a rival's standard when you take its capital (once per rival);
+  - a raider's shield each time raiders are beaten off your land;
+  - a tribe's totem when it swears to you.
+- **Magnificence** adds 2 prestige a point (prestige decides a round-50 legacy victory). A
+  smooth succession needs less legitimacy, by magnificence ÷ 2 (at most 10 less). The AI
+  decorates only with gold beyond three times its reserve, which gives hoarding realms (Greece)
+  something to spend on.
+- **Council**: four advisors with names in each empire's style. Each says the one most
+  pressing thing in their field, with a button to go to the place or tab:
+  - the general: the worst threat to our land, else the best attack on offer;
+  - the steward: grain deficit, pay outrunning income, cut-off land, or idle gold;
+  - the envoy: peace offers, a tribe likely to take gifts, or a missing resource a rival holds;
+  - the high priest: bad omens, low legitimacy, an old king without a safe heir, or the
+    coming collapse.
+  The crown button shows a badge for advisors who sound the alarm.
+- **Balance** (40 games × 2): Mesopotamia 50/42%, Italia 27/25%, Egypt 17/17%, Greece 5/15%.
+  Rules version 11.
+- **Open**: Egypt has fallen from about 30% to 17% since army pay and the overland haul. It
+  collapses in 57–75% of games.

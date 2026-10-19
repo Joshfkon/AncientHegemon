@@ -21,6 +21,11 @@ public struct Engine: Sendable {
     /// Applies a command from the active player. On error the state is left unchanged.
     @discardableResult
     public func apply(_ command: Command, to state: inout GameState) throws -> [GameEvent] {
+        let events = try perform(command, &state)
+        return events + awardTrophies(events, &state)
+    }
+
+    private func perform(_ command: Command, _ state: inout GameState) throws -> [GameEvent] {
         guard state.winner == nil else { throw GameError.gameOver }
         if state.civs[state.activePlayer]!.crisis != nil {
             guard case .resolveCrisis = command else { throw GameError.crisisPending }
@@ -34,6 +39,8 @@ public struct Engine: Sendable {
             return try setFormation(territory, formation, &state)
         case let .parley(territory, kind):
             return try parley(territory, kind, &state)
+        case let .decorate(id):
+            return try decorate(id, &state)
         case let .disband(territory, units):
             return try disband(territory, units, &state)
         case let .setBattlePlan(territory, plan):
