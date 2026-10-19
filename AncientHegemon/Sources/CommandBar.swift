@@ -168,6 +168,7 @@ struct CommandBar: View {
         let home = engine.homeNetwork(of: human, in: state).contains(id)
         let army = state.armies[id].flatMap { $0.owner == human ? $0 : nil }
         let cs = state.civs[human]!
+        if let army { supplyCard(army, id, human) }
         if home {
             section("Recruit") {
                 ForEach(UnitType.allCases, id: \.self) { type in recruitTile(type, id, human) }
@@ -297,6 +298,57 @@ struct CommandBar: View {
                 .frame(width: 420, height: 320)
                 .presentationCompactAdaptation(.popover)
             }
+        }
+    }
+
+    /// What keeping this army in the field costs, and how its supply gets there.
+    private func supplyCard(_ army: Army, _ id: TerritoryID, _ human: CivilizationID) -> some View {
+        let men = army.units.total
+        let haul = engine.haul(of: human, to: id, in: state)
+        let steps = engine.supplySteps(of: human, to: id, in: state)
+        let base = engine.rules.upkeep(of: army.units)
+        let extra = men * (haul?.extraGrain ?? 0)
+        let per = engine.rules.economy.soldiersPerGold
+        let pay = Double(men) / Double(per)
+        let (status, color): (String, Color) = switch (steps, extra) {
+        case (nil, _): ("Cut off", .red)
+        case (_, 0): ("Well supplied", .green)
+        case (_, ..<4): ("Long haul", .orange)
+        default: ("Strained", .red)
+        }
+        return section("Supply") {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Circle().fill(color).frame(width: 9, height: 9)
+                    Text(status).font(.system(.subheadline, design: .serif).weight(.bold))
+                    Spacer()
+                    Text("\(men) soldiers").font(.caption2)
+                }
+                Text("🌾 \(base + extra) grain a turn" + (extra > 0 ? " (\(base) + \(extra) carted)" : ""))
+                    .font(.caption.bold())
+                Text("🪙 about \(pay.formatted(.number.precision(.fractionLength(0...1)))) gold a turn in pay")
+                    .font(.caption.bold())
+                Group {
+                    if steps == nil {
+                        Text("No road home to the capital: no supply, and it loses a soldier a turn. Retake the land between.")
+                    } else if let haul, haul.extraGrain > 0 {
+                        Text("Grain is carted \(haul.steps) steps overland. A road, or your ships in the sea between, would carry it free.")
+                    } else if steps == 0 {
+                        Text("At the capital: fed straight from the granary.")
+                    } else {
+                        Text("\(steps!) steps from the capital, by road or sea: no carting costs.")
+                    }
+                }
+                .font(.caption2).foregroundStyle(Color(red: 0.3, green: 0.24, blue: 0.16))
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(8)
+            .frame(width: 210, height: 96, alignment: .topLeading)
+            .foregroundStyle(Color(red: 0.2, green: 0.14, blue: 0.08))
+            .background(RoundedRectangle(cornerRadius: 10).fill(LinearGradient(
+                colors: [Color(red: 0.96, green: 0.91, blue: 0.79), Color(red: 0.86, green: 0.78, blue: 0.62)],
+                startPoint: .top, endPoint: .bottom)))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(color, lineWidth: 2))
         }
     }
 

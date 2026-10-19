@@ -9,6 +9,7 @@ struct EndScreen: View {
     let close: () -> Void
     @State private var step = 0
     @State private var shown = false
+    @State private var graphs = false
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -25,7 +26,7 @@ struct EndScreen: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Bronze.gradient, lineWidth: 2))
                 VStack(alignment: .leading, spacing: 12) {
                     Text(won ? "VICTORY" : "DEFEAT")
-                        .font(.system(size: 44, weight: .black, design: .serif))
+                        .font(.system(size: 38, weight: .black, design: .serif))
                         .tracking(6)
                         .foregroundStyle(won ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color(red: 0.8, green: 0.3, blue: 0.25)))
                     Text("\(victory.grade.rawValue.capitalized) \(kindName) Victory")
@@ -33,6 +34,8 @@ struct EndScreen: View {
                     Text("\(Palette.name(winner, state)) · round \(victory.round)")
                         .font(.callout).foregroundStyle(.white.opacity(0.7))
                     Divider().overlay(.white.opacity(0.3))
+                    ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
                     ForEach(Array(victory.standings.enumerated()), id: \.offset) { place, civ in
                         HStack(spacing: 8) {
                             Text("\(place + 1)").font(.headline.monospacedDigit()).foregroundStyle(.white.opacity(0.6)).frame(width: 20)
@@ -48,8 +51,15 @@ struct EndScreen: View {
                         .offset(x: shown ? 0 : 30)
                         .animation(.spring(duration: 0.5).delay(0.6 + Double(place) * 0.15), value: shown)
                     }
-                    Spacer()
+                    }
+                    }
                     HStack {
+                        Button { graphs = true } label: {
+                            Label("Graphs", systemImage: "chart.xyaxis.line").font(.headline).foregroundStyle(.white)
+                                .padding(.horizontal, 18).padding(.vertical, 10)
+                                .woodPanel(Capsule())
+                        }
+                        .buttonStyle(.plain)
                         Button(action: close) {
                             Text("Play again").font(.headline).foregroundStyle(.black)
                                 .padding(.horizontal, 24).padding(.vertical, 10)
@@ -61,6 +71,18 @@ struct EndScreen: View {
                 .frame(width: 320)
             }
             .padding(20)
+        }
+        .sheet(isPresented: $graphs) {
+            NavigationStack {
+                ScrollView {
+                    EmpireGraphs(history: session.statsHistory, lastRound: state.turn,
+                                 order: victory.standings, human: session.human, state: state, height: 260)
+                        .padding()
+                }
+                .navigationTitle("How the age unfolded")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { Button("Done") { graphs = false } }
+            }
         }
         .onAppear {
             shown = true

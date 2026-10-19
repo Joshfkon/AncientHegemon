@@ -13,6 +13,18 @@ struct LogLine: Identifiable, Codable {
     var mine: Bool?
 }
 
+/// One empire's numbers at the start of a round.
+struct RoundStats: Codable, Equatable {
+    var prestige: Int
+    var land: Int
+    var people: Int
+    var gold: Int
+    var army: Int
+    var ships: Int
+    var granary: Int
+    var knowledge: Int
+}
+
 struct BattleEntry: Identifiable, Codable {
     let id: Int
     let round: Int
@@ -70,8 +82,9 @@ final class GameSession {
     private(set) var markTimes: [Date] = []
     /// Who held each territory at the start of each round, for the end-of-game replay.
     private(set) var history: [[TerritoryID: CivilizationID]] = []
-    /// Each empire's prestige at the start of each round, for the standings chart.
-    private(set) var prestigeHistory: [[CivilizationID: Int]] = []
+    /// Each empire's prestige, land, people, gold, army and more at the start of each round,
+    /// for the graphs.
+    private(set) var statsHistory: [[CivilizationID: RoundStats]] = []
     /// The chronicle lines since the player last ended a turn, shown as a summary card.
     private(set) var report: [LogLine] = []
     var showReport = false
@@ -115,7 +128,7 @@ final class GameSession {
         log = []
         battles = []
         history = []
-        prestigeHistory = []
+        statsHistory = []
         recordedTurn = state.turn
         snapshotBorders()
         message = nil
@@ -139,7 +152,7 @@ final class GameSession {
         log = game.log
         battles = game.battles
         history = game.history ?? []
-        prestigeHistory = game.prestigeHistory ?? []
+        statsHistory = game.statsHistory ?? []
         recordedTurn = state.turn
         nextID = (game.log.map(\.id) + game.battles.map(\.id)).max() ?? 0
         message = nil
@@ -158,7 +171,7 @@ final class GameSession {
             return
         }
         let game = SavedGame(human: human, seed: seed, state: state, log: Array(log.prefix(150)),
-                             battles: Array(battles.prefix(30)), savedAt: .now, history: history, prestigeHistory: prestigeHistory)
+                             battles: Array(battles.prefix(30)), savedAt: .now, history: history, statsHistory: statsHistory)
         SaveStore.save(game)
         saved = game
     }
@@ -376,9 +389,19 @@ final class GameSession {
         var owners: [TerritoryID: CivilizationID] = [:]
         for (t, land) in state.land { if let o = land.owner { owners[t] = o } }
         history.append(owners)
-        var prestige: [CivilizationID: Int] = [:]
-        for civ in state.players where !(state.civs[civ]?.eliminated ?? true) { prestige[civ] = engine.prestige(of: civ, in: state) }
-        prestigeHistory.append(prestige)
+        var stats: [CivilizationID: RoundStats] = [:]
+        for civ in state.players where !(state.civs[civ]?.eliminated ?? true) {
+            let cs = state.civs[civ]!
+            stats[civ] = RoundStats(prestige: engine.prestige(of: civ, in: state),
+                                    land: state.territories(of: civ).count,
+                                    people: state.totalPopulation(of: civ),
+                                    gold: cs.gold,
+                                    army: state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total },
+                                    ships: state.fleets(of: civ).reduce(0) { $0 + $1.ships },
+                                    granary: cs.granary,
+                                    knowledge: cs.knowledge.values.reduce(0, +))
+        }
+        statsHistory.append(stats)
     }
 
     // MARK: Moments

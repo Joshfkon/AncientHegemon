@@ -1324,3 +1324,17 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
   - each route's partner, what comes in and what goes out, gold after tolls, wine sales, and
     what would cut it;
   - every empire you don't trade with, and the resources they have that you lack.
+
+### Graphs and army supply (Josh: "graphs… your rise relative to other empires, and your gold and other resources, armies. Just like Age of Empires at the end of a game"; "see how well an army is supplied when we tap it")
+
+- Each round the session records every empire's prestige, land, people, gold, army (soldiers
+  on land and at sea), ships, granary and knowledge (`RoundStats`, saved with the game).
+- `EmpireGraphs`: a line per empire (yours thicker), with a picker for Prestige, Land, People,
+  Gold, Army, Ships or Knowledge. It's in the standings sheet during play and behind a Graphs
+  button on the end screen ("How the age unfolded"). The end screen's standings scroll when
+  rebel factions make the list long.
+- Tapping one of your armies puts a Supply card first in the command bar:
+  - its state: well supplied, long haul, strained, or cut off;
+  - grain a turn, with the carted extra shown separately, and its share of army pay;
+  - one line on why, and what would fix it (a road, ships in the sea between, retaking the
+    land).

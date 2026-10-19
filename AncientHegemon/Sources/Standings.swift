@@ -90,33 +90,7 @@ struct StandingsView: View {
     }
 
     private func chart(_ order: [CivilizationID]) -> some View {
-        // The last entry is the current round (saves from before this was kept start late).
-        let first = state.turn - session.prestigeHistory.count + 1
-        let points: [Point] = session.prestigeHistory.enumerated().flatMap { i, row in
-            row.map { Point(round: first + i, civ: $0.key, prestige: $0.value) }
-        }
-        return Chart(points) { p in
-            LineMark(x: .value("Round", p.round), y: .value("Prestige", p.prestige))
-                .foregroundStyle(by: .value("Empire", Palette.name(p.civ, state)))
-                .interpolationMethod(.monotone)
-                .lineStyle(StrokeStyle(lineWidth: p.civ == session.human ? 3 : 1.8))
-        }
-        .chartForegroundStyleScale(domain: order.map { Palette.name($0, state) }, range: order.map { Palette.color($0, state) })
-        .chartXAxisLabel("Round")
-        .chartYAxisLabel("Prestige")
-        .frame(height: 180)
-        .overlay {
-            if session.prestigeHistory.count < 2 {
-                Text("The race is drawn here as the rounds go by.").font(.caption).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private struct Point: Identifiable {
-        let round: Int
-        let civ: CivilizationID
-        let prestige: Int
-        var id: String { "\(civ)-\(round)" }
+        EmpireGraphs(history: session.statsHistory, lastRound: state.turn, order: order, human: session.human, state: state)
     }
 
     private func card(_ place: Int, _ civ: CivilizationID) -> some View {
@@ -162,8 +136,76 @@ struct StandingsView: View {
 
     /// Prestige gained over the last five rounds.
     private func trend(_ civ: CivilizationID) -> Int? {
-        let h = session.prestigeHistory
-        guard h.count >= 2, let then = h[max(0, h.count - 6)][civ] else { return nil }
+        let h = session.statsHistory
+        guard h.count >= 2, let then = h[max(0, h.count - 6)][civ]?.prestige else { return nil }
         return engine.prestige(of: civ, in: state) - then
+    }
+}
+
+/// Age of Empires–style graphs: each empire's rise and fall over the game, one measure at a time.
+struct EmpireGraphs: View {
+    let history: [[CivilizationID: RoundStats]]
+    /// The round of the last entry (older saves begin part-way through).
+    let lastRound: Int
+    let order: [CivilizationID]
+    let human: CivilizationID?
+    let state: GameState
+    var height: CGFloat = 200
+    @State private var metric = Metric.prestige
+
+    enum Metric: String, CaseIterable, Identifiable {
+        case prestige = "Prestige", land = "Land", people = "People", gold = "Gold", army = "Army",
+             ships = "Ships", knowledge = "Knowledge"
+        var id: String { rawValue }
+        func value(_ s: RoundStats) -> Int {
+            switch self {
+            case .prestige: s.prestige
+            case .land: s.land
+            case .people: s.people
+            case .gold: s.gold
+            case .army: s.army
+            case .ships: s.ships
+            case .knowledge: s.knowledge
+            }
+        }
+    }
+
+    private struct Point: Identifiable {
+        let round: Int
+        let civ: CivilizationID
+        let value: Int
+        var id: String { "\(civ)-\(round)" }
+    }
+
+    var body: some View {
+        let first = lastRound - history.count + 1
+        let points: [Point] = history.enumerated().flatMap { i, row in
+            row.map { Point(round: first + i, civ: $0.key, value: metric.value($0.value)) }
+        }
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("Graph", selection: $metric) {
+                ForEach(Metric.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            Chart(points) { p in
+                LineMark(x: .value("Round", p.round), y: .value(metric.rawValue, p.value))
+                    .foregroundStyle(by: .value("Empire", Palette.name(p.civ, state)))
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: p.civ == human ? 3.5 : 1.8))
+                if p.civ == human, p.round == lastRound {
+                    PointMark(x: .value("Round", p.round), y: .value(metric.rawValue, p.value))
+                        .foregroundStyle(Palette.color(p.civ, state))
+                }
+            }
+            .chartForegroundStyleScale(domain: order.map { Palette.name($0, state) }, range: order.map { Palette.color($0, state) })
+            .chartXAxisLabel("Round")
+            .frame(height: height)
+            .overlay {
+                if history.count < 2 {
+                    Text("The race is drawn here as the rounds go by.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .animation(.easeInOut(duration: 0.35), value: metric)
+        }
     }
 }
