@@ -1308,3 +1308,19 @@ upkeep was costing. It's undoable like any other order. The AI doesn't disband y
 - Borders and prestige are now recorded on every change of round. Before, a round that turned
   over on the player's own End turn was missed, which also left gaps in the end-of-game
   border replay.
+
+### City view and trade (Josh: "tap into your city like the throne room… see your improvements and the gold/resources it brings in"; "make it clearer what our trade routes are providing")
+
+- **Enter the town** from the command bar of any territory you hold. On the left the town is
+  drawn from its real state:
+  - one house per person and one field per grain;
+  - the capital's palace, a river for river valleys, terrain and trees;
+  - walls, road, mine, farm irrigation, harbor and the ships offshore;
+  - building work in progress, and the army camped outside under its owner's flag.
+  On the right: what it gives each turn (grain, people of room, taxes, mines, wine, harbor
+  trade, total gold; `Engine.territoryReport`), its yields, its buildings, and build buttons.
+- **Trade** (new ⇄ toolbar button; `Engine.tradeReports`):
+  - a total of what all trade brings each turn (gold, every resource, grain on call);
+  - each route's partner, what comes in and what goes out, gold after tolls, wine sales, and
+    what would cut it;
+  - every empire you don't trade with, and the resources they have that you lack.

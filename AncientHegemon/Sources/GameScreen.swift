@@ -37,6 +37,10 @@ struct GameScreen: View {
     @State private var showWalkthrough = false
     @State private var showThrone = false
     @State private var showStandings = false
+    @State private var showTrade = false
+    @State private var cityShown: CityPick?
+
+    struct CityPick: Identifiable { let id: TerritoryID }
     @State private var layer = MapLayer.armies
     @State private var quickLook: TerritoryID?
     @State private var explain: StatTopic?
@@ -173,6 +177,14 @@ struct GameScreen: View {
                 }
             }
         }
+        .fullScreenCover(item: $cityShown) { pick in
+            CityView(session: session, territory: pick.id) { cityShown = nil }
+        }
+        .sheet(isPresented: $showTrade) {
+            NavigationStack {
+                TradeView(session: session) { _ in }.toolbar { Button("Done") { showTrade = false } }
+            }
+        }
         .sheet(isPresented: $showStandings) {
             NavigationStack {
                 StandingsView(session: session).toolbar { Button("Done") { showStandings = false } }
@@ -296,7 +308,8 @@ struct GameScreen: View {
             Spacer(minLength: 0)
             if let selected, pending == nil, session.human != nil {
                 HStack(alignment: .bottom, spacing: 10) {
-                    CommandBar(session: session, pick: selected) { self.selected = nil }
+                    CommandBar(session: session, pick: selected, close: { self.selected = nil },
+                               enter: { cityShown = CityPick(id: $0) })
                         .id(selected)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     turnControls
@@ -571,6 +584,7 @@ struct GameScreen: View {
             if session.human != nil {
                 toolButton("Throne room", "crown.fill", badge: councilAlarms) { showThrone = true }
                 toolButton("Empire", "building.columns.fill") { open(.empire) }
+                toolButton("Trade", "arrow.left.arrow.right") { showTrade = true }
                 toolButton("Diplomacy", "person.2.fill", badge: offerCount) { open(.diplomacy) }
                 toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
             }

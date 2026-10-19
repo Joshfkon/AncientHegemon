@@ -8,6 +8,8 @@ struct CommandBar: View {
     let session: GameSession
     let pick: MapPick
     let close: () -> Void
+    /// Go into one of your own territories.
+    var enter: ((TerritoryID) -> Void)?
 
     @State private var showPlan = false
     @State private var showDisband = false
@@ -87,6 +89,16 @@ struct CommandBar: View {
             Text(hint(id)).font(.caption2).foregroundStyle(.white.opacity(0.65))
                 .fixedSize(horizontal: false, vertical: true)
                 .lineLimit(3)
+            if let enter, owner != nil, owner == session.human {
+                Button { enter(id) } label: {
+                    Label("Enter \(engine.seat(of: owner!, in: state) == id ? "the capital" : "the town")", systemImage: "building.2.fill")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Bronze.gradient, in: Capsule())
+                        .foregroundStyle(.black)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

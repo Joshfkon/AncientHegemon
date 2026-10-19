@@ -20,7 +20,7 @@ struct StandingsBar: View {
         let threat = order.first { engine.landShare(of: $0, in: state).percent * 100 >= engine.landShare(of: $0, in: state).toWin * 80 }
         Button(action: open) {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     ForEach(Array(order.enumerated()), id: \.element) { i, civ in
                         let mine = civ == session.human
                         VStack(alignment: .leading, spacing: 2) {
@@ -30,6 +30,7 @@ struct StandingsBar: View {
                                     .foregroundStyle(.white.opacity(mine ? 1 : 0.8))
                                     .lineLimit(1).fixedSize()
                                 Text("\(scores[i])").font(.caption2.monospacedDigit()).foregroundStyle(.white.opacity(0.7))
+                                    .lineLimit(1).fixedSize()
                             }
                             GeometryReader { g in
                                 ZStack(alignment: .leading) {
@@ -41,7 +42,7 @@ struct StandingsBar: View {
                             .frame(height: 5)
                             .overlay(Capsule().stroke(mine ? Color.white : .clear, lineWidth: 1))
                         }
-                        .frame(minWidth: 64)
+                        .frame(minWidth: 56)
                     }
                 }
                 if let civ = threat {

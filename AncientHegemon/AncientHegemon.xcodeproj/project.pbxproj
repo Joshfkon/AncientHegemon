@@ -31,12 +31,14 @@
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
 		94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DF88279096FCF589EA9D0E /* Walkthrough.swift */; };
+		AB98FE64DAE66DDF159BE715 /* TradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2CF376F9E0AE28E930B3BE /* TradeView.swift */; };
 		B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274DD8EB3BAAB27A38991F2C /* WorldView.swift */; };
 		B234E652CC62E857DB359A86 /* click.wav in Resources */ = {isa = PBXBuildFile; fileRef = BD6DDA213A9E31B4C7C20FF7 /* click.wav */; };
 		BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */; };
 		C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8264F7FC3FCC73EAA576137C /* SaveStore.swift */; };
 		CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5ACD1C217BD355BA7B28AFB5 /* HegemonCore */; };
 		D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */; };
+		D61E57E5F2593CC3904B21C0 /* CityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C815DC03A75A0FBDC73B4D9D /* CityView.swift */; };
 		D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90545C84FE5971D4416409AA /* OrderViews.swift */; };
 		D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */; };
 		E0E3C7D4ADB7EC0596F234C6 /* EndScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698F3135FF252AFF8CF0C79B /* EndScreen.swift */; };
@@ -76,6 +78,7 @@
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
 		99446154A61CAABED13A5D65 /* roar.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = roar.wav; sourceTree = "<group>"; };
 		9B6EFEC6B7A04539C9215408 /* Standings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Standings.swift; sourceTree = "<group>"; };
+		9E2CF376F9E0AE28E930B3BE /* TradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeView.swift; sourceTree = "<group>"; };
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlefieldView.swift; sourceTree = "<group>"; };
 		AD395B564F5864E92AF2E613 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
@@ -83,6 +86,7 @@
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C531F5931E1FB610194769C0 /* CommandBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBar.swift; sourceTree = "<group>"; };
 		C7087D3414E9471A080F99F9 /* horn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = horn.wav; sourceTree = "<group>"; };
+		C815DC03A75A0FBDC73B4D9D /* CityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView.swift; sourceTree = "<group>"; };
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
 		D0154D70203F3EB68C8F8532 /* HegemonCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HegemonCore; path = ../HegemonCore; sourceTree = SOURCE_ROOT; };
 		D1B35133F6C1422877D8A459 /* UnitIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitIcons.swift; sourceTree = "<group>"; };
@@ -158,6 +162,7 @@
 				AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */,
 				13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */,
 				3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */,
+				C815DC03A75A0FBDC73B4D9D /* CityView.swift */,
 				C531F5931E1FB610194769C0 /* CommandBar.swift */,
 				0ECFFACBAD68C2C31E4A376E /* Council.swift */,
 				2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */,
@@ -178,6 +183,7 @@
 				98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */,
 				34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */,
 				FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */,
+				9E2CF376F9E0AE28E930B3BE /* TradeView.swift */,
 				D1B35133F6C1422877D8A459 /* UnitIcons.swift */,
 				87DF88279096FCF589EA9D0E /* Walkthrough.swift */,
 				274DD8EB3BAAB27A38991F2C /* WorldView.swift */,
@@ -287,6 +293,7 @@
 				811367309C8774DE014E4391 /* BattlePlan.swift in Sources */,
 				E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */,
 				25CE013F01E7910FDB8B203E /* BattlefieldView.swift in Sources */,
+				D61E57E5F2593CC3904B21C0 /* CityView.swift in Sources */,
 				E42D185130EDA0A316B69986 /* CommandBar.swift in Sources */,
 				27FB2A89E777BFECC518BFC5 /* Council.swift in Sources */,
 				E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */,
@@ -307,6 +314,7 @@
 				50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */,
 				63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */,
 				D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */,
+				AB98FE64DAE66DDF159BE715 /* TradeView.swift in Sources */,
 				6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */,
 				94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */,
 				B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */,
