@@ -710,7 +710,7 @@ final class GameSession {
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
         case let .eliminated(civ): return civ == me
-        case let .siegeLaid(civ, t, _), let .siegePressed(civ, t, _, _), let .siegeLifted(civ, t):
+        case let .siegeLaid(civ, t, _), let .siegePressed(civ, t, _, _, _), let .siegeLifted(civ, t):
             return civ == me || before.owner(of: t) == me
         case let .capitalSacked(by, from, _, _): return by == me || from == me
         case let .splendourBegan(civ), let .splendourEnded(civ), let .projectQueued(civ, _, _): return civ == me
@@ -852,8 +852,9 @@ final class GameSession {
                 add(human, "\(projectName(kind)) in \(place(t)) destroyed", at: t)
             case let .siegeLaid(civ, t, camp):
                 add(civ, "\(name(civ)) lay\(civ == human ? "" : "s") siege to \(place(t)) from \(place(camp))", at: t)
-            case let .siegePressed(civ, t, rounds, starved) where civ == human || before.owner(of: t) == human:
-                add(civ, "Siege of \(place(t)), round \(rounds)" + (starved > 0 ? ": \(starved) of the garrison starve" : ": the granary holds"), at: t)
+            case let .siegePressed(civ, t, rounds, starved, sick) where civ == human || before.owner(of: t) == human:
+                add(civ, "Siege of \(place(t)), round \(rounds)" + (starved > 0 ? ": \(starved) of the garrison starve" : ": the stores hold")
+                    + (sick > 0 ? "; sickness takes \(sick) in the camp" : ""), at: t)
             case let .siegeLifted(civ, t):
                 add(civ, "The siege of \(place(t)) is lifted", at: t)
             case let .capitalSacked(by, from, t, gold):
@@ -908,6 +909,18 @@ final class GameSession {
         state.civs[human]!.stock = [.stone: 10, .timber: 10]
         state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
         state.land[seat]!.queue = [.road]
+    }
+
+    /// Launch with -demoBesieged YES: a rival camps beside the walled capital and lays siege.
+    func demoBesieged() {
+        guard let human, let seat = engine.seat(of: human, in: state),
+              let rival = state.players.first(where: { $0 != human }),
+              let camp = engine.map.landNeighbors(of: seat).sorted().first else { return }
+        state.land[seat]!.improvements.insert(.walls)
+        state.armies[seat] = Army(owner: human, units: UnitCounts(infantry: 8))
+        state.land[camp]!.owner = rival
+        state.armies[camp] = Army(owner: rival, units: UnitCounts(infantry: 6))
+        state.sieges[seat] = Siege(civ: rival, camp: camp, rounds: 2)
     }
 
     /// For -demoTown full: every building in a territory, and a building site.

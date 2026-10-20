@@ -25,6 +25,12 @@ public struct SiegeRules: Codable, Sendable, Equatable {
     public let starvePercent: Int
     /// Rounds a granary in the town holds off hunger.
     public let granaryRounds: Int
+    /// Rounds the town's own stores hold off hunger, granary or not.
+    public let storeRounds: Int
+    /// From this round of the siege on, sickness spreads in the besiegers' camp…
+    public let campSicknessFrom: Int
+    /// …taking this share of the camp's army each round (at least one).
+    public let campSicknessPercent: Int
 }
 
 extension Engine {
@@ -81,7 +87,8 @@ extension Engine {
             let rounds = siege.rounds + 1
             state.sieges[town]!.rounds = rounds
             var starved = 0
-            let stores = state.land[town]?.improvements.contains(.granary) == true ? rules.siege.granaryRounds : 0
+            let stores = rules.siege.storeRounds
+                + (state.land[town]?.improvements.contains(.granary) == true ? rules.siege.granaryRounds : 0)
             if rounds > stores, let garrison = state.armies[town], garrison.owner != civ {
                 starved = max(1, garrison.units.total * rules.siege.starvePercent / 100)
                 var units = garrison.units
@@ -94,7 +101,23 @@ extension Engine {
                 state.armies[town] = units.isEmpty ? nil : { var a = garrison; a.units = units; return a }()
                 state.land[town]!.population = max(rules.economy.minPopulation, state.population(of: town) - 1)
             }
-            events.append(.siegePressed(civ: civ, territory: town, rounds: rounds, starved: starved))
+            // A long siege costs the besiegers too: sickness in the crowded camp.
+            var sick = 0
+            if rounds >= rules.siege.campSicknessFrom, let camp = state.armies[siege.camp], camp.owner == civ {
+                sick = min(camp.units.total, max(1, camp.units.total * rules.siege.campSicknessPercent / 100))
+                var units = camp.units
+                for _ in 0..<sick {
+                    let biggest = UnitType.allCases.max { units[$0] < units[$1] }!
+                    units[biggest] -= 1
+                }
+                state.armies[siege.camp] = units.isEmpty ? nil : { var a = camp; a.units = units; return a }()
+                if units.isEmpty {
+                    state.sieges[town] = nil
+                    events.append(.siegeLifted(civ: civ, territory: town))
+                    continue
+                }
+            }
+            events.append(.siegePressed(civ: civ, territory: town, rounds: rounds, starved: starved, sick: sick))
         }
         return events
     }

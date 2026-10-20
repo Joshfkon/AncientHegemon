@@ -14,6 +14,8 @@ struct CommandBar: View {
     var armyView = false
     /// Switch between the army's menu and the territory's.
     var switchView: ((Bool) -> Void)?
+    /// Begin an attack from one territory on another (the order card takes it from there).
+    var attack: ((TerritoryID, TerritoryID) -> Void)?
 
     /// The player's own army in the picked territory, if any.
     private var ownArmy: (id: TerritoryID, army: Army)? {
@@ -146,10 +148,11 @@ struct CommandBar: View {
             if let siege = state.sieges[id] {
                 let breach = engine.breach(at: id, state)
                 Label("\(siege.civ == session.human ? "Your siege" : "Besieged by \(Palette.name(siege.civ, state))"): round \(siege.rounds)"
-                      + (breach > 0 ? " · walls −\(breach)%" : "") + " · no harvest, no taxes",
+                      + (breach > 0 ? " · walls −\(breach)%" : "") + " · no harvest, no taxes"
+                      + (siege.civ == session.human ? "" : " · sally out to break it"),
                       systemImage: "shield.lefthalf.filled.slash")
                     .font(.caption2.bold()).foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2).minimumScaleFactor(0.8)
                 if siege.civ == session.human, session.isHumanTurn {
                     Button("Lift siege") { session.order(.liftSiege(territory: id)) }
                         .font(.caption.bold()).buttonStyle(.bordered).controlSize(.small)
@@ -243,6 +246,16 @@ struct CommandBar: View {
         let home = engine.homeNetwork(of: human, in: state).contains(id)
         let army = state.armies[id].flatMap { $0.owner == human ? $0 : nil }
         let cs = state.civs[human]!
+        if let siege = state.sieges[id], let army, state.armies[siege.camp].map({ $0.owner != human }) == true {
+            let ready = army.units - (state.moved[id] ?? .zero)
+            section("Besieged") {
+                Tile(symbol: "flag.2.crossed.fill", title: "Sally out",
+                     detail: "Go out and meet \(Palette.name(siege.civ, state))'s camp in \(engine.map.territory(siege.camp)?.name ?? siege.camp)",
+                     cost: Text(ready.total > 0 ? "Attack the camp" : "Your troops have moved"), enabled: ready.total > 0) {
+                    attack?(id, siege.camp)
+                }
+            }
+        }
         if showingArmy, let army {
             supplyCard(army, id, human)
             armyCommands(army, id, human, home: home, cs: cs)

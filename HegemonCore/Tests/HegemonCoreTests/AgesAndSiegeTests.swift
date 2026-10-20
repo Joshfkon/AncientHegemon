@@ -97,6 +97,7 @@ private func play(_ s: inout GameState, as civ: CivilizationID) {
         s.civs["egypt"]!.gold = 200
         s.civs["egypt"]!.granary = 200
         s.civs["mesopotamia"]!.gold = 200
+        s.civs["mesopotamia"]!.granary = 200
         s.land["petraea"]!.owner = "mesopotamia"
         s.armies["petraea"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 6))
         play(&s, as: "mesopotamia")
@@ -116,15 +117,37 @@ private func play(_ s: inout GameState, as civ: CivilizationID) {
         var s = try siege()
         let walls = engine.fortification(at: "egypt", s)
         try round(&s)
+        // The town's own stores hold the first round.
         #expect(s.sieges["egypt"]?.rounds == 1)
-        #expect(s.armies["egypt"]!.units.total == 6)
+        #expect(s.armies["egypt"]!.units.total == 8)
         #expect(engine.fortification(at: "egypt", s) == walls - engine.rules.siege.wallDamagePercent)
+        try round(&s)
+        #expect(s.armies["egypt"]!.units.total == 7)
     }
 
     @Test func aGranaryHoldsOffHunger() throws {
         var s = try siege(granary: true)
-        try round(&s)
+        for _ in 0..<3 { try round(&s) }
         #expect(s.armies["egypt"]!.units.total == 8)
+    }
+
+    @Test func sicknessSpreadsInALongSiegesCamp() throws {
+        var s = try siege(granary: true)
+        for _ in 0..<engine.rules.siege.campSicknessFrom { try round(&s) }
+        #expect(s.armies["petraea"]?.units.total == 5, "camp \(String(describing: s.armies["petraea"]?.units.total)), siege \(String(describing: s.sieges["egypt"]))")
+    }
+
+    @Test func aStarvingGarrisonSalliesWhenItHasAChance() throws {
+        var s = try siege()
+        s.armies["egypt"]!.units = UnitCounts(infantry: 12)
+        s.armies["petraea"]!.units = UnitCounts(infantry: 4)
+        try round(&s)
+        try round(&s)
+        // Egypt's turn: the AI goes out to meet the camp.
+        s.civs["egypt"]!.isHuman = false
+        while s.activePlayer != "egypt" { try engine.apply(.endTurn, to: &s) }
+        let turn = AIPlayer(engine: engine, personality: .turtle).playTurn(&s)
+        #expect(turn.events.contains { if case let .moved(civ, from, to, _) = $0 { civ == "egypt" && from == "egypt" && to == "petraea" } else { false } })
     }
 
     @Test func leavingCampLiftsTheSiege() throws {

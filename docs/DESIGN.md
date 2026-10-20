@@ -1678,3 +1678,16 @@ goals: everything here follows from how real Bronze Age empires held together or
   - **The army:** tents in its colour, its flag and a smoking campfire.
 - Debug launch argument `-demoTown YES` opens the capital; `-demoTown full` paints every
   building.
+
+### Sieges softened, and sallying out (Josh: "laying siege might be too strong - how do you go out and meet them in combat")
+
+- **Sally out.** A besieged town with troops of yours shows a "Besieged" section with a
+  "Sally out" tile: it opens the attack on the camp (the usual order card: battlefield, quick
+  attack at three to one, joined by other armies). Beating the camp's army lifts the siege. The
+  AI sallies too: when its odds against the camp are 55%, or 40% once its stores have run out.
+- **Softer pacing.** The town's own stores hold the first round (plus 3 with a granary) before
+  anyone starves; hunger then takes 15% of the garrison a round (was 25%). From the third round
+  sickness spreads in the besiegers' camp, taking 8% of its army a round (at least one); a camp
+  that dies out lifts the siege. Walls still wear down 10 points a round (20 with rams).
+- Balance (80 games): Egypt 35%, Italia 23%, Greece 8%, Mesopotamia ~34%. Rules version 23;
+  261 tests. Debug launch argument `-demoBesieged YES`.

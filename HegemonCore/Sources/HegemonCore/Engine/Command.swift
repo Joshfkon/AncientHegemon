@@ -145,7 +145,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case playingOn
     case capitalSacked(by: CivilizationID, from: CivilizationID, territory: TerritoryID, gold: Int)
     case siegeLaid(civ: CivilizationID, territory: TerritoryID, camp: TerritoryID)
-    case siegePressed(civ: CivilizationID, territory: TerritoryID, rounds: Int, starved: Int)
+    case siegePressed(civ: CivilizationID, territory: TerritoryID, rounds: Int, starved: Int, sick: Int)
     case siegeLifted(civ: CivilizationID, territory: TerritoryID)
     case projectCompleted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
     case projectDestroyed(territory: TerritoryID, project: ProjectKind)

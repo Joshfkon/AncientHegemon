@@ -1,5 +1,5 @@
 {
-  "version": 22,
+  "version": 23,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -691,8 +691,11 @@
   "siege": {
     "wallDamagePercent": 10,
     "ramsDamagePercent": 20,
-    "starvePercent": 25,
-    "granaryRounds": 3
+    "starvePercent": 15,
+    "granaryRounds": 3,
+    "storeRounds": 1,
+    "campSicknessFrom": 3,
+    "campSicknessPercent": 8
   },
   "sight": {
     "limited": false,

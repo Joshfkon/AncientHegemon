@@ -234,6 +234,7 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
+            if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
             // Launch with -demoTown YES to walk into the capital.
             if UserDefaults.standard.bool(forKey: "demoTown"), let human = session.human, let seat = engine.seat(of: human, in: state) {
                 if UserDefaults.standard.string(forKey: "demoTown") == "full" { session.demoBuildAll(seat) }
@@ -369,7 +370,13 @@ struct GameScreen: View {
                 HStack(alignment: .bottom, spacing: 10) {
                     CommandBar(session: session, pick: selected, close: { self.selected = nil },
                                enter: { cityShown = CityPick(id: $0) },
-                               armyView: armyFocus, switchView: { armyFocus = $0 })
+                               armyView: armyFocus, switchView: { armyFocus = $0 },
+                               attack: { from, to in
+                                   roadVia = nil
+                                   pending = .march(from: from, to: to)
+                                   tab = .orders
+                                   panelOpen = true
+                               })
                         .id("\(String(describing: selected))-\(armyFocus)")
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     turnControls
