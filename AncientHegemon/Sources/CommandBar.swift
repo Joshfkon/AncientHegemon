@@ -10,6 +10,18 @@ struct CommandBar: View {
     let close: () -> Void
     /// Go into one of your own territories.
     var enter: ((TerritoryID) -> Void)?
+    /// The army here was tapped (its cube), not the land: show the army's orders.
+    var armyView = false
+    /// Switch between the army's menu and the territory's.
+    var switchView: ((Bool) -> Void)?
+
+    /// The player's own army in the picked territory, if any.
+    private var ownArmy: (id: TerritoryID, army: Army)? {
+        guard case .territory(let id) = pick, let human = session.human,
+              let army = state.armies[id], army.owner == human, army.units.total > 0 else { return nil }
+        return (id, army)
+    }
+    private var showingArmy: Bool { armyView && ownArmy != nil }
 
     @State private var showPlan = false
     @State private var showDisband = false
@@ -45,7 +57,7 @@ struct CommandBar: View {
         HStack(alignment: .top, spacing: 4) {
             Group {
                 switch pick {
-                case .territory(let id): territoryHeader(id)
+                case .territory(let id): if showingArmy { armyHeader(id) } else { territoryHeader(id) }
                 case .sea(let sea): seaHeader(sea)
                 }
             }
@@ -54,6 +66,42 @@ struct CommandBar: View {
                 Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(.white.opacity(0.5))
             }
             .accessibilityLabel("Close")
+        }
+    }
+
+    /// The army's own header: its cube, size, leader, rank, and how many can still march.
+    private func armyHeader(_ id: TerritoryID) -> some View {
+        let army = state.armies[id]!
+        let ready = army.units - (state.moved[id] ?? .zero)
+        let general = state.generals.values.first { $0.location == id && $0.owner == army.owner }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Canvas { context, size in
+                    MapView.drawCube(&context, at: CGPoint(x: size.width / 2 - 2, y: size.height / 2 + 2), half: 10,
+                                     color: Palette.color(army.owner, state), label: "\(army.units.total)",
+                                     labelColor: .white, scale: 1)
+                }
+                .frame(width: 34, height: 32)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("ARMY").font(.system(.title3, design: .serif).weight(.bold)).tracking(1.5)
+                        .foregroundStyle(Bronze.gradient)
+                    Text("in \(engine.map.territory(id)?.name ?? id)").font(.caption).foregroundStyle(.white.opacity(0.7))
+                }
+            }
+            UnitRow(units: army.units, size: 12).font(.caption.bold()).foregroundStyle(.white)
+            HStack(spacing: 6) {
+                if let general { Label(general.name, systemImage: "star.fill").font(.caption.bold()).foregroundStyle(Bronze.gradient) }
+                if engine.rank(of: army) > .green { VeteranBadge(rank: engine.rank(of: army)) }
+            }
+            Text(ready.total > 0 ? "\(max(0, ready.total)) can still march this turn." : "All have marched this turn.")
+                .font(.caption2.bold()).foregroundStyle(ready.total > 0 ? Color.green : .white.opacity(0.6))
+            if ready.total > 0 {
+                Text("Tap a glowing land to march there.").font(.caption2).foregroundStyle(.white.opacity(0.65))
+            }
+            Button { switchView?(false) } label: {
+                Label("The land of \(engine.map.territory(id)?.name ?? id)", systemImage: "map.fill").font(.caption.bold())
+            }
+            .foregroundStyle(Bronze.gradient)
         }
     }
 
@@ -195,7 +243,18 @@ struct CommandBar: View {
         let home = engine.homeNetwork(of: human, in: state).contains(id)
         let army = state.armies[id].flatMap { $0.owner == human ? $0 : nil }
         let cs = state.civs[human]!
-        if let army { supplyCard(army, id, human) }
+        if showingArmy, let army {
+            supplyCard(army, id, human)
+            armyCommands(army, id, human, home: home, cs: cs)
+        } else {
+        if let army {
+            section("Army") {
+                Tile(symbol: "shield.lefthalf.filled", title: "\(army.units.total) troops here",
+                     detail: "Its orders: march, defence plan, general, disband", cost: Text("Open the army ›"), enabled: true) {
+                    switchView?(true)
+                }
+            }
+        }
         if home {
             section("Recruit") {
                 ForEach(UnitType.allCases, id: \.self) { type in recruitTile(type, id, human) }
@@ -254,7 +313,12 @@ struct CommandBar: View {
                 }
             }
         }
-        if let army {
+        }
+    }
+
+
+    /// The army's orders: its defence plan, a general to lead it, disbanding.
+    @ViewBuilder private func armyCommands(_ army: Army, _ id: TerritoryID, _ human: CivilizationID, home: Bool, cs: CivState) -> some View {
             section("Command") {
                 if home, state.general(of: human, at: id) == nil {
                     Tile(symbol: "star.fill", title: "General", detail: "Leads this army: better battle plans, and renown as he wins",
@@ -297,7 +361,6 @@ struct CommandBar: View {
                     .presentationCompactAdaptation(.popover)
                 }
             }
-        }
     }
 
     @ViewBuilder private func tribeSection(_ id: TerritoryID, _ human: CivilizationID) -> some View {

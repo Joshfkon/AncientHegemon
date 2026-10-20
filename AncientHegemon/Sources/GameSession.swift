@@ -265,6 +265,16 @@ final class GameSession {
         economy = human.map { engine.economy(of: $0, in: state) }
     }
 
+    /// One more turn: the result stands, and the game goes on.
+    func playOn() {
+        var s = state
+        guard let events = try? engine.apply(.playOn, to: &s) else { return }
+        record(events, round: s.turn, before: state, after: s)
+        state = s
+        autosave()
+        if state.activePlayer != human { Task { await runAITurns() } }
+    }
+
     func quit() {
         autosave()
         playing = false
@@ -850,6 +860,8 @@ final class GameSession {
                 add(civ, "An age of splendour begins in \(name(civ))")
             case let .splendourEnded(civ) where civ == human:
                 add(civ, "The age of splendour fades")
+            case .playingOn:
+                add(nil, "The age is reckoned, but the world goes on: one more turn")
             case .ironAgeBegan:
                 add(nil, "The Iron Age dawns: iron needs no tin, and every realm can arm with it")
             case let .peaceDeclined(by, offerer):

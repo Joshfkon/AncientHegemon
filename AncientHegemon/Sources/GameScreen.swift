@@ -32,6 +32,8 @@ struct GameScreen: View {
     @State private var pending: PendingOrder?
     /// For a two-step road march being composed: the land it passes through.
     @State private var roadVia: TerritoryID?
+    /// The army's menu rather than the land's: the cube was tapped.
+    @State private var armyFocus = false
     @State private var tab = PanelTab.orders
     @State private var panelOpen = false
     @State private var showKnowledge = false
@@ -75,7 +77,7 @@ struct GameScreen: View {
     private var screen: some View {
         ZStack {
             MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
-                    selected: selected, targets: targets, onTap: tapped,
+                    selected: selected, targets: targets, onTap: tapped, onCubeTap: { armyFocus = $0 },
                     onLongPress: { pick in
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
@@ -174,10 +176,13 @@ struct GameScreen: View {
         .fullScreenCover(isPresented: Binding(get: { state.victory != nil && session.replay == nil && !endDismissed },
                                               set: { if !$0 { endDismissed = true } })) {
             if let victory = state.victory {
-                EndScreen(session: session, victory: victory) {
+                EndScreen(session: session, victory: victory, close: {
                     endDismissed = true
                     session.quit()
-                }
+                }, playOn: {
+                    endDismissed = true
+                    session.playOn()
+                })
             }
         }
         .fullScreenCover(isPresented: $showThrone) {
@@ -353,8 +358,9 @@ struct GameScreen: View {
             if let selected, pending == nil, session.human != nil {
                 HStack(alignment: .bottom, spacing: 10) {
                     CommandBar(session: session, pick: selected, close: { self.selected = nil },
-                               enter: { cityShown = CityPick(id: $0) })
-                        .id(selected)
+                               enter: { cityShown = CityPick(id: $0) },
+                               armyView: armyFocus, switchView: { armyFocus = $0 })
+                        .id("\(String(describing: selected))-\(armyFocus)")
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     turnControls
                 }
@@ -581,6 +587,7 @@ struct GameScreen: View {
         guard !list.isEmpty else { return }
         idleIndex = (idleIndex + 1) % list.count
         pending = nil
+        armyFocus = true
         selected = .territory(list[idleIndex])
         if tab == .orders { panelOpen = false }
     }
@@ -625,7 +632,8 @@ struct GameScreen: View {
                 } else {
                     Text("Watching").font(.headline)
                 }
-                Text("Round \(state.turn)/\(engine.rules.victory.roundLimit)" + (state.ironAge ? " · Iron Age" : ""))
+                Text((state.playingOn == true ? "Round \(state.turn) · playing on" : "Round \(state.turn)/\(engine.rules.victory.roundLimit)")
+                     + (state.ironAge ? " · Iron Age" : ""))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             if let human = session.human, let left = state.civs[human]?.splendour, left > 0 {
@@ -925,7 +933,7 @@ struct GameScreen: View {
 
     @ViewBuilder private var orders: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let victory = state.victory {
+            if let victory = state.victory, state.winner != nil {
                 VictoryBanner(victory: victory, state: state, engine: engine)
                 Button("New game") { session.quit() }.buttonStyle(.borderedProminent)
             }

@@ -228,6 +228,8 @@ public struct GameState: Codable, Sendable, Equatable {
     public var winner: CivilizationID?
     /// How the game was won, once it is.
     public var victory: Victory?
+    /// Play went on after the victory ("one more turn"). Optional, so older saves still load.
+    public var playingOn: Bool?
     /// Consecutive rounds each civ has held the conditions for a trade victory.
     public var tradeHold: [CivilizationID: Int]
     public var land: [TerritoryID: TerritoryState]

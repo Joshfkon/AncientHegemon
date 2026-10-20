@@ -103,6 +103,8 @@ struct MapView: View {
     var targets: Set<MapPick> = []
     /// A tap on a territory, or on a sea near its fleet marker.
     var onTap: (MapPick?) -> Void = { _ in }
+    /// Told, just before `onTap`, whether the tap landed on an army's cube rather than the land.
+    var onCubeTap: (Bool) -> Void = { _ in }
     /// A long press, for a quick look.
     var onLongPress: (MapPick?) -> Void = { _ in }
     /// What happened this round, drawn as arrows, crossed swords and flashes.
@@ -148,7 +150,10 @@ struct MapView: View {
                 }
             }
                 .contentShape(Rectangle())
-                .gesture(press(t).exclusively(before: SpatialTapGesture().onEnded { onTap(pick(at: $0.location, t)) }))
+                .gesture(press(t).exclusively(before: SpatialTapGesture().onEnded {
+                    onCubeTap(onCube($0.location, t))
+                    onTap(pick(at: $0.location, t))
+                }))
                 .gesture(pinch(geo.size).simultaneously(with: drag(geo.size)))
                 .onAppear {
                     viewSize = geo.size
@@ -258,6 +263,13 @@ struct MapView: View {
     }
 
     private func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(a.x - b.x, a.y - b.y) }
+
+    /// Whether a tap lands on an army's cube.
+    private func onCube(_ location: CGPoint, _ t: BoardTransform) -> Bool {
+        art.territories.contains { id, shape in
+            (state.armies[id]?.units.total ?? 0) > 0 && distance(t.point(shape.token), CGPoint(x: location.x, y: location.y + 2)) < 15 * t.detail
+        }
+    }
 
     private static let terrain: [Terrain: Color] = [
         .plains: Color(red: 0.42, green: 0.70, blue: 0.32),

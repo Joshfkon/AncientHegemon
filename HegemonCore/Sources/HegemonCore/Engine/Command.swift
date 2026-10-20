@@ -70,6 +70,8 @@ public enum Command: Codable, Sendable, Equatable {
     case resolveCrisis(CrisisChoice)
     /// End the active player's turn.
     case endTurn
+    /// Keep playing after the game has been won.
+    case playOn
 }
 
 /// Something that happened as a result of a command, for the UI, logs and the simulator.
@@ -140,6 +142,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case splendourBegan(civ: CivilizationID)
     case splendourEnded(civ: CivilizationID)
     case ironAgeBegan
+    case playingOn
     case capitalSacked(by: CivilizationID, from: CivilizationID, territory: TerritoryID, gold: Int)
     case siegeLaid(civ: CivilizationID, territory: TerritoryID, camp: TerritoryID)
     case siegePressed(civ: CivilizationID, territory: TerritoryID, rounds: Int, starved: Int)

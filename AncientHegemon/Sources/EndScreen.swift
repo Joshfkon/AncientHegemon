@@ -7,6 +7,8 @@ struct EndScreen: View {
     let session: GameSession
     let victory: Victory
     let close: () -> Void
+    /// Keep playing after the result.
+    var playOn: (() -> Void)?
     @State private var step = 0
     @State private var shown = false
     @State private var graphs = false
@@ -65,6 +67,14 @@ struct EndScreen: View {
                                 .woodPanel(Capsule())
                         }
                         .buttonStyle(.plain)
+                        if let playOn, session.human != nil, !(session.human.map { state.civs[$0]?.eliminated ?? true } ?? true) {
+                            Button(action: playOn) {
+                                Text("One more turn").font(.headline).foregroundStyle(.white)
+                                    .padding(.horizontal, 18).padding(.vertical, 10)
+                                    .woodPanel(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
                         Button(action: close) {
                             Text("Play again").font(.headline).foregroundStyle(.black)
                                 .padding(.horizontal, 24).padding(.vertical, 10)

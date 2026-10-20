@@ -26,6 +26,7 @@ public struct Engine: Sendable {
     }
 
     private func perform(_ command: Command, _ state: inout GameState) throws -> [GameEvent] {
+        if case .playOn = command { return try playOn(&state) }
         guard state.winner == nil else { throw GameError.gameOver }
         if state.civs[state.activePlayer]!.crisis != nil {
             guard case .resolveCrisis = command else { throw GameError.crisisPending }
@@ -101,6 +102,8 @@ public struct Engine: Sendable {
             return try resolveCrisis(choice, &state)
         case .endTurn:
             return endTurn(&state)
+        case .playOn:
+            return try playOn(&state)
         }
     }
 
@@ -259,7 +262,7 @@ public struct Engine: Sendable {
                 events += declareVictory(last, .lastStanding, &state)
             } else {
                 // Raiders destroyed everyone: the barbarians have the last word.
-                state.winner = barbariansID
+                if state.playingOn != true { state.winner = barbariansID }
                 events.append(.victory(civ: barbariansID))
             }
         }
@@ -298,8 +301,13 @@ public struct Engine: Sendable {
             age = dawnOfIron(&state)
         }
 
+        return closing + beginTurn(age, &state)
+    }
+
+    /// The start of the active civ's turn: the round's news, then its own.
+    private func beginTurn(_ age: [GameEvent], _ state: inout GameState) -> [GameEvent] {
         let civ = state.activePlayer
-        var events: [GameEvent] = closing + [.turnStarted(civ: civ, turn: state.turn)] + age
+        var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)] + age
         events += expireWarRequests(from: civ, &state)
         state.allianceOffers = state.allianceOffers.filter { $0.from != civ }
         // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
@@ -318,6 +326,25 @@ public struct Engine: Sendable {
         events += checkElimination(civ, &state)
         if state.civs[civ]!.eliminated, state.winner == nil { events += endTurn(&state) }
         return events
+    }
+
+    /// One more turn: the age's result stands, but the game goes on for as long as the players
+    /// like. Nobody wins again.
+    private func playOn(_ state: inout GameState) throws -> [GameEvent] {
+        guard state.winner != nil, state.winner != barbariansID,
+              state.players.contains(where: { !state.civs[$0]!.eliminated }) else { throw GameError.gameOver }
+        state.winner = nil
+        state.playingOn = true
+        // A victory reckoned at the turn of a round left the next turn unbegun.
+        switch state.victory?.kind {
+        case .legacy?:
+            state.turn += 1
+            return [.playingOn] + beginTurn([], &state)
+        case .trade?:
+            return [.playingOn] + beginTurn([], &state)
+        default:
+            return [.playingOn]
+        }
     }
 
     // MARK: Diplomacy

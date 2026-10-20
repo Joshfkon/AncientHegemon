@@ -206,3 +206,22 @@ private func play(_ s: inout GameState, as civ: CivilizationID) {
         }
     }
 }
+
+@Suite struct PlayOnTests {
+    let engine = try! Engine.bare()
+
+    @Test func theGameGoesOnAfterTheAgeEndsAndNobodyWinsAgain() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        s.turn = engine.rules.victory.roundLimit
+        while s.winner == nil { try engine.apply(.endTurn, to: &s) }
+        #expect(s.victory?.kind == .legacy)
+        #expect(throws: GameError.gameOver) { try engine.apply(.endTurn, to: &s) }
+        try engine.apply(.playOn, to: &s)
+        #expect(s.winner == nil)
+        #expect(s.turn == engine.rules.victory.roundLimit + 1)
+        for _ in 0..<6 { try engine.apply(.endTurn, to: &s) }
+        #expect(s.winner == nil)
+        #expect(s.turn > engine.rules.victory.roundLimit + 2)
+        #expect(s.victory?.kind == .legacy)
+    }
+}

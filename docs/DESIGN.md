@@ -1594,3 +1594,17 @@ goals: everything here follows from how real Bronze Age empires held together or
   the clear space above the command bar (and may pan further past the board's edge to do it),
   and the map's notices hide while something is selected.
 - Rules version 21 (the state gained a field; old saves are retired); 253 tests.
+
+### One more turn, and the army's own menu (Josh: "like Civ you should have the option to play one more turn at the end of the game"; "when you tap on the cubes, you shouldn't see the territory menu. you should see an army menu")
+
+- **One more turn** (`Command.playOn`). The end screen offers "One more turn" beside "Play
+  again" (while the player still has a realm). The result stands (the victory is kept), but
+  play goes on as long as you like: no further victories are declared, the round limit no
+  longer applies, and the status reads "Round N · playing on". Raiders wiping everyone out
+  after that just leaves the world empty.
+- **Army menu.** Tapping an army's cube (rather than the land around it) opens the army's own
+  menu: its cube and size, units, general and rank, how many can still march, supply, defence
+  plan, general and disband. Tapping the land shows the territory (recruit, build, ships), with
+  an "Army" tile to switch to the army; the army menu has "The land of …" to switch back. The
+  next-army button opens armies in their menu.
+- Rules unchanged (version 21); 254 tests.
