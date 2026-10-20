@@ -53,6 +53,7 @@
 		F679B7A870F692418B01A07B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E710095DFC58ED6E6AD23B14 /* Assets.xcassets */; };
 		F959F0A69661E89FBC832BFD /* gallop.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5C556F203B94E6D2190DFCCC /* gallop.wav */; };
 		FC0C2A3CF6D20616851B8CFD /* roar.wav in Resources */ = {isa = PBXBuildFile; fileRef = 99446154A61CAABED13A5D65 /* roar.wav */; };
+		FDF4BE078F0BB2D4F163960F /* RulerStatue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4FC92586EA217081B93582 /* RulerStatue.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +64,7 @@
 		2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyView.swift; sourceTree = "<group>"; };
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
 		34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThroneRoom.swift; sourceTree = "<group>"; };
+		3F4FC92586EA217081B93582 /* RulerStatue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerStatue.swift; sourceTree = "<group>"; };
 		3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleViews.swift; sourceTree = "<group>"; };
 		56A2A90E394E1F771A7B0376 /* clash.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clash.wav; sourceTree = "<group>"; };
 		5C556F203B94E6D2190DFCCC /* gallop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = gallop.wav; sourceTree = "<group>"; };
@@ -186,6 +188,7 @@
 				6FA988893EB7B67616AC6394 /* ResourcesView.swift */,
 				C68161D07A290C13CFFD63F8 /* RulerFigure.swift */,
 				C2E4AD6639ED1329E331B67C /* Rulers.swift */,
+				3F4FC92586EA217081B93582 /* RulerStatue.swift */,
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
 				9B6EFEC6B7A04539C9215408 /* Standings.swift */,
@@ -319,6 +322,7 @@
 				D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */,
 				E1DBC00849377F7EFEFCCFA8 /* ResourcesView.swift in Sources */,
 				5158F762F9D19A3A396078D5 /* RulerFigure.swift in Sources */,
+				FDF4BE078F0BB2D4F163960F /* RulerStatue.swift in Sources */,
 				AA8F9A2A1C98DCA5E03738AB /* Rulers.swift in Sources */,
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,

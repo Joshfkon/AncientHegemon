@@ -112,6 +112,8 @@ struct CivPickerView: View {
                 session.start(as: nil)
                 session.playing = true
             }
+            // Launch with -demoThrone egypt to walk into that realm's finished throne room.
+            if let civ = UserDefaults.standard.string(forKey: "demoThrone") { session.start(as: civ) }
             #endif
         }
     }

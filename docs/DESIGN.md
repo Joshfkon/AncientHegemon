@@ -1737,3 +1737,13 @@ goals: everything here follows from how real Bronze Age empires held together or
   troops aboard can't be disbanded (land them first). Order `Command.disbandShips(sea:ships:)`.
 - Title screen: difficulty and scenario sit on their own row with the blurb beside them, so a
   saved game's "Continue" button no longer crowds them. Debug launch argument `-demoFleet YES`.
+
+### The statue of the ruler (Josh: "improve the statue of the ruler in the throne room")
+
+- No longer a stock stick figure: a carved likeness of the ruler in each realm's own sculpture,
+  on a stepped plinth with the ruler's name cut into it (`RulerStatue.swift`). Egypt: a
+  sandstone striding pharaoh against a back pillar, painted nemes and collar. Mesopotamia: dark
+  diorite, hands clasped, tall cap and curled beard (after the statues of Gudea). Greece:
+  painted marble with crested helmet, spear and spiral shield. Italia: cast bronze in a toga and
+  laurel, arm raised to the crowd. Debug launch argument `-demoThrone <civ>` opens a fully
+  decorated throne room.

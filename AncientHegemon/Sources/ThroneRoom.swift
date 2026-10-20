@@ -345,13 +345,14 @@ struct Hall: View {
                 }
                 // The statue.
                 if decorations.contains("statue") {
-                    VStack(spacing: 0) {
-                        Image(systemName: "figure.stand").resizable().scaledToFit().foregroundStyle(Color(white: 0.85))
-                            .frame(height: h * 0.3)
-                        Rectangle().fill(Color(white: 0.7)).frame(width: 40, height: 14)
-                    }
-                    .shadow(radius: 4)
-                    .position(x: w * 0.82, y: floorTop - h * 0.12)
+                    let tall = h * 0.56
+                    Ellipse().fill(.black.opacity(0.3)).blur(radius: 4)
+                        .frame(width: tall * 0.34, height: tall * 0.06)
+                        .position(x: w * 0.82 + 6, y: floorTop + h * 0.05)
+                    RulerStatue(civ: civ, ruler: ruler)
+                        .frame(height: tall)
+                        .shadow(color: .black.opacity(0.35), radius: 3, x: 3)
+                        .position(x: w * 0.82, y: floorTop + h * 0.05 - tall / 2)
                 }
                 // The throne, the realm's emblem above it.
                 if emptyThrone {

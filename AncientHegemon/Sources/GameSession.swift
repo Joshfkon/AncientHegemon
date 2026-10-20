@@ -915,6 +915,12 @@ final class GameSession {
         state.land[seat]!.queue = [.road]
     }
 
+    /// For -demoThrone: every decoration in the human's throne room.
+    func demoDecorate() {
+        guard let human else { return }
+        state.civs[human]!.decorations = Set(engine.rules.throneRoom.decorations.map(\.id))
+    }
+
     /// For -demoFleet: three ships with two troops aboard. Returns their sea.
     func demoFleet(_ human: CivilizationID) -> SeaZoneID? {
         guard let i = state.fleets.firstIndex(where: { $0.owner == human }) else { return nil }

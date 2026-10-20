@@ -235,6 +235,10 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
+            if UserDefaults.standard.string(forKey: "demoThrone") != nil {
+                session.demoDecorate()
+                showThrone = true
+            }
             // Launch with -demoFleet YES to open the fleet's menu, two troops aboard.
             if UserDefaults.standard.bool(forKey: "demoFleet"), let human = session.human,
                let sea = session.demoFleet(human) {
