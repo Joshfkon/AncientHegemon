@@ -1608,3 +1608,21 @@ goals: everything here follows from how real Bronze Age empires held together or
   an "Army" tile to switch to the army; the army menu has "The land of …" to switch back. The
   next-army button opens armies in their menu.
 - Rules unchanged (version 21); 254 tests.
+
+### Placing blocks and giving them orders, and livelier battles (Josh: "a bit of animation and battle sounds… move our pieces on the grid before the battle… orders like move forward, or this unit holds its ground")
+
+- **Placement.** On the battlefield before a land attack, drag any of your blocks to another
+  square of your own two ranks (not onto rock); a block already there trades places. Stored as
+  `BattlePlan.placements` (block index → square) and applied after the formation's deployment.
+  Out-of-range squares are ignored, so a stale placement never breaks a battle.
+- **Orders.** Tap a block to cycle: advance (↑; marches from the first round, and archers close
+  in rather than stopping to shoot), hold (✋; stands until struck), or the formation's way.
+  `BattlePlan.orders` → `BlockOrder`; a block's own order outranks its formation and the army's
+  stratagem. Badges on the blocks show them; "Reset placings" clears both. They stay with the
+  army's standing plan (as defender they're ignored: they're in attacker coordinates).
+- **Animation and sound.** Blocks lunge into the block they strike in melee; archers' volleys
+  fly as three shafts along the arc; marching rounds thump a drum; blows land a beat after the
+  volley's whistle; cavalry charges gallop; a block breaking draws a cry.
+- A battle you drew up on the battlefield always plays out there, even at three to one (quick
+  battles are for attacks sent straight from the map).
+- 257 tests. AI armies don't place or order blocks (unchanged balance).

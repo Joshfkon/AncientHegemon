@@ -391,3 +391,41 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(!events.contains(.eliminated(civ: "greece")))
     }
 }
+
+@Suite struct BattleOrdersTests {
+    let sim = BattleSimulator(rules: try! Rules.bundled())
+
+    func setup(_ attacker: BattleArmy) -> BattleSetup {
+        BattleSetup(attacker: attacker, defender: BattleArmy(civ: "d", units: UnitCounts(infantry: 4), formation: "phalanx"),
+                    terrain: .plains, seed: 7)
+    }
+
+    @Test func blocksGoWhereTheyArePlaced() {
+        var army = BattleArmy(civ: "a", units: UnitCounts(infantry: 4), formation: "phalanx")
+        army.placements = [0: GridPoint(0, 0)]
+        let frame = sim.deployment(setup(army))
+        #expect(frame.blocks.first { $0.id == 0 }?.position == GridPoint(0, 0))
+        // Into the enemy's ranks is not allowed.
+        army.placements = [0: GridPoint(2, 3)]
+        #expect(sim.deployment(setup(army)).blocks.first { $0.id == 0 }?.position.row ?? 9 <= 1)
+    }
+
+    @Test func aHoldingBlockStandsItsGround() {
+        var army = BattleArmy(civ: "a", units: UnitCounts(infantry: 4), formation: "phalanx")
+        let start = sim.deployment(setup(army)).blocks.filter { $0.side == .attacker }
+        army.orders = Dictionary(uniqueKeysWithValues: start.map { ($0.id, BlockOrder.hold) })
+        let report = sim.resolve(setup(army))
+        guard report.frames.count > 1 else { return }
+        let next = report.frames[1].blocks.filter { $0.side == .attacker }
+        for b in start { #expect(next.first { $0.id == b.id }?.position == b.position) }
+    }
+
+    @Test func anAdvancingBlockMarchesEvenWhenItsFormationWouldWait() {
+        var army = BattleArmy(civ: "a", units: UnitCounts(infantry: 2, archers: 2), formation: "phalanx")
+        let start = sim.deployment(setup(army)).blocks.filter { $0.side == .attacker && $0.type == .archers }
+        army.orders = Dictionary(uniqueKeysWithValues: start.map { ($0.id, BlockOrder.advance) })
+        let report = sim.resolve(setup(army))
+        let moved = start.contains { b in report.frames[1].blocks.first { $0.id == b.id }?.position != b.position }
+        #expect(moved)
+    }
+}

@@ -161,6 +161,8 @@ extension Engine {
                           unitPercent: percent, morale: war >= 3 ? e.tacticsMorale : 0,
                           depth: plan.depth, stratagem: plan.stratagem)
         army.pursue = plan.pursue
+        army.placements = plan.placements
+        army.orders = plan.orders
         applyVeterancy(&army, battles: battles)
         if holds("lionGate", civ, in: state) { army.morale += 5 }
         return army

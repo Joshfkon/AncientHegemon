@@ -87,15 +87,36 @@ struct BattlefieldView: View {
         let frame = BattleSimulator(rules: engine.rules).deployment(setup)
         let impassable = engine.rules.battle.terrain[setup.terrain]?.impassable ?? []
         return HStack(spacing: 14) {
-            BattleBoard(setup: setup, impassable: impassable, frame: frame, previous: [], tick: 0, state: state)
-                .overlay(alignment: .bottom) {
-                    Text(charging ? (muster.naval ? "Ramming speed!" : "Charge!")
-                         : muster.naval ? "Your ships below · theirs above" : "Your army below · theirs above")
-                        .font(charging ? .title2.weight(.black) : .caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(Capsule().fill(.black.opacity(0.6)))
-                        .padding(10)
+            BattleBoard(setup: setup, impassable: impassable, frame: frame, previous: [], tick: 0, state: state,
+                        onMove: muster.naval ? nil : { id, square in
+                            var placed = plan.placements ?? [:]
+                            // Whoever stood there trades places: keep their square in step.
+                            if let other = frame.blocks.first(where: { $0.side == .attacker && $0.position == square }),
+                               let mine = frame.blocks.first(where: { $0.id == id }) {
+                                placed[other.id] = mine.position
+                            }
+                            placed[id] = square
+                            plan.placements = placed
+                            Feedback.select()
+                        },
+                        onTapBlock: muster.naval ? nil : { id in
+                            // Each tap: advance, hold, then as the formation has it.
+                            var orders = plan.orders ?? [:]
+                            orders[id] = switch orders[id] {
+                            case nil: .advance
+                            case .advance?: .hold
+                            case .hold?: nil
+                            }
+                            plan.orders = orders.isEmpty ? nil : orders
+                            Feedback.select()
+                        })
+                .overlay(alignment: .center) {
+                    if charging {
+                        Text(muster.naval ? "Ramming speed!" : "Charge!")
+                            .font(.title2.weight(.black)).foregroundStyle(.white)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Capsule().fill(.black.opacity(0.6)))
+                    }
                 }
                 .scaleEffect(charging ? 1.04 : 1)
                 .animation(.spring(duration: 0.45, bounce: 0.3), value: frame.blocks.map(\.position))
@@ -117,7 +138,20 @@ struct BattlefieldView: View {
                         }
                         scouts
                         Divider()
-                        Text("Battle plan").font(.headline)
+                        if !muster.naval {
+                            Label("Drag your blocks to other squares of your two ranks. Tap a block to order it forward (↑), tap again to hold its ground (✋), again for the formation's way.",
+                                  systemImage: "hand.draw.fill")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        HStack {
+                            Text("Battle plan").font(.headline)
+                            Spacer()
+                            if plan.placements != nil || plan.orders != nil {
+                                Button("Reset placings") { plan.placements = nil; plan.orders = nil }
+                                    .font(.caption.bold())
+                            }
+                        }
                         BattlePlanEditor(engine: engine, civ: human, state: state,
                                          units: muster.naval ? UnitCounts(infantry: muster.ships) : muster.host,
                                          general: general, plan: $plan, odds: odds, naval: muster.naval)

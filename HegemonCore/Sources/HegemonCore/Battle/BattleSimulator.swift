@@ -26,6 +26,7 @@ public struct BattleSimulator: Sendable {
         /// Stands on a wing of its formation (outer columns), for a flanking march.
         var onWing = false
         var levy = false
+        var order: BlockOrder?
     }
 
     // MARK: Land battle
@@ -65,7 +66,15 @@ public struct BattleSimulator: Sendable {
                 let formation = b.formation(army.formation) ?? b.formation(b.defaultFormation)!
                 var advances = formation.advance[blocks[i].type] ?? true || blocks[i].provoked
                     || (blocks[i].side == .attacker && round > b.attackerHoldRounds)
+                // A block's own orders outrank its formation's.
+                switch blocks[i].order {
+                case .advance?: advances = true
+                case .hold?: advances = blocks[i].provoked
+                case nil: break
+                }
                 switch army.stratagem {
+                case _ where blocks[i].order != nil:
+                    break  // its own orders stand, whatever the stratagem
                 case .standFast?:
                     advances = blocks[i].provoked
                 case .shieldWall? where blocks[i].type == .infantry && round % 2 == 1:
@@ -86,7 +95,9 @@ public struct BattleSimulator: Sendable {
                 }
                 for _ in 0..<b.speed[blocks[i].type]! {
                     if !enemies(of: i, blocks, within: 1).isEmpty { break }
-                    if blocks[i].type == .archers, !enemies(of: i, blocks, within: range).isEmpty { break }
+                    // Archers stop to shoot once in range, unless ordered to close in.
+                    if blocks[i].type == .archers, blocks[i].order != .advance,
+                       !enemies(of: i, blocks, within: range).isEmpty { break }
                     guard advances, let step = step(for: i, blocks, impassable) else { break }
                     blocks[i].position = step
                 }
@@ -294,6 +305,17 @@ public struct BattleSimulator: Sendable {
                                     onWing: slot.col == 0 || slot.col == Self.size - 1, levy: true))
             }
         }
+        // Hand placements: each to its chosen square in the army's own two ranks (trading places
+        // with whoever stood there); then single blocks' orders.
+        let ranks = side == .attacker ? 0...1 : 3...4
+        for (k, square) in (army.placements ?? [:]).sorted(by: { $0.key < $1.key }) {
+            guard k < blocks.count, ranks.contains(square.row), (0..<Self.size).contains(square.col) else { continue }
+            if let other = blocks.indices.first(where: { $0 != k && blocks[$0].position == square }) {
+                blocks[other].position = blocks[k].position
+            }
+            blocks[k].position = square
+        }
+        for (k, order) in army.orders ?? [:] where k < blocks.count { blocks[k].order = order }
         return blocks
     }
 
@@ -411,7 +433,8 @@ public struct BattleSimulator: Sendable {
 
     private func snapshot(_ block: Block) -> BlockSnapshot {
         BlockSnapshot(id: block.id, side: block.side, type: block.type, position: block.position,
-                      units: units(block), morale: max(0, block.morale), status: block.status, levy: block.levy)
+                      units: units(block), morale: max(0, block.morale), status: block.status, levy: block.levy,
+                      order: block.order)
     }
 
     // MARK: Naval battle (auto-resolve only)

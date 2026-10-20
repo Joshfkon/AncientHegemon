@@ -100,12 +100,27 @@ struct BattleReplayView: View {
 
     /// Sound and a jolt for a round of fighting, as hard as the blows.
     private func announce(_ frame: BattleFrame) {
-        guard !frame.strikes.isEmpty else { return }
+        // A round of marching: feet on the ground.
+        guard !frame.strikes.isEmpty else { SoundBoard.shared.play(.drum, volume: 0.35); return }
         let ranged = frame.strikes.filter(\.ranged).reduce(0) { $0 + $1.damage }
         let melee = frame.strikes.filter { !$0.ranged }.reduce(0) { $0 + $1.damage }
         let scale = Float(max(1, report.setup.attacker.units.total + report.setup.defender.units.total) * 6)
         if ranged > 0 { SoundBoard.shared.play(.arrows, volume: 0.4 + Float(ranged) / scale) }
-        if melee > 0 { SoundBoard.shared.play(.clash, volume: 0.4 + Float(melee) / scale) }
+        // Blows land a beat after the volley's whistle.
+        if melee > 0 {
+            let volume = 0.4 + Float(melee) / scale
+            Task {
+                try? await Task.sleep(for: .milliseconds(ranged > 0 ? 260 : 120))
+                SoundBoard.shared.play(.clash, volume: volume)
+            }
+        }
+        // Horses in the charge; a cry as a block breaks.
+        let index = report.frames.firstIndex(of: frame) ?? 0
+        let before = index > 0 ? report.frames[index - 1].blocks : []
+        let charged = frame.strikes.contains { s in !s.ranged && frame.blocks.first { $0.id == s.from }?.type == .cavalry }
+        if charged { SoundBoard.shared.play(.gallop, volume: 0.45) }
+        let broke = frame.blocks.contains { b in b.status != .fighting && before.first { $0.id == b.id }?.status == .fighting }
+        if broke { SoundBoard.shared.play(.roar, volume: 0.5) }
         Feedback.impact(CGFloat(ranged + melee) / CGFloat(scale) * 3)
     }
 
@@ -265,6 +280,11 @@ struct BattleBoard: View {
     /// After the battle: who won, and whether they chased the beaten army off the field.
     var chase: (winner: BattleSide, pursue: Bool)?
     let state: GameState
+    /// Before the battle: the attacker's blocks can be dragged to other squares of its own two
+    /// ranks, and tapped to change their orders.
+    var onMove: ((Int, GridPoint) -> Void)?
+    var onTapBlock: ((Int) -> Void)?
+    @State private var dragging: (id: Int, offset: CGSize)?
 
     var body: some View {
         GeometryReader { geo in
@@ -312,11 +332,22 @@ struct BattleBoard: View {
                 })
                 .id(tick)
                 // Blocks: they shake and flash when hit, and shrink away when destroyed.
+                // While a block is dragged, the squares it may go to glow.
+                if dragging != nil {
+                    ForEach(0..<10, id: \.self) { i in
+                        let square = GridPoint(i % 5, i / 5)
+                        if !rocks.contains(square) {
+                            RoundedRectangle(cornerRadius: 4).strokeBorder(Color.white.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                                .frame(width: cell * 0.9, height: cell * 0.9)
+                                .position(center(square, cell))
+                        }
+                    }
+                }
                 ForEach(frame.blocks.filter { $0.status != .destroyed }, id: \.id) { block in
                     let lost = (previous.first { $0.id == block.id }?.units ?? block.units) - block.units
                     BlockView(block: block, ship: setup.naval == true,
                               color: Palette.color(block.side == .attacker ? setup.attacker.civ : setup.defender.civ, state),
-                              hit: lost > 0 ? tick : nil)
+                              hit: lost > 0 ? tick : nil, lunge: lunge(block, cell), lungeTrigger: tick)
                         .frame(width: cell * 0.82, height: cell * 0.82)
                         .background { if lost > 0 { DustPuff().id(tick) } }
                         .overlay { if lost > 0 { LossMarker(lost: lost).id(tick) } }
@@ -325,6 +356,11 @@ struct BattleBoard: View {
                         .offset(y: chaseOffset(block, cell))
                         .opacity(fled(block) ? 0 : 1)
                         .transition(.scale(scale: 0.2).combined(with: .opacity))
+                        .overlay(alignment: .topTrailing) { orderBadge(block, cell) }
+                        .offset(dragging?.id == block.id ? dragging!.offset : .zero)
+                        .zIndex(dragging?.id == block.id ? 1 : 0)
+                        .gesture(editable(block) ? drag(block, cell, rocks) : nil)
+                        .onTapGesture { if editable(block) { onTapBlock?(block.id) } }
                 }
             }
         }
@@ -333,6 +369,46 @@ struct BattleBoard: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Color(red: 0.32, green: 0.24, blue: 0.15)))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Bronze.gradient, lineWidth: 3))
         .shadow(color: .black.opacity(0.5), radius: 10, y: 4)
+    }
+
+    private func editable(_ block: BlockSnapshot) -> Bool {
+        onMove != nil && block.side == .attacker && block.status == .fighting
+    }
+
+    private func drag(_ block: BlockSnapshot, _ cell: CGFloat, _ rocks: Set<GridPoint>) -> some Gesture {
+        DragGesture(minimumDistance: 4)
+            .onChanged { dragging = (block.id, $0.translation) }
+            .onEnded { value in
+                dragging = nil
+                let p = center(block.position, cell)
+                let col = Int(((p.x + value.translation.width) / cell).rounded(.down))
+                let row = 4 - Int(((p.y + value.translation.height) / cell).rounded(.down))
+                let square = GridPoint(col, row)
+                guard (0..<5).contains(col), (0...1).contains(row), !rocks.contains(square), square != block.position else { return }
+                onMove?(block.id, square)
+            }
+    }
+
+    /// Hold or advance, marked on the block's corner.
+    @ViewBuilder private func orderBadge(_ block: BlockSnapshot, _ cell: CGFloat) -> some View {
+        if let order = block.order {
+            Image(systemName: order == .hold ? "hand.raised.fill" : "arrow.up")
+                .font(.system(size: cell * 0.16, weight: .black))
+                .foregroundStyle(.white)
+                .padding(cell * 0.05)
+                .background(Circle().fill(order == .hold ? Color(red: 0.2, green: 0.35, blue: 0.7) : Color(red: 0.7, green: 0.2, blue: 0.12)))
+                .overlay(Circle().stroke(Bronze.gradient, lineWidth: 1))
+                .position(x: center(block.position, cell).x + cell * 0.36, y: center(block.position, cell).y - cell * 0.36)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// A block striking in melee this round lunges a third of the way into its target.
+    private func lunge(_ block: BlockSnapshot, _ cell: CGFloat) -> CGSize {
+        guard let s = frame.strikes.first(where: { $0.from == block.id && !$0.ranged }),
+              let target = frame.blocks.first(where: { $0.id == s.to }) else { return .zero }
+        return CGSize(width: CGFloat(target.position.col - block.position.col) * cell * 0.32,
+                      height: -CGFloat(target.position.row - block.position.row) * cell * 0.32)
     }
 
     /// The beaten run for their own edge of the field; pursuers follow a little way.
@@ -564,13 +640,27 @@ private struct StrikeLines: View {
                         path.addLine(to: b)
                     }
                 }
-                .trim(from: 0, to: progress)
-                .stroke(ranged ? Color.orange : Color.red,
-                        style: StrokeStyle(lineWidth: ranged ? 1.8 : 3, lineCap: .round, dash: ranged ? [4, 3] : []))
-                .opacity(0.85)
+                .trim(from: ranged ? max(0, progress - 0.25) : 0, to: progress)
+                .stroke(ranged ? Color(red: 0.25, green: 0.18, blue: 0.1) : Color.red,
+                        style: StrokeStyle(lineWidth: ranged ? 2.2 : 3, lineCap: .round))
+                .opacity(ranged ? (progress < 1 ? 0.95 : 0) : 0.85)
+                // A volley: three shafts in flight along each arc.
+                if ranged {
+                    ForEach(0..<3, id: \.self) { k in
+                        let off = CGFloat(k - 1) * 6
+                        Path { path in
+                            path.move(to: CGPoint(x: a.x + off, y: a.y))
+                            let mid = CGPoint(x: (a.x + b.x) / 2 + off, y: (a.y + b.y) / 2 - abs(b.y - a.y) * 0.25 - 12)
+                            path.addQuadCurve(to: CGPoint(x: b.x + off * 0.4, y: b.y), control: mid)
+                        }
+                        .trim(from: max(0, progress - 0.12 - CGFloat(k) * 0.04), to: max(0, progress - CGFloat(k) * 0.04))
+                        .stroke(Color(red: 0.3, green: 0.22, blue: 0.12), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                        .opacity(progress < 1 ? 1 : 0)
+                    }
+                }
             }
         }
-        .onAppear { withAnimation(.easeOut(duration: 0.35)) { progress = 1 } }
+        .onAppear { withAnimation(.easeIn(duration: 0.45)) { progress = 1 } }
         .allowsHitTesting(false)
     }
 }
@@ -618,6 +708,9 @@ private struct BlockView: View {
     let color: Color
     /// The frame in which the block was hit, to trigger its shake and flash.
     var hit: Int?
+    /// Where it lunges this round as it strikes (zero: it doesn't), and the round that triggers it.
+    var lunge: CGSize = .zero
+    var lungeTrigger: Int = 0
 
     var body: some View {
         RoundedRectangle(cornerRadius: 6)
@@ -649,6 +742,15 @@ private struct BlockView: View {
                 .stroke(Color.black.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: block.levy ? [3, 2] : [])))
             .overlay(alignment: .top) {
                 if block.levy { Text("militia").font(.system(size: 7, weight: .bold)).foregroundStyle(.white).padding(.top, 1) }
+            }
+            .keyframeAnimator(initialValue: CGFloat(0), trigger: lungeTrigger) { view, k in
+                view.offset(x: lunge.width * k, y: lunge.height * k)
+            } keyframes: { _ in
+                KeyframeTrack {
+                    SpringKeyframe(1, duration: 0.18, spring: .snappy)
+                    LinearKeyframe(1, duration: 0.06)
+                    SpringKeyframe(0, duration: 0.3, spring: .bouncy)
+                }
             }
             .keyframeAnimator(initialValue: HitState(), trigger: hit) { view, value in
                 view

@@ -15,6 +15,14 @@ public struct General: Codable, Sendable, Equatable, Identifiable {
     public var isAlive: Bool { location != nil }
 }
 
+/// A block's own orders for the battle, overriding what its formation would have it do.
+public enum BlockOrder: String, Codable, Sendable, CaseIterable {
+    /// Marches on the enemy from the first round.
+    case advance
+    /// Stands its ground until struck.
+    case hold
+}
+
 public enum BattleSide: String, Codable, Sendable {
     case attacker, defender
 }
@@ -43,6 +51,10 @@ public struct BattleArmy: Codable, Sendable, Equatable {
     /// If the enemy breaks, chase them down (more of them fall, but archers covering the
     /// retreat can sting the pursuers) or hold the field.
     public var pursue: Bool = true
+    /// Squares chosen by hand for the army's blocks, by block (its place in the deployment, from
+    /// 0), in board coordinates; and orders for single blocks.
+    public var placements: [Int: GridPoint]?
+    public var orders: [Int: BlockOrder]?
 
     public init(civ: CivilizationID, units: UnitCounts, formation: FormationID,
                 general: General? = nil, bronzePercent: Int = 0,
@@ -68,12 +80,18 @@ public struct BattlePlan: Codable, Sendable, Hashable {
     public var depth: LineDepth
     public var stratagem: Stratagem?
     public var pursue: Bool
+    /// Blocks placed by hand, and blocks given their own orders (see `BattleArmy`).
+    public var placements: [Int: GridPoint]?
+    public var orders: [Int: BlockOrder]?
 
-    public init(formation: FormationID? = nil, depth: LineDepth = .deep, stratagem: Stratagem? = nil, pursue: Bool = true) {
+    public init(formation: FormationID? = nil, depth: LineDepth = .deep, stratagem: Stratagem? = nil, pursue: Bool = true,
+                placements: [Int: GridPoint]? = nil, orders: [Int: BlockOrder]? = nil) {
         self.formation = formation
         self.depth = depth
         self.stratagem = stratagem
         self.pursue = pursue
+        self.placements = placements
+        self.orders = orders
     }
 }
 
@@ -114,6 +132,8 @@ public struct BlockSnapshot: Codable, Sendable, Equatable {
     public let status: BlockStatus
     /// Townsfolk raised to defend their home: weak, and not part of the standing army.
     public let levy: Bool
+    /// Its own orders, if it was given any.
+    public var order: BlockOrder?
 }
 
 public struct BattleStrike: Codable, Sendable, Equatable {

@@ -753,7 +753,8 @@ final class GameSession {
                     battles.insert(entry, at: 0)
                     if let human, a.civ == human || d.civ == human {
                         // Lopsided fights resolve on the map; only real contests open the battlefield.
-                        if Self.lopsided(report) {
+                        // (Unless the player drew up on the battlefield: then they watch it.)
+                        if Self.lopsided(report), muster == nil {
                             let ours = (a.civ == human) == won
                             toast = (ours ? "Easy victory at \(place(t))" : "\(place(t)): overwhelmed", (toast?.id ?? 0) + 1, !ours)
                             flashes[t] = .now
