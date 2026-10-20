@@ -126,7 +126,7 @@ extension Engine {
 
     /// Gold a civilization takes in per turn, by source.
     func income(of civ: CivilizationID, _ homeNet: [TerritoryID], _ routes: [TradeRoute], _ state: GameState)
-        -> (taxes: Int, mines: Int, trade: Int, total: Int) {
+        -> (taxes: Int, mines: Int, trade: Int, peoples: Int, total: Int) {
         let e = rules.economy
         // Restless land pays nothing.
         let population = homeNet.filter { !restless($0, of: civ, in: state) && state.sieges[$0] == nil }
@@ -138,8 +138,11 @@ extension Engine {
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
             + harborGold(civ, homeNet, routes, state)
         let splendour = state.civs[civ]!.splendour > 0 ? rules.splendour.goldPercent : 0
-        let total = ((taxes + mines) * (100 + administration) / 100 + trade) * (100 + splendour) / 100
-        return (taxes, mines, trade, total * aiIncomePercent(civ, state) / 100)
+        // Vassals' tribute and friendly peoples' trade.
+        let fromPeoples = peoplesGold(of: civ, in: state)
+        let peoples = fromPeoples.tribute + fromPeoples.trade
+        let total = ((taxes + mines) * (100 + administration) / 100 + trade + peoples) * (100 + splendour) / 100
+        return (taxes, mines, trade, peoples, total * aiIncomePercent(civ, state) / 100)
     }
 
     /// Most grain a civilization can buy from its trade partners this turn.

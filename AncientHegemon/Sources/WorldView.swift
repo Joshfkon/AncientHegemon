@@ -320,6 +320,14 @@ struct MapView: View {
                         layer.stroke(path, with: .color(color), lineWidth: 8)
                     }
                 }
+            } else if let lord = state.minors[territory.id]?.overlord, state.armies[territory.id]?.owner == nativesID {
+                // A vassal people: its own land, ringed in its overlord's colour.
+                let color = Palette.color(lord, state)
+                context.fill(path, with: .color(color.opacity(0.07)))
+                context.drawLayer { layer in
+                    layer.clip(to: path)
+                    layer.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 8 * t.detail, dash: [6 * t.detail, 4 * t.detail]))
+                }
             }
             context.stroke(path, with: .color(.black.opacity(0.85)), lineWidth: 1.1)
         }

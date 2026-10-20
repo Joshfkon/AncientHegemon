@@ -19,6 +19,8 @@ public struct EconomyReport: Sendable, Equatable {
     public let taxes: Int
     public let mines: Int
     public let trade: Int
+    /// Vassals' tribute and trade with friendly peoples.
+    public let peoples: Int
     /// Gold next harvest, including the ruler's administration bonus (before army pay).
     public let income: Int
     /// Gold owed to the soldiers each turn.
@@ -64,7 +66,8 @@ extension Engine {
         // The total comes from the harvest itself; learning during it can shift the breakdown.
         var harvestIncome = breakdown.total
         if case let .harvest(_, _, _, _, _, income)? = harvested.first { harvestIncome = income }
-        let gold = (taxes: breakdown.taxes, mines: breakdown.mines, trade: breakdown.trade, total: harvestIncome)
+        let gold = (taxes: breakdown.taxes, mines: breakdown.mines, trade: breakdown.trade, peoples: breakdown.peoples,
+                    total: harvestIncome)
         let cs = state.civs[civ]!
         var cast = min(effectiveYield(of: .copper, for: civ, in: state, routes: routes),
                        effectiveYield(of: .tin, for: civ, in: state, routes: routes))
@@ -82,7 +85,7 @@ extension Engine {
             eatenAtSea: pockets.isEmpty ? 0 : fleetUpkeep(of: civ, state), granary: state.civs[civ]!.granary,
             granaryCap: granaryCap(civ, production: produced, state),
             grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
-            taxes: gold.taxes, mines: gold.mines, trade: gold.trade, income: gold.total,
+            taxes: gold.taxes, mines: gold.mines, trade: gold.trade, peoples: gold.peoples, income: gold.total,
             pay: armyPay(of: civ, in: state),
             bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,
             equipmentPercent: bronzePercent(civ, state), taxRate: cs.taxRate,

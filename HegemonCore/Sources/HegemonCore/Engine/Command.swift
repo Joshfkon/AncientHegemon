@@ -4,6 +4,10 @@ public enum Command: Codable, Sendable, Equatable {
     case recruit(territory: TerritoryID, unit: UnitType, count: Int)
     /// Talk to the tribe on unclaimed land next to yours.
     case parley(territory: TerritoryID, Parley)
+    /// Call up half a vassal's warriors into neighbouring land of yours.
+    case levy(territory: TerritoryID, to: TerritoryID)
+    /// Make a loyal vassal's land your own, peacefully.
+    case annex(territory: TerritoryID)
     /// How a fleet fights at sea.
     case setFleetPlan(sea: SeaZoneID, plan: BattlePlan)
     /// Alliances: offer, accept, leave; ask an ally to join a war; answer an ally's call.
@@ -100,6 +104,15 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
     case tribeJoined(civ: CivilizationID, territory: TerritoryID, parley: Parley, warriors: Int)
+    case vassalSworn(civ: CivilizationID, territory: TerritoryID)
+    /// A vassal threw off its overlord, or was conquered by someone else.
+    case vassalFreed(civ: CivilizationID, territory: TerritoryID)
+    case levied(civ: CivilizationID, territory: TerritoryID, to: TerritoryID, warriors: Int)
+    case annexed(civ: CivilizationID, territory: TerritoryID)
+    /// A warlike people raided an empire's land; `won` if they got through to plunder.
+    case peopleRaided(people: TerritoryID, territory: TerritoryID, civ: CivilizationID, gold: Int, won: Bool)
+    /// A people came over to an empire of its own accord.
+    case peopleJoined(civ: CivilizationID, territory: TerritoryID, warriors: Int)
     case decorated(civ: CivilizationID, decoration: DecorationID)
     case patronageSet(civ: CivilizationID, field: KnowledgeField?)
     case decisionOffered(civ: CivilizationID, DecisionKind)
@@ -204,6 +217,10 @@ public struct EventReport: Codable, Sendable, Equatable {
 }
 
 public enum GameError: Error, Equatable, Sendable {
+    case notVassal(TerritoryID)
+    case tooSoon(TerritoryID)
+    /// A vassal under the protection of its overlord, or of someone at peace with you.
+    case shielded(TerritoryID)
     case gameOver
     case notWalled(TerritoryID)
     case noSiege(TerritoryID)

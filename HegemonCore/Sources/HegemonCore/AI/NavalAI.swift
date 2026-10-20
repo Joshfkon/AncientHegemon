@@ -50,6 +50,7 @@ extension AIPlayer {
         var best: (SeaCampaign, Double)?
         for t in map.territories where t.isCoastal && !owned.contains(t.id) {
             if let owner = state.owner(of: t.id), state.atPeace(civ, owner) { continue }
+            if engine.shielded(t.id, from: civ, in: state) { continue }
             // Coasts next to our own land are the army's job.
             if map.landNeighbors(of: t.id).contains(where: owned.contains) { continue }
             let landing = Set(t.seas)
@@ -204,6 +205,7 @@ extension AIPlayer {
         let coasts = map.coastalTerritories(of: sea).filter { t in
             guard state.owner(of: t) != civ else { return false }
             if let owner = state.owner(of: t), state.atPeace(civ, owner) { return false }
+            if engine.shielded(t, from: civ, in: state) { return false }
             return (try? engine.checkOmen(civ, attacking: t, state)) != nil
         }
         let ranked = coasts.sorted { a, b in

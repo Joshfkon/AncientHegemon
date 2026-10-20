@@ -40,6 +40,10 @@ public struct Engine: Sendable {
             return try setFormation(territory, formation, &state)
         case let .parley(territory, kind):
             return try parley(territory, kind, &state)
+        case let .levy(territory, to):
+            return try levy(territory, to: to, &state)
+        case let .annex(territory):
+            return try annex(territory, &state)
         case let .setFleetPlan(sea, plan):
             return try setFleetPlan(sea, plan, &state)
         case let .offerAlliance(to):
@@ -183,6 +187,7 @@ public struct Engine: Sendable {
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
         guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
         if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
+        if shielded(to, from: civ, in: state) { throw GameError.shielded(to) }
         try checkOmen(civ, attacking: to, state)
         var general: General?
         if withGeneral {
@@ -300,7 +305,7 @@ public struct Engine: Sendable {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return closing + ended }
-            age = dawnOfIron(&state) + piratesRound(&state)
+            age = dawnOfIron(&state) + piratesRound(&state) + minorsRound(&state)
         }
 
         return closing + beginTurn(age, &state)

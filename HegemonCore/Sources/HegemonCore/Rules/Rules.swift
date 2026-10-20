@@ -217,6 +217,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let trade: TradeRules
     public let ships: ShipRules
     public let pirates: PirateRules
+    public let minors: MinorRules
     public let battle: BattleRules
     public let naval: NavalRules
     public let generals: GeneralRules

@@ -125,6 +125,7 @@ extension Engine {
         guard let i = fleetIndex(civ, sea, state) else { throw GameError.noFleet(sea) }
         guard units.fits(in: state.fleets[i].cargo) else { throw GameError.insufficientUnits(territory) }
         if let owner = state.owner(of: territory), state.atPeace(civ, owner) { throw GameError.atPeace(territory) }
+        if shielded(territory, from: civ, in: state) { throw GameError.shielded(territory) }
         try checkOmen(civ, attacking: territory, state)
 
         // Enemy ships in these waters must be beaten before anyone goes ashore.

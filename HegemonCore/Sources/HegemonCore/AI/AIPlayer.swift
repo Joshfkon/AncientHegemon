@@ -34,6 +34,7 @@ public struct AIPlayer: Sendable {
         court(civ, &state, &turn)
         let campaign = seaCampaign(civ, state)
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
+        courtPeoples(civ, &state, &turn)
         recruit(civ, &state, &turn)
         sally(civ, &state, &turn)
         attack(civ, &state, &turn)
@@ -329,6 +330,22 @@ public struct AIPlayer: Sendable {
         }
     }
 
+    /// Peoples next door that would swear fealty: rich land is worth conquering outright; poor
+    /// land is taken as a vassal (and annexed when the time comes, without battle or unrest);
+    /// in between, the gentler empires take vassals and the warlike conquer.
+    func courtPeoples(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        for t in state.minors.keys.sorted() {
+            let grain = map.territory(t)!.grain
+            let swear = grain <= 3 || (grain < 5 && personality.aggression < 1)
+            if swear, engine.tribe(at: t, for: civ, in: state) != nil, engine.people(at: t, in: state) != nil,
+               !state.parleyed.contains(t), engine.wouldSwear(t, to: civ, in: state) {
+                attempt(.parley(territory: t, .vassalage), &state, &turn)
+            } else if engine.overlord(of: t, in: state) == civ, engine.annexWait(t, in: state) == 0 {
+                attempt(.annex(territory: t), &state, &turn)
+            }
+        }
+    }
+
     /// A besieged garrison goes out to meet the besiegers when it has a fair chance.
     func sally(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where state.owner(of: town) == civ {
@@ -370,6 +387,7 @@ public struct AIPlayer: Sendable {
                 let owner = state.owner(of: to)
                 if owner == civ { continue }
                 if let owner, state.atPeace(civ, owner) { continue }
+                if engine.shielded(to, from: civ, in: state) { continue }
                 if (try? engine.checkOmen(civ, attacking: to, state)) == nil { continue }
                 let keep = garrison(from, for: civ, state, excluding: to)
                 guard ready.total + (state.armies[from]!.units.total - ready.total) > keep else { continue }

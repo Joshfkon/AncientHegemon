@@ -19,6 +19,7 @@ extension Engine {
             + monumentPrestige(of: civ, in: state)
             + cs.sacked * rules.sack.prestige
             + objectivePrestige(of: civ, in: state)
+            + vassals(of: civ, in: state).count * rules.minors.vassalPrestige
     }
 
     /// Where a civilization's prestige comes from, part by part (they sum to `prestige`).
@@ -37,6 +38,7 @@ extension Engine {
             ("Great works", monumentPrestige(of: civ, in: state)),
             ("Capitals sacked", cs.sacked * rules.sack.prestige),
             ("Prizes held", objectivePrestige(of: civ, in: state)),
+            ("Vassals", vassals(of: civ, in: state).count * rules.minors.vassalPrestige),
         ].filter { $0.1 != 0 }
     }
 

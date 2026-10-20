@@ -235,6 +235,8 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
+            if let how = UserDefaults.standard.string(forKey: "demoVassal"),
+               let t = session.demoVassal(sworn: how != "look") { selected = .territory(t) }
             if UserDefaults.standard.string(forKey: "demoThrone") != nil {
                 session.demoDecorate()
                 showThrone = true

@@ -28,6 +28,7 @@
 		63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */; };
 		6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B35133F6C1422877D8A459 /* UnitIcons.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
+		7F0ED4E597E9C3E9F68B373C /* Peoples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14768232649EF1859B451DAC /* Peoples.swift */; };
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
@@ -60,6 +61,7 @@
 		095BFA7DCC2670D90123446F /* MapMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarks.swift; sourceTree = "<group>"; };
 		0ECFFACBAD68C2C31E4A376E /* Council.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Council.swift; sourceTree = "<group>"; };
 		13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlePlan.swift; sourceTree = "<group>"; };
+		14768232649EF1859B451DAC /* Peoples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Peoples.swift; sourceTree = "<group>"; };
 		185BAB29A57542F88154144A /* Guidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Guidance.swift; sourceTree = "<group>"; };
 		2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyView.swift; sourceTree = "<group>"; };
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
@@ -185,6 +187,7 @@
 				095BFA7DCC2670D90123446F /* MapMarks.swift */,
 				90FA72590070862E642AFFAE /* Moments.swift */,
 				90545C84FE5971D4416409AA /* OrderViews.swift */,
+				14768232649EF1859B451DAC /* Peoples.swift */,
 				6FA988893EB7B67616AC6394 /* ResourcesView.swift */,
 				C68161D07A290C13CFFD63F8 /* RulerFigure.swift */,
 				C2E4AD6639ED1329E331B67C /* Rulers.swift */,
@@ -320,6 +323,7 @@
 				4189AA9CA92DB2DDFA1C25AB /* MapMarks.swift in Sources */,
 				58AA774DC005708C95E2CDA5 /* Moments.swift in Sources */,
 				D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */,
+				7F0ED4E597E9C3E9F68B373C /* Peoples.swift in Sources */,
 				E1DBC00849377F7EFEFCCFA8 /* ResourcesView.swift in Sources */,
 				5158F762F9D19A3A396078D5 /* RulerFigure.swift in Sources */,
 				FDF4BE078F0BB2D4F163960F /* RulerStatue.swift in Sources */,

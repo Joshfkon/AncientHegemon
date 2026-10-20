@@ -2,7 +2,8 @@
 /// a chance they refuse) or demand their submission (free, but only an overwhelming army next
 /// door makes them bow; a refused demand costs face and stiffens them).
 public enum Parley: String, Codable, Sendable, CaseIterable {
-    case gifts, demand
+    /// Win them over with gold; demand they submit; or offer them your protection as vassals.
+    case gifts, demand, vassalage
 }
 
 public struct TribeRules: Codable, Sendable, Equatable {
@@ -26,9 +27,10 @@ public struct TribeRules: Codable, Sendable, Equatable {
 
 extension Engine {
     /// The tribe holding a territory, if it is native land the civ could talk to: unclaimed, held
-    /// by natives, and next to the civ's land.
+    /// by natives, next to the civ's land, and nobody's vassal.
     public func tribe(at territory: TerritoryID, for civ: CivilizationID, in state: GameState) -> Army? {
         guard state.owner(of: territory) == nil, let army = state.armies[territory], army.owner == nativesID,
+              overlord(of: territory, in: state) == nil,
               map.landNeighbors(of: territory).contains(where: { state.owner(of: $0) == civ }) else { return nil }
         return army
     }
@@ -55,6 +57,7 @@ extension Engine {
         let p = r.giftChanceBase + r.giftChancePerTroop * (troopsNextTo(territory, for: civ, in: state) - warriors)
             + legitimacy / 2 + writing
             + magnificence(of: civ, in: state) / max(1, rules.throneRoom.magnificencePerGiftPercent)
+            + (people(at: territory, in: state) != nil ? attitude(of: territory, toward: civ, in: state) / 2 : 0)
         return min(r.giftChanceMax, max(r.giftChanceMin, p))
     }
 
@@ -77,14 +80,26 @@ extension Engine {
             guard gold >= cost else { throw GameError.insufficientGold(needed: cost, available: gold) }
             state.civs[civ]!.gold -= cost
             joins = Int(state.rng.next() % 100) < giftChance(at: territory, for: civ, in: state)
+            // Refused gifts are still remembered kindly.
+            if !joins { changeAttitude(of: territory, toward: civ, by: rules.minors.giftAttitude, &state) }
         case .demand:
             joins = demandWorks(at: territory, for: civ, in: state)
             if !joins {
                 adjustLegitimacy(civ, -r.demandRefusedLegitimacy, &state)
                 state.armies[territory]!.units.infantry += 1
+                changeAttitude(of: territory, toward: civ, by: rules.minors.demandRefusedAttitude, &state)
             }
+        case .vassalage:
+            // Only a kingdom can swear fealty; a tribe without a name just joins or doesn't.
+            guard people(at: territory, in: state) != nil else { throw GameError.noTribe(territory) }
+            guard wouldSwear(territory, to: civ, in: state) else {
+                changeAttitude(of: territory, toward: civ, by: rules.minors.vassalRefusedAttitude, &state)
+                return [.tribeRefused(civ: civ, territory: territory, parley: kind)]
+            }
+            return swear(territory, to: civ, &state)
         }
         guard joins else { return [.tribeRefused(civ: civ, territory: territory, parley: kind)] }
+        state.minors[territory] = nil
         // The land is theirs to give; some of the warriors take service.
         let warriors = tribe.units.total * r.warriorsJoinPercent / 100
         state.armies[territory] = warriors > 0 ? Army(owner: civ, units: UnitCounts(infantry: warriors)) : nil

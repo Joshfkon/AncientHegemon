@@ -712,6 +712,8 @@ final class GameSession {
         case let .warDeclared(by, on): return by == me || on == me
         case let .navalBattle(_, r): return r.attacker == me || r.defender == me
         case let .storm(civ, _, _, _), let .piratesPlundered(civ, _, _), let .bountyPaid(civ, _): return civ == me
+        case let .vassalSworn(civ, _), let .vassalFreed(civ, _), let .levied(civ, _, _, _), let .annexed(civ, _),
+             let .peopleJoined(civ, _, _), let .peopleRaided(_, _, civ, _, _): return civ == me
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
         case let .eliminated(civ): return civ == me
@@ -733,6 +735,12 @@ final class GameSession {
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name ?? engine.map.sea($0)?.name } ?? "?" }
+        func peopleName(_ t: TerritoryID) -> String { engine.rules.minors.peoples[t]?.name ?? "The people of \(place(t))" }
+        /// Land next to the player's: news of it matters to them.
+        func isNeighbour(_ t: TerritoryID) -> Bool {
+            guard let human else { return false }
+            return engine.map.landNeighbors(of: t).contains { after.owner(of: $0) == human }
+        }
         func monumentName(_ id: MonumentID) -> String { engine.rules.monuments.list.first { $0.id == id }?.name ?? id }
         var mine = false
         func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
@@ -813,6 +821,21 @@ final class GameSession {
                 add(civ, "A trophy for the throne room: \(ThroneRoomView.trophyName(kind, engine, after).lowercased())")
             case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
                 add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
+            case let .vassalSworn(civ, t):
+                if civ == human || isNeighbour(t) {
+                    add(civ, "\(peopleName(t).capitalizedFirst) swear\(peopleName(t).hasPrefix("the ") ? "" : "s") fealty to \(name(civ))", at: t)
+                }
+            case let .vassalFreed(civ, t) where civ == human:
+                add(civ, "\(peopleName(t).capitalizedFirst) no longer serve\(peopleName(t).hasPrefix("the ") ? "" : "s") you", at: t)
+            case let .levied(civ, t, to, warriors) where civ == human:
+                add(civ, "\(warriors) warriors of \(peopleName(t)) join your army in \(place(to))", at: to)
+            case let .annexed(civ, t):
+                add(civ, "\(name(civ)) annexes \(place(t)), its loyal vassal", at: t)
+            case let .peopleRaided(p, t, civ, gold, won) where civ == human:
+                add(nativesID, won ? "\(peopleName(p).capitalizedFirst) raid \(place(t))" + (gold > 0 ? " and carry off \(gold) gold" : "")
+                                   : "\(peopleName(p).capitalizedFirst) raid \(place(t)) and are beaten off", at: t)
+            case let .peopleJoined(civ, t, _):
+                add(civ, "\(place(t)) comes over to \(name(civ)) of its own accord", at: t)
             case let .storm(civ, sea, ships, drowned) where civ == human:
                 add(civ, "A storm in the \(place(sea)) sinks \(ships) ship\(ships == 1 ? "" : "s")"
                     + (drowned.total > 0 ? " and drowns \(drowned.total) troops" : "")
@@ -927,6 +950,17 @@ final class GameSession {
         state.civs[human]!.stock = [.stone: 10, .timber: 10]
         state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
         state.land[seat]!.queue = [.road]
+    }
+
+    /// For -demoVassal: the first people next to the capital swears to the player (or, with
+    /// `look`, is only picked). Returns it.
+    func demoVassal(sworn: Bool) -> TerritoryID? {
+        guard let human, let seat = engine.seat(of: human, in: state),
+              let t = engine.map.landNeighbors(of: seat).sorted().first(where: { engine.people(at: $0, in: state) != nil }) else { return nil }
+        guard sworn else { return t }
+        state.minors[t]!.overlord = human
+        state.minors[t]!.vassalSince = state.turn
+        return t
     }
 
     /// For -demoThrone: every decoration in the human's throne room.

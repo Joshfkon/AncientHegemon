@@ -1778,3 +1778,49 @@ goals: everything here follows from how real Bronze Age empires held together or
   Ships lost to storms: 0.2–0.5 per empire per game. The sim's sea table now counts storm
   losses, gold plundered and bounties. Rules version 26. Test rules (`Engine.calm()`) switch
   storms and pirates off.
+
+### Minor kingdoms and vassals (Josh: "making the smaller regions have their own AIs and personalities… not playable for users"; "an option to have a conquered country be a vassal state. lots of advantages")
+
+- **Peoples.** Each of the 28 native lands that isn't a barbarian homeland is a named people
+  with a ruler and a temperament (`minors.peoples` in rules.json), drawn from the age where we
+  can: Hatti under Suppiluliuma II, Ugarit under Ammurapi, Alashiya, Knossos, Tartessos, Elam,
+  the Libu under Meryey, the Sherden, the Lukka, the Thracians under Rhesus… Temperaments:
+  warlike (base attitude −10), proud (0), mercantile (+10), peaceable (+20).
+- **Memory.** Each people's attitude toward each empire runs −100…100. Gifts warm them by 15
+  even when refused (so gold is never quite wasted); a refused demand chills them by 20, a
+  refused offer of vassalage by 10; attacking them costs 50, and every people next door fears
+  the attacker (−10). Feelings drift back toward the base by 2 a round. Half the attitude is
+  added to the chance gifts win them over.
+- **Their own turn** (once a round, after pirates): warriors lost grow back by one every 5
+  rounds, up to their starting strength. (Growing 2 beyond it made tribes tough enough that
+  empires rarely met: wars between the four nearly vanished in the sims.) Warlike peoples with 3+ warriors raid (15% a round) the most
+  weakly held land of an empire they hate (attitude ≤ −20): half their warriors plus one go,
+  fight any garrison, carry off up to 4 gold and a person, and go home; the land stays the
+  empire's. Mercantile peoples pay 1 gold a turn to each friendly empire (attitude ≥ 40) that
+  borders them or shares a sea. A people devoted to a neighbouring empire (≥ 70) may come over
+  of its own accord (5% a round).
+- **Vassals.** "Make vassal" succeeds when your troops next door are twice their warriors, or
+  they like you (≥ 40). A vassal keeps its land and warriors and:
+  - pays tribute every turn: 1 gold + 1 per 3 of its grain ("Vassals & peoples" in the
+    treasury);
+  - needs no garrison and causes no unrest, since it isn't your land;
+  - is shielded: nobody at peace with you may attack it or treat with it (and you can't attack
+    your own);
+  - adds 8 prestige ("Vassals" in the breakdown);
+  - can be levied every 5 rounds: half its warriors join your army next door;
+  - can be annexed after 8 loyal rounds: the land becomes yours with its warriors, and since it
+    wasn't conquered, it isn't restless.
+  A vassal with none of your troops next door may break free (8% a round), and is freed if you
+  fall. Someone at war with you may still conquer it.
+- **AI** (Josh: "in some cases it may make sense to just conquer outright"). Rich land (grain
+  5+) is conquered outright; poor land (grain 3 or less) is taken as a vassal when they'd
+  swear; in between, merchants and turtles take vassals and conquerors and opportunists fight.
+  Every vassal is annexed once its 8 rounds are up. (Keeping vassals as buffers, or taking
+  every people as a vassal, slowed expansion until the empires barely met.) Nobody attacks a
+  shielded vassal.
+- Balance (80 games): Italia 36%, Mesopotamia 26%, Egypt 20%, Greece 17%; wars between the
+  empires as common as before. Rules version 27.
+- Vassalage between the four empires themselves (a beaten Egypt submitting to you) is not in
+  yet: it needs submission terms in diplomacy and changes to peace and alliances.
+- Debug launch arguments: `-demoAs <civ>` starts a game as that civ; `-demoVassal YES` makes
+  the first people next to your capital your vassal and selects it (`look` only selects it).

@@ -124,8 +124,23 @@ struct CommandBar: View {
                     .foregroundStyle(Bronze.gradient)
                     .lineLimit(1).minimumScaleFactor(0.6)
             }
-            Text("\(owner.map { Palette.name($0, state) } ?? "Unclaimed") · \(t.terrain.rawValue)")
-                .font(.caption).foregroundStyle(.white.opacity(0.7))
+            if owner == nil, let people = engine.people(at: id, in: state) {
+                Text("\(people.name.capitalizedFirst) · \(people.ruler) · \(t.terrain.rawValue)")
+                    .font(.caption).foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                if let lord = engine.overlord(of: id, in: state) {
+                    Label(lord == session.human ? "Your vassal" : "Vassal of \(Palette.name(lord, state))", systemImage: "crown")
+                        .font(.caption2.bold()).foregroundStyle(Palette.color(lord, state))
+                } else if let human = session.human {
+                    let a = engine.attitude(of: id, toward: human, in: state)
+                    Text("\(PeopleText.temperament(people.temperament).capitalizedFirst) · \(PeopleText.mood(a))")
+                        .font(.caption2.bold()).foregroundStyle(PeopleText.moodColor(a))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+            } else {
+                Text("\(owner.map { Palette.name($0, state) } ?? "Unclaimed") · \(t.terrain.rawValue)")
+                    .font(.caption).foregroundStyle(.white.opacity(0.7))
+            }
             if session.sees(id) {
                 HStack(spacing: 8) {
                     Label("\(state.population(of: id))", systemImage: "person.2.fill")
@@ -216,6 +231,11 @@ struct CommandBar: View {
             if !routes.isEmpty { return "Tap white land to march, or a blue coast ⛵ to sail there and attack in one go." }
             if coastal { return "Tap a glowing territory to march. To cross the sea, build a ship (Ships, below) first." }
             return "Tap a glowing territory to march."
+        }
+        if let lord = engine.overlord(of: id, in: state) {
+            return lord == human ? "Your vassal holds its own land: no garrison needed. Levy its warriors or, in time, annex it below."
+                : state.atPeace(human, lord) ? "Protected by \(Palette.name(lord, state)) while you are at peace."
+                : "At war with its overlord: you may attack it."
         }
         if state.owner(of: id) == human, engine.restless(id, of: human, in: state) {
             return "Restless: it pays no taxes and may revolt. March in at least \(engine.rules.unrest.garrisonToCalm) soldier to calm it."
@@ -380,8 +400,15 @@ struct CommandBar: View {
 
     @ViewBuilder private func tribeSection(_ id: TerritoryID, _ human: CivilizationID) -> some View {
         let warriors = state.armies[id].flatMap { $0.owner == nativesID ? $0.units.total : nil } ?? 0
+        if engine.overlord(of: id, in: state) == human {
+            vassalSection(id, human, warriors)
+        } else {
         section("Diplomacy") {
-            if warriors == 0 {
+            if let lord = engine.overlord(of: id, in: state) {
+                Tile(symbol: "crown", title: "Vassal of \(Palette.name(lord, state))",
+                     detail: state.atPeace(human, lord) ? "Under their protection while you're at peace" : "At war with their lord: you may attack",
+                     cost: Text(""), enabled: false) {}
+            } else if warriors == 0 {
                 Tile(symbol: "flag.fill", title: "Empty land", detail: "March a single unit in to claim it", cost: Text(""), enabled: false) {}
             } else if engine.tribe(at: id, for: human, in: state) == nil {
                 Tile(symbol: "person.3.fill", title: session.sees(id) ? "\(warriors) warriors" : "A tribe", detail: "Your land must border theirs to send envoys",
@@ -400,6 +427,41 @@ struct CommandBar: View {
                      cost: Text(bows ? "Free" : "Costs standing if refused"), enabled: true) {
                     session.order(.parley(territory: id, .demand))
                 }
+                if engine.people(at: id, in: state) != nil {
+                    let swears = engine.wouldSwear(id, to: human, in: state)
+                    Tile(symbol: "crown", title: "Make vassal",
+                         detail: swears ? "They'll swear to you: tribute, levies, no unrest" : "They'd refuse: you need \(engine.rules.minors.vassalRatio)× their warriors nearby, or their friendship",
+                         cost: Text(swears ? "+\(engine.tribute(of: id)) gold a turn" : "Sours them if refused"), enabled: true) {
+                        session.order(.parley(territory: id, .vassalage))
+                    }
+                }
+            }
+        }
+        }
+    }
+
+    /// Your vassal: what it pays, and calling on it.
+    @ViewBuilder private func vassalSection(_ id: TerritoryID, _ human: CivilizationID, _ warriors: Int) -> some View {
+        section("Vassal") {
+            Tile(symbol: "dollarsign.circle.fill", title: "Tribute", detail: "Paid every turn; no garrison needed, no unrest",
+                 cost: Text("+\(engine.tribute(of: id)) gold a turn"), enabled: false) {}
+            // Levies march to the neighbouring land of yours with the biggest army.
+            let fronts = engine.map.landNeighbors(of: id).filter { t in
+                state.owner(of: t) == human && (state.armies[t].map { $0.owner == human } ?? true)
+            }.sorted { (state.armies[$0]?.units.total ?? 0, $1) > (state.armies[$1]?.units.total ?? 0, $0) }
+            let wait = engine.levyWait(id, in: state)
+            Tile(symbol: "person.3.sequence.fill", title: "Levy",
+                 detail: fronts.first.map { "Half their warriors (\(warriors / 2)) join your army in \(engine.map.territory($0)?.name ?? $0)" }
+                    ?? "Needs land of yours next door",
+                 cost: Text(wait > 0 ? "Again in \(wait) round\(wait == 1 ? "" : "s")" : "Every \(engine.rules.minors.levyRounds) rounds"),
+                 enabled: wait == 0 && warriors >= 2 && fronts.first != nil) {
+                if let to = fronts.first { session.order(.levy(territory: id, to: to)) }
+            }
+            let annex = engine.annexWait(id, in: state)
+            Tile(symbol: "flag.fill", title: "Annex", detail: "Their land becomes yours, peacefully: no unrest",
+                 cost: Text(annex > 0 ? "After \(annex) more loyal round\(annex == 1 ? "" : "s")" : "Their warriors join you"),
+                 enabled: annex == 0) {
+                session.order(.annex(territory: id))
             }
         }
     }

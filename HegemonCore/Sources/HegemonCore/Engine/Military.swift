@@ -58,6 +58,7 @@ extension Engine {
         var general = general
 
         if defenders(of: to, against: civ, state) != nil {
+            notePeopleAttacked(to, by: civ, &state)
             let result = fight(civ, units, general: general, plan: plan, battles: battles, at: to,
                                approach: approach, &state)
             events += result.events

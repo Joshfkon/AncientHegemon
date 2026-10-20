@@ -288,6 +288,8 @@ public struct GameState: Codable, Sendable, Equatable {
     public var sieges: [TerritoryID: Siege] = [:]
     /// The collapse has brought iron within everyone's reach.
     public var ironAge = false
+    /// Minor kingdoms: the named peoples holding native land, and what they remember.
+    public var minors: [TerritoryID: MinorState] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held
@@ -351,6 +353,10 @@ public struct GameState: Codable, Sendable, Equatable {
             let count = natives.tribe(in: t, island: map.landNeighbors(of: t.id).isEmpty)
             if count > 0 { armies[t.id] = Army(owner: nativesID, units: UnitCounts(infantry: count)) }
         }
+        var minors: [TerritoryID: MinorState] = [:]
+        for (t, _) in rules.minors.peoples {
+            if let army = armies[t], army.owner == nativesID { minors[t] = MinorState(startWarriors: army.units.total) }
+        }
 
         self.mapVersion = map.version
         self.rulesVersion = rules.version
@@ -367,6 +373,7 @@ public struct GameState: Codable, Sendable, Equatable {
         self.armies = armies
         self.moved = [:]
         self.generals = generals
+        self.minors = minors
         self.fleets = startingFleets
         self.generalsMoved = []
         self.peace = []

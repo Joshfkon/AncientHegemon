@@ -3,7 +3,8 @@ import Foundation
 
 extension Engine {
     /// The bundled rules with chance taken out of government: no random events, no ruler deaths,
-    /// no rebellions, no storms or pirates, no generals' pay and no ruler-trait effects. For tests that expect exact numbers.
+    /// no rebellions, no storms or pirates, no moods or deeds of the minor peoples, no generals'
+    /// pay and no ruler-trait effects. For tests that expect exact numbers.
     static func calm() throws -> Engine {
         try modified { json in
             var events = json["events"] as! [String: Any]
@@ -26,6 +27,11 @@ extension Engine {
             var pirates = json["pirates"] as! [String: Any]
             pirates["spawnPercent"] = 0
             json["pirates"] = pirates
+            // Peoples who feel nothing in particular and never act on their own.
+            var minors = json["minors"] as! [String: Any]
+            minors["baseAttitude"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
+            for key in ["growthCap", "raidPercent", "joinPercent", "breakFreePercent"] { minors[key] = 0 }
+            json["minors"] = minors
             let traits = json["rulerTraits"] as! [String: Any]
             json["rulerTraits"] = traits.mapValues { _ in [String: Any]() }
         }

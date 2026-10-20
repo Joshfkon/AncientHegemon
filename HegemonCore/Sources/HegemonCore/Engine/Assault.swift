@@ -23,6 +23,7 @@ extension Engine {
         guard !groups.isEmpty, groups.allSatisfy({ $0.units.isNonNegative && !$0.units.isEmpty }),
               Set(groups.map(\.source)).count == groups.count else { throw GameError.invalidCount }
         if let owner = state.owner(of: target), state.atPeace(civ, owner) { throw GameError.atPeace(target) }
+        if shielded(target, from: civ, in: state) { throw GameError.shielded(target) }
         try checkOmen(civ, attacking: target, state)
         for g in groups {
             switch g.source {

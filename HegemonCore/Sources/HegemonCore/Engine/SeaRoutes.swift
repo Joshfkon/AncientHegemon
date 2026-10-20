@@ -20,6 +20,7 @@ extension Engine {
         func consider(_ target: TerritoryID, _ route: SeaRoute) {
             guard target != from, !map.areLandAdjacent(from, target), state.owner(of: target) != civ else { return }
             if let owner = state.owner(of: target), state.atPeace(civ, owner) { return }
+            if shielded(target, from: civ, in: state) { return }
             if let army = state.armies[target], army.owner != civ, state.isPlayer(army.owner), state.atPeace(civ, army.owner) { return }
             // No sailing beats sailing; then more room.
             if let old = routes[target], (!old.sails && route.sails) || (old.sails == route.sails && old.room >= route.room) { return }
