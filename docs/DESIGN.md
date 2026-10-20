@@ -1577,3 +1577,20 @@ goals: everything here follows from how real Bronze Age empires held together or
   confirm; take your leave). Several wait their turn. The Rivals tab opens with a row of the
   age's rulers — tap one (or the portrait on their card) to visit their court any time.
 - Rules version 20; 252 tests.
+
+### Road marches in one go, armies as cubes, and selection you can't miss (Josh: "If there are roads I should be able to move my troops 2 spaces in one go… much clearer that you've selected your troops… like a 3D cube")
+
+- With an army selected, land two steps away along a road also glows: the first step to a
+  neighbour of ours with a road (and a road where the army stands, nobody to fight there),
+  then one step anywhere. Tapping it composes one order ("Attack Arabia by road through
+  Petraea"); sending it makes both moves. If the last step can't be taken, the army stays where
+  it got to. A general marching by road may go on with his troops (once a turn:
+  `generalsRoadMoved`). Only troops that haven't already taken a road step can make the march.
+- Armies are drawn as blocks from the board game: a cube in the owner's colour seen from the
+  front and a little above, the count on its face, a shadow on the board (tribes' cubes grey).
+  Marching armies are cubes too.
+- The selected army lifts off the board with a bobbing bronze arrow over it and pulsing bronze
+  rings beneath; the "can still move" ring steps aside. The map brings whatever you select into
+  the clear space above the command bar (and may pan further past the board's edge to do it),
+  and the map's notices hide while something is selected.
+- Rules version 21 (the state gained a field; old saves are retired); 253 tests.

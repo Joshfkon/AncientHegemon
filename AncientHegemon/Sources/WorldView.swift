@@ -115,6 +115,8 @@ struct MapView: View {
     var idle: Set<TerritoryID> = []
     /// Width covered by the panel on the right; the map can pan further so nothing is stuck under it.
     var trailingInset: CGFloat = 0
+    /// Height covered by the command bar along the bottom: territories are brought above it.
+    var bottomInset: CGFloat = 0
     /// Bring a territory into the visible part of the map.
     var center: MapCenter?
     /// Territories to spotlight (e.g. where a resource comes from): the rest is dimmed.
@@ -138,7 +140,7 @@ struct MapView: View {
     var body: some View {
         GeometryReader { geo in
             let t = BoardTransform(fitting: geo.size, zoom: zoom, pan: pan)
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: idle.isEmpty && flashes.isEmpty && !animatingMarks)) { timeline in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: idle.isEmpty && flashes.isEmpty && !animatingMarks && !armySelected)) { timeline in
                 Canvas { context, _ in
                     draw(&context, t, now: timeline.date)
                     drawFlashes(&context, t, now: timeline.date)
@@ -219,15 +221,16 @@ struct MapView: View {
         let limit = BoardTransform.panLimit(size, zoom: zoom)
         // With the panel open the board may slide left by its width, so the east isn't trapped.
         return CGSize(width: min(limit.width, max(-limit.width - trailingInset, pan.width)),
-                      height: min(limit.height, max(-limit.height, pan.height)))
+                      height: min(limit.height, max(-limit.height - bottomInset, pan.height)))
     }
 
     /// Zooms and pans so a territory sits in the middle of the visible area.
     private func bring(_ request: MapCenter, _ size: CGSize, animated: Bool) {
         guard size.width > 0, let shape = art.territories[request.territory] else { return }
-        let visible = CGRect(x: 0, y: 0, width: size.width - trailingInset, height: size.height)
+        // Clear of the status panel at the top and the command bar at the bottom.
+        let visible = CGRect(x: 0, y: 70, width: size.width - trailingInset, height: max(120, size.height - bottomInset - 70))
         let now = BoardTransform(fitting: size, zoom: zoom, pan: pan).point(shape.token)
-        if request.onlyIfHidden, zoom >= request.minZoom, visible.insetBy(dx: 70, dy: 60).contains(now) { return }
+        if request.onlyIfHidden, zoom >= request.minZoom, visible.insetBy(dx: 60, dy: 30).contains(now) { return }
         let newZoom = max(zoom, request.minZoom)
         let base = BoardTransform(fitting: size, zoom: newZoom, pan: .zero).point(shape.token)
         let update = {
@@ -263,6 +266,12 @@ struct MapView: View {
         .mountains: Color(red: 0.36, green: 0.55, blue: 0.31),
         .desert: Color(red: 0.93, green: 0.69, blue: 0.21),
     ]
+
+    /// One of the player's armies is selected: it bobs, so the map keeps drawing.
+    private var armySelected: Bool {
+        guard case .territory(let id)? = selected, let focus else { return false }
+        return state.armies[id]?.owner == focus
+    }
 
     /// Marks young enough to still be moving.
     private var animatingMarks: Bool {
@@ -423,7 +432,7 @@ struct MapView: View {
                        emphasized: territory.id == picked, hidden: !seen(territory.id))
             if layer != .resources, let army, !arriving.contains(territory.id) {
                 if seen(territory.id) || army.owner == focus {
-                    drawArmy(&context, army, at: c, in: territory.id, t)
+                    drawArmy(&context, army, at: c, in: territory.id, t, now: now)
                 } else if let engine, engine.rumoured(army.units) {
                     drawRumour(&context, army, at: c, t)
                 }
@@ -614,7 +623,7 @@ extension MapView {
     fileprivate func drawIdle(_ context: inout GraphicsContext, _ t: BoardTransform, phase: Double) {
         guard !idle.isEmpty, layer != .resources else { return }
         let pulse = 0.5 + 0.5 * sin(phase * 3.2)
-        for id in idle {
+        for id in idle where selected != .territory(id) {
             guard let c = token(id, t) else { continue }
             let r = (12.5 + 3 * pulse) * t.detail
             context.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
@@ -787,14 +796,7 @@ extension MapView {
         // The army's own token, bobbing as it marches.
         var p = at(eased)
         p.y -= abs(sin(eased * .pi * 3)) * 3 * t.detail
-        let r = 10 * t.detail
-        let disc = Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
-        context.fill(Path(ellipseIn: CGRect(x: p.x - r, y: p.y + r * 0.6, width: 2 * r, height: r * 0.8)), with: .color(.black.opacity(0.25)))
-        context.fill(disc, with: .color(color))
-        context.stroke(disc, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
-        context.stroke(disc, with: .color(Self.bronze), lineWidth: 1.2 * t.detail)
-        context.draw(Text("\(units)").font(.system(size: (units >= 100 ? 7.5 : units >= 10 ? 10 : 12) * t.detail, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white), at: p)
+        Self.drawCube(&context, at: p, half: 9 * t.detail, color: color, label: "\(units)", labelColor: .white, scale: t.detail)
     }
 
     /// An army arriving: a ring in its colour spreads from where it lands.
@@ -1129,21 +1131,39 @@ extension MapView {
 
     /// The army token: a disc in its owner's colour with a bronze rim, its size, a star for a
     /// general, and chevrons for veterans.
-    fileprivate func drawArmy(_ context: inout GraphicsContext, _ army: Army, at c: CGPoint, in id: TerritoryID, _ t: BoardTransform) {
+    fileprivate func drawArmy(_ context: inout GraphicsContext, _ army: Army, at c0: CGPoint, in id: TerritoryID,
+                              _ t: BoardTransform, now: Date = .now) {
         let native = !state.isPlayer(army.owner)
-        let r: CGFloat = (native ? 7.5 : 10) * t.detail
         let led = state.generals.values.contains { $0.location == id }
-        let badge = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
-        context.fill(badge, with: .color(Palette.color(army.owner, state).opacity(native ? 0.85 : 1)))
-        context.stroke(badge, with: .color(.black.opacity(0.7)), lineWidth: 2.2 * t.detail)
-        context.stroke(badge, with: .color(native ? Color(white: 0.75) : Self.bronze), lineWidth: 1.2 * t.detail)
-        let label = "\(army.units.total)\(led ? "★" : "")"
-        // Long labels ("14★") shrink to stay inside the disc.
-        let fit: CGFloat = label.count >= 4 ? 0.62 : label.count == 3 ? 0.75 : 1
-        context.draw(Text(label)
-                        .font(.system(size: (native ? 9.5 : 12) * fit * t.detail, weight: .heavy, design: .rounded))
-                        .foregroundStyle(native ? Color.black.opacity(0.7) : .white),
-                     at: c)
+        // The selected army rises off the board, glowing, with a marker bobbing above it.
+        let chosen = selected == .territory(id) && army.owner == focus && focus != nil
+        let phase = now.timeIntervalSinceReferenceDate
+        let lift: CGFloat = chosen ? (5 + 1.5 * sin(phase * 4)) * t.detail : 0
+        let c = CGPoint(x: c0.x, y: c0.y - lift)
+        let a: CGFloat = (native ? 7 : 9) * t.detail
+        if chosen {
+            let pulse = 0.5 + 0.5 * sin(phase * 4)
+            for k in 0..<2 {
+                let r = (15 + 6 * CGFloat(k) + 3 * pulse) * t.detail
+                context.stroke(Path(ellipseIn: CGRect(x: c0.x - r, y: c0.y + a * 0.6 - r * 0.45, width: 2 * r, height: r * 0.9)),
+                               with: .color(Self.bronze.opacity(k == 0 ? 0.95 : 0.5 * (1 - pulse))), lineWidth: (k == 0 ? 3 : 2) * t.detail)
+            }
+        }
+        Self.drawCube(&context, at: c, half: a, color: Palette.color(army.owner, state).opacity(native ? 0.85 : 1),
+                      label: "\(army.units.total)\(led ? "★" : "")", labelColor: native ? Color.black.opacity(0.7) : .white,
+                      lifted: lift, scale: t.detail)
+        if chosen {
+            // A bronze arrow bobbing over the cube.
+            let y = c.y - a * 2.3 - 3 * sin(phase * 4) * t.detail
+            var arrow = Path()
+            arrow.move(to: CGPoint(x: c.x - 5 * t.detail, y: y - 5 * t.detail))
+            arrow.addLine(to: CGPoint(x: c.x + 5 * t.detail, y: y - 5 * t.detail))
+            arrow.addLine(to: CGPoint(x: c.x, y: y + 2 * t.detail))
+            arrow.closeSubpath()
+            context.fill(arrow, with: .color(Self.bronze))
+            context.stroke(arrow, with: .color(.black.opacity(0.7)), lineWidth: 1)
+        }
+        let r = a * 1.3
         // Veterans wear chevrons above the token, one per rank.
         if let engine, engine.rank(of: army) > .green {
             let n = engine.rank(of: army).rawValue
@@ -1157,6 +1177,43 @@ extension MapView {
                 context.stroke(v, with: .color(Color(red: 0.98, green: 0.8, blue: 0.3)), style: StrokeStyle(lineWidth: 1.4 * t.detail, lineCap: .round, lineJoin: .round))
             }
         }
+    }
+
+    /// An army as a block from the board game: a cube in its owner's colour, seen from the front
+    /// and a little above, with the troop count on its face and a shadow on the board.
+    static func drawCube(_ context: inout GraphicsContext, at c: CGPoint, half a: CGFloat, color: Color,
+                         label: String, labelColor: Color, lifted: CGFloat = 0, scale: CGFloat) {
+        let d = a * 0.55  // depth offset of the top and side
+        let front = CGRect(x: c.x - a - d / 2, y: c.y - a + d / 2, width: 2 * a, height: 2 * a)
+        // Shadow on the board, further off as the cube lifts.
+        let sh = 1 + lifted / max(1, a) * 0.4
+        context.fill(Path(ellipseIn: CGRect(x: c.x - a * 1.3 * sh, y: front.maxY + lifted - a * 0.25, width: a * 2.6 * sh, height: a * 0.7)),
+                     with: .color(.black.opacity(0.3 / sh)))
+        var top = Path()
+        top.move(to: CGPoint(x: front.minX, y: front.minY))
+        top.addLine(to: CGPoint(x: front.minX + d, y: front.minY - d))
+        top.addLine(to: CGPoint(x: front.maxX + d, y: front.minY - d))
+        top.addLine(to: CGPoint(x: front.maxX, y: front.minY))
+        top.closeSubpath()
+        var side = Path()
+        side.move(to: CGPoint(x: front.maxX, y: front.minY))
+        side.addLine(to: CGPoint(x: front.maxX + d, y: front.minY - d))
+        side.addLine(to: CGPoint(x: front.maxX + d, y: front.maxY - d))
+        side.addLine(to: CGPoint(x: front.maxX, y: front.maxY))
+        side.closeSubpath()
+        let face = Path(front)
+        context.fill(face, with: .color(color))
+        context.fill(top, with: .color(color))
+        context.fill(top, with: .color(.white.opacity(0.32)))
+        context.fill(side, with: .color(color))
+        context.fill(side, with: .color(.black.opacity(0.3)))
+        // A soft sheen down the front face.
+        context.fill(face, with: .linearGradient(Gradient(colors: [.white.opacity(0.18), .clear, .black.opacity(0.12)]),
+                                                 startPoint: CGPoint(x: front.minX, y: front.minY), endPoint: CGPoint(x: front.maxX, y: front.maxY)))
+        for p in [face, top, side] { context.stroke(p, with: .color(.black.opacity(0.75)), lineWidth: 0.9 * scale) }
+        let fit: CGFloat = label.count >= 4 ? 0.6 : label.count == 3 ? 0.74 : 1
+        context.draw(Text(label).font(.system(size: a * 1.25 * fit, weight: .heavy, design: .rounded)).foregroundStyle(labelColor),
+                     at: CGPoint(x: front.midX, y: front.midY))
     }
 
     static func glyph(_ r: Resource) -> String {

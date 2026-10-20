@@ -207,7 +207,11 @@ public struct Engine: Sendable {
         let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
         let result = events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
                                       from: .territory(from), approach: approach, &state)
-        // Fresh units that marched by road may move once more this turn.
+        // Fresh units that marched by road may move once more this turn, and their general with them.
+        if roadMarch, let g = general, !state.generalsRoadMoved.contains(g.id) {
+            state.generalsMoved.remove(g.id)
+            state.generalsRoadMoved.insert(g.id)
+        }
         if roadMarch, state.armies[to]?.owner == civ {
             let fresh = units - second
             if let moved = state.moved[to] {
@@ -273,6 +277,7 @@ public struct Engine: Sendable {
         state.calledToWar = []
         state.parleyed = []
         state.generalsMoved = []
+        state.generalsRoadMoved = []
         for i in state.fleets.indices { state.fleets[i].movedShips = 0 }
         state.civs[state.activePlayer]!.resourceUsedThisTurn = [:]
         state.civs[state.activePlayer]!.omen = false

@@ -30,6 +30,8 @@ struct GameScreen: View {
     @Bindable var session: GameSession
     @State private var selected: MapPick?
     @State private var pending: PendingOrder?
+    /// For a two-step road march being composed: the land it passes through.
+    @State private var roadVia: TerritoryID?
     @State private var tab = PanelTab.orders
     @State private var panelOpen = false
     @State private var showKnowledge = false
@@ -78,7 +80,8 @@ struct GameScreen: View {
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
                     marks: session.marks, markTimes: session.markTimes, planned: planned, idle: session.isHumanTurn ? Set(idleArmies) : [],
-                    trailingInset: panelOpen ? Self.panelWidth : 0, center: mapCenter,
+                    trailingInset: panelOpen ? Self.panelWidth : 0,
+                    bottomInset: selected != nil && pending == nil && session.human != nil ? 190 : 0, center: mapCenter,
                     spotlight: spotlightTerritories, flashes: session.flashes, sight: session.sight)
                 .background(Color(red: 0.12, green: 0.10, blue: 0.08))
                 .modifier(Shake(animatableData: shake))
@@ -278,6 +281,8 @@ struct GameScreen: View {
             if p == nil { session.plannedOdds = nil }
         }
         .onChange(of: selected) { _, pick in
+            // Keep what's selected in view, above the command bar.
+            if case .territory(let t)? = pick { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
             if case .territory(let t)? = pick, state.armies[t]?.owner == session.human, session.human != nil { offer(.orders) }
         }
         .onChange(of: engine.collapsePressure(state) > 0) { _, on in if on { offer(.collapse) } }
@@ -325,7 +330,7 @@ struct GameScreen: View {
                     .onTapGesture { session.message = nil }
                     .transition(.opacity)
             }
-            if !session.showReport, tip != .map, session.isHumanTurn, session.moments.isEmpty {
+            if !session.showReport, tip != .map, session.isHumanTurn, session.moments.isEmpty, selected == nil, pending == nil {
                 HStack(spacing: 8) {
                     if let human = session.human, let call = state.warRequests.first(where: { $0.to == human }) {
                         notice("📯 \(Palette.name(call.from, state)) calls you to arms", "Answer") { open(.diplomacy) }
@@ -868,7 +873,7 @@ struct GameScreen: View {
             }
             if tab == .orders, let pending, session.isHumanTurn {
                 // The order composer scrolls its own choices and keeps its buttons in view.
-                OrderComposer(session: session, order: pending) { done in
+                OrderComposer(session: session, order: pending, via: roadVia) { done in
                     self.pending = nil
                     if let done { selected = done }
                     panelOpen = false
@@ -943,6 +948,25 @@ struct GameScreen: View {
     // MARK: Map interaction
 
     /// Coasts the selected army can sail to this turn with the ships offshore.
+    /// Land the selected army can reach in one order by marching along a road: the first step
+    /// to a neighbour with a road (ours, no one to fight), then one more step anywhere. Keyed by
+    /// destination, with the land passed through.
+    private var roadTargets: [TerritoryID: TerritoryID] {
+        guard session.isHumanTurn, let human = session.human, case .territory(let from)? = selected,
+              let army = state.armies[from], army.owner == human else { return [:] }
+        let fresh = army.units - (state.moved[from] ?? .zero) - (state.roadMoved[from] ?? .zero)
+        guard fresh.total > 0 else { return [:] }
+        let near = Set(engine.map.landNeighbors(of: from))
+        var result: [TerritoryID: TerritoryID] = [:]
+        for via in near.sorted() where engine.roadLinks(from, via, for: human, in: state) {
+            for to in engine.map.landNeighbors(of: via).sorted() where to != from && !near.contains(to) && result[to] == nil {
+                if let owner = state.owner(of: to), owner != human, state.atPeace(human, owner) { continue }
+                result[to] = via
+            }
+        }
+        return result
+    }
+
     private var seaRoutes: [TerritoryID: SeaRoute] {
         guard session.isHumanTurn, let human = session.human, case .territory(let from)? = selected,
               let army = state.armies[from], army.owner == human,
@@ -968,6 +992,8 @@ struct GameScreen: View {
             }
             // Coasts across the water that the ships offshore can carry this army to.
             picks.formUnion(seaRoutes.keys.map(MapPick.territory))
+            // Land two steps away along a road, in one order.
+            picks.formUnion(roadTargets.keys.map(MapPick.territory))
             return picks
         case .sea(let sea)?:
             guard let fleet = state.fleet(of: human, in: sea) else { return [] }
@@ -991,7 +1017,11 @@ struct GameScreen: View {
         if let pick, targets.contains(pick), let from = selected {
             switch (from, pick) {
             case let (.territory(a), .territory(b)):
-                if !engine.map.areLandAdjacent(a, b), let route = seaRoutes[b] {
+                roadVia = nil
+                if !engine.map.areLandAdjacent(a, b), let via = roadTargets[b] {
+                    roadVia = via
+                    pending = .march(from: a, to: b)
+                } else if !engine.map.areLandAdjacent(a, b), let route = seaRoutes[b] {
                     pending = .seaAssault(from: a, to: b, route: SeaRouteKey(route))
                 } else {
                     pending = .march(from: a, to: b)

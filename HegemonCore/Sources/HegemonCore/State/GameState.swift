@@ -256,6 +256,8 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Units that marched along a road this turn without fighting, by where they are now: they
     /// may make one more move.
     public var roadMoved: [TerritoryID: UnitCounts] = [:]
+    /// Generals who took a road step this turn (they may march once more, once).
+    public var generalsRoadMoved: Set<GeneralID> = []
     /// Defensive alliances, alliance offers waiting for a person's answer, allies' calls to
     /// arms waiting for one, and the allies already asked this turn.
     public var alliances: Set<CivPair> = []

@@ -1,5 +1,5 @@
 {
-  "version": 20,
+  "version": 21,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {

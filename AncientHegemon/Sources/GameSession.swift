@@ -900,6 +900,13 @@ final class GameSession {
     func demoHost() {
         guard let human, let seat = engine.seat(of: human, in: state), state.armies[seat]?.owner == human else { return }
         state.armies[seat]!.units = UnitCounts(infantry: 14)
+        // A road out through the first neighbour, for trying two-step road marches.
+        if let next = engine.map.landNeighbors(of: seat).sorted().last {
+            state.land[next]!.owner = human
+            state.armies[next] = nil
+            state.land[seat]!.improvements.insert(.road)
+            state.land[next]!.improvements.insert(.road)
+        }
     }
 
     /// Launch with -demoCrisis YES: the player's generals contest the throne.

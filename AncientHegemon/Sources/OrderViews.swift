@@ -29,6 +29,8 @@ struct UnitPicker: View {
 struct OrderComposer: View {
     let session: GameSession
     let order: PendingOrder
+    /// A march two steps along a road: the land it passes through on the way.
+    var via: TerritoryID?
     /// Called when the order is sent (with what to select next) or cancelled (nil).
     let done: (MapPick?) -> Void
 
@@ -48,7 +50,8 @@ struct OrderComposer: View {
         switch order {
         case let .march(from, _), let .embark(from, _), let .seaAssault(from, _, _):
             guard let army = state.armies[from], army.owner == human else { return .zero }
-            let ready = army.units - (state.moved[from] ?? .zero)
+            // Through a road, only troops that haven't already taken a road step can go on.
+            let ready = army.units - (state.moved[from] ?? .zero) - (via != nil ? state.roadMoved[from] ?? .zero : .zero)
             return UnitCounts(infantry: max(0, ready.infantry), archers: max(0, ready.archers),
                               cavalry: max(0, ready.cavalry))
         case let .land(sea, _):
@@ -127,7 +130,9 @@ struct OrderComposer: View {
     private var title: String {
         func place(_ t: String) -> String { engine.map.territory(t)?.name ?? engine.map.sea(t)?.name ?? t }
         switch order {
-        case let .march(from, to): return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
+        case let .march(from, to):
+            if let via { return "\(isBattle ? "Attack" : "March to") \(place(to)) by road through \(place(via))" }
+            return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
         case let .embark(from, sea): return "Board ships in the \(place(sea)) from \(place(from))"
         case let .land(sea, to): return "\(isBattle ? "Land and attack" : "Land in") \(place(to)) from the \(place(sea))"
         case let .seaAssault(from, to, _): return "\(isBattle ? "Sail and attack" : "Sail to") \(place(to)) from \(place(from))"
@@ -375,7 +380,7 @@ struct OrderComposer: View {
 
     /// Straight in, with the army's standing battle plan.
     private func quickAttack() {
-        guard case let .march(from, to) = order else { return }
+        guard case let .march(start, to) = order, let from = firstLeg(start) else { return }
         SoundBoard.shared.play(.roar, volume: 0.6)
         let sent = joining.isEmpty
             ? session.order(.move(from: from, to: to, units: units, general: withGeneral))
@@ -391,9 +396,18 @@ struct OrderComposer: View {
         }
     }
 
+    /// For a road march, takes the first step to `via` and returns where the army now stands.
+    private func firstLeg(_ from: TerritoryID) -> TerritoryID? {
+        guard let via else { return from }
+        return session.order(.move(from: from, to: via, units: units, general: withGeneral)) ? via : nil
+    }
+
     private func send() {
         switch order {
-        case let .march(from, to):
+        case let .march(start, to):
+            guard let from = firstLeg(start) else { return }
+            // Partway along the road: if the last step can't be taken, the army stays where it got to.
+            defer { if via != nil, session.message != nil { done(.territory(from)) } }
             if isBattle {
                 // The plan is made on the battlefield, with both armies in view.
                 Feedback.select()
