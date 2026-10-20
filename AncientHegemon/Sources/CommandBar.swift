@@ -311,9 +311,9 @@ struct CommandBar: View {
                         }
                         // Anything else can be lined up behind it, paid for when it starts.
                         ForEach(ProjectKind.allCases.filter { engine.canQueue($0, in: id, state) }, id: \.self) { kind in
-                            let c = engine.projectCost(kind, for: human, state)
-                            Tile(symbol: Self.projectSymbol(kind), title: "Then " + projectName(kind).lowercased(),
-                                 detail: projectPurpose(kind),
+                            let c = engine.projectCost(kind, for: human, state, at: id)
+                            Tile(symbol: Self.projectSymbol(kind), title: "Then " + projectName(kind, at: id, engine, state).lowercased(),
+                                 detail: projectPurpose(kind, at: id, engine, state),
                                  cost: Text("Queue · ") + Self.cost(gold: c.gold, stone: c.stone, timber: c.timber, turns: c.turns),
                                  enabled: true) {
                                 if session.order(.queueProject(territory: id, project: kind)) { Feedback.select() }
@@ -321,9 +321,10 @@ struct CommandBar: View {
                         }
                     } else {
                         ForEach(buildable, id: \.self) { kind in
-                            let c = engine.projectCost(kind, for: human, state)
+                            let c = engine.projectCost(kind, for: human, state, at: id)
                             let ok = cs.gold >= c.gold && (cs.stock[.stone] ?? 0) >= c.stone && (cs.stock[.timber] ?? 0) >= c.timber
-                            Tile(symbol: Self.projectSymbol(kind), title: projectName(kind), detail: projectPurpose(kind),
+                            Tile(symbol: Self.projectSymbol(kind), title: projectName(kind, at: id, engine, state),
+                                 detail: projectPurpose(kind, at: id, engine, state),
                                  cost: Self.cost(gold: c.gold, stone: c.stone, timber: c.timber, turns: c.turns), enabled: ok) {
                                 if session.order(.build(territory: id, project: kind)) { SoundBoard.shared.play(.coins, volume: 0.6) }
                             }

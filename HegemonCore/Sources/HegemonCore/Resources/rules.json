@@ -1,5 +1,5 @@
 {
-  "version": 27,
+  "version": 28,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -103,6 +103,10 @@
     "farmRiverValleyGrain": 2,
     "mineBonus": 1,
     "wallsDefensePercent": 35,
+    "maxWallLevel": 3,
+    "wallLevelDefensePercent": 15,
+    "wallLevelStoreRounds": 1,
+    "topWallConstruction": 1,
     "harborGold": 2,
     "harborShipDiscount": 2,
     "granaryGrain": 6

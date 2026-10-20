@@ -205,3 +205,54 @@ extension Engine {
         return s
     }
 }
+
+@Suite struct WallLevelTests {
+    let engine = try! Engine.calm()
+
+    /// Mesopotamia alone, rich, with walls round its capital.
+    func walledCapital() throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
+        s.civs["mesopotamia"]!.gold = 500
+        s.civs["mesopotamia"]!.stock[.stone] = 50
+        s.land["mesopotamia"]!.improvements.insert(.walls)
+        return s
+    }
+
+    @Test func wallsRiseALevelAtATimeEachDearerAndStronger() throws {
+        var s = try walledCapital()
+        let low = engine.fortification(at: "mesopotamia", s)
+        let first = engine.projectCost(.walls, for: "mesopotamia", s)
+        let raise = engine.projectCost(.walls, for: "mesopotamia", s, at: "mesopotamia")
+        #expect(raise.gold == first.gold * 2 && raise.stone == first.stone * 2 && raise.turns == first.turns + 1)
+        #expect(engine.canBuild(.walls, in: "mesopotamia", s))
+        try engine.apply(.build(territory: "mesopotamia", project: .walls), to: &s)
+        for _ in 0..<raise.turns { try engine.apply(.endTurn, to: &s) }
+        #expect(engine.wallLevel(at: "mesopotamia", s) == 2)
+        #expect(engine.fortification(at: "mesopotamia", s) == low + engine.rules.projectEffects.wallLevelDefensePercent)
+        // The top level needs masonry.
+        #expect(!engine.canBuild(.walls, in: "mesopotamia", s))
+        s.civs["mesopotamia"]!.knowledge[.construction] = engine.rules.knowledge.levels[0]
+        #expect(engine.canBuild(.walls, in: "mesopotamia", s))
+        s.land["mesopotamia"]!.wallLevel = 3
+        #expect(!engine.canBuild(.walls, in: "mesopotamia", s))
+    }
+
+    @Test func higherWallsHoldOutLonger() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia", "egypt"])
+        s.land["syria"]!.owner = "egypt"
+        s.armies["syria"] = Army(owner: "egypt", units: UnitCounts(infantry: 8))
+        s.land["mesopotamia"]!.improvements.insert(.walls)
+        s.armies["mesopotamia"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 10))
+        s.sieges["mesopotamia"] = Siege(civ: "egypt", camp: "syria")
+        var high = s
+        high.land["mesopotamia"]!.wallLevel = 3
+        let stores = engine.rules.siege.storeRounds
+        for _ in 0..<stores + 1 {
+            _ = engine.pressSieges("egypt", &s)
+            _ = engine.pressSieges("egypt", &high)
+        }
+        // Behind low walls they're already hungry; behind high ones the stores still hold.
+        #expect(s.armies["mesopotamia"]!.units.total < 10)
+        #expect(high.armies["mesopotamia"]!.units.total == 10)
+    }
+}

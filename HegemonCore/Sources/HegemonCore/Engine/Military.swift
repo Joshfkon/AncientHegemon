@@ -229,9 +229,11 @@ extension Engine {
         let gate = state.monuments["lionGate"] == territory ? 30 : 0
         guard state.land[territory]?.improvements.contains(.walls) == true else { return gate }
         let builders = level(.construction, of: state.owner(of: territory), in: state) >= 2
-        let walls = rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0) + gate
-        // A siege wears the walls down.
-        return max(0, walls - breach(at: territory, state))
+        let fx = rules.projectEffects
+        let walls = fx.wallsDefensePercent + (wallLevel(at: territory, state) - 1) * fx.wallLevelDefensePercent
+            + (builders ? rules.knowledge.effects.fortificationPercent : 0) + gate
+        // A siege wears the walls down. No wall makes defenders invulnerable.
+        return min(80, max(0, walls - breach(at: territory, state)))
     }
 
     /// The chance an attack succeeds, estimated by running the battle several times with seeds

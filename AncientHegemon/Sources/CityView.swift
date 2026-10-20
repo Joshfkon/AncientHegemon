@@ -95,7 +95,8 @@ struct CityView: View {
         let buildable = ProjectKind.allCases.filter { engine.canBuild($0, in: territory, state) }
         section("Buildings") {
             ForEach(ProjectKind.allCases.filter { land.improvements.contains($0) }, id: \.self) { kind in
-                Label("\(projectName(kind)): \(projectPurpose(kind))", systemImage: CommandBar.projectSymbol(kind))
+                Label(kind == .walls ? "\(wallName(engine.wallLevel(at: territory, state))): +\(engine.fortification(at: territory, state))% defence"
+                                     : "\(projectName(kind)): \(projectPurpose(kind))", systemImage: CommandBar.projectSymbol(kind))
                     .font(.callout)
             }
             if let site = land.construction {
@@ -107,7 +108,7 @@ struct CityView: View {
             }
             if land.construction == nil, session.isHumanTurn {
                 ForEach(buildable, id: \.self) { kind in
-                    let c = engine.projectCost(kind, for: civ, state)
+                    let c = engine.projectCost(kind, for: civ, state, at: territory)
                     let ok = cs.gold >= c.gold && (cs.stock[.stone] ?? 0) >= c.stone && (cs.stock[.timber] ?? 0) >= c.timber
                     Button {
                         if session.order(.build(territory: territory, project: kind)) { SoundBoard.shared.play(.coins, volume: 0.6) }
@@ -115,8 +116,9 @@ struct CityView: View {
                         HStack {
                             Image(systemName: CommandBar.projectSymbol(kind)).frame(width: 22)
                             VStack(alignment: .leading, spacing: 0) {
-                                Text("Build \(projectName(kind).lowercased())").font(.callout.bold())
-                                Text(projectPurpose(kind)).font(.caption2).foregroundStyle(.secondary)
+                                Text(engine.wallLevel(at: territory, state) > 0 && kind == .walls ? projectName(kind, at: territory, engine, state)
+                                     : "Build \(projectName(kind, at: territory, engine, state).lowercased())").font(.callout.bold())
+                                Text(projectPurpose(kind, at: territory, engine, state)).font(.caption2).foregroundStyle(.secondary)
                             }
                             Spacer()
                             CommandBar.cost(gold: c.gold, stone: c.stone, timber: c.timber, turns: c.turns)
@@ -192,9 +194,18 @@ struct TownScene: View {
 }
 
 extension TownScene {
-    /// The land as painted (debug: -demoTown full paints every building and a site).
+    /// The land as painted (debug: -demoTown full paints every building and a site; -demoWalls
+    /// paints walls of a given height).
     static func shown(_ land: TerritoryState) -> TerritoryState {
         #if DEBUG
+        // -demoWalls 1|2|3 paints walls of that height.
+        let walls = UserDefaults.standard.integer(forKey: "demoWalls")
+        if walls > 0 {
+            var l = land
+            l.improvements.insert(.walls)
+            l.wallLevel = walls
+            return l
+        }
         if UserDefaults.standard.string(forKey: "demoTown") == "full" {
             var l = land
             l.improvements.formUnion([.walls, .road, .farm, .granary, .harbor, .mine, .levee, .drains])
@@ -686,45 +697,92 @@ private struct TownPainter {
 
     // MARK: Works
 
+    /// A standing wall along the town's front, as high as it has been raised: mud-brick with a
+    /// low gate; stone with battlements and two gate towers; or cyclopean, huge rough-fitted
+    /// blocks with four towers, like Mycenae's or Troy's.
     private func walls(_ ctx: inout GraphicsContext) {
-        // A standing wall along the town's front: a stone face with battlements, two gate towers.
-        let stone = Color(red: 0.7, green: 0.66, blue: 0.58), shade = Color(red: 0.5, green: 0.46, blue: 0.4)
+        let level = max(1, min(3, land.wallLevel ?? 1))
+        let (stone, shade): (Color, Color) = switch level {
+        case 1: (Color(red: 0.8, green: 0.64, blue: 0.44), Color(red: 0.6, green: 0.45, blue: 0.3))
+        case 2: (Color(red: 0.7, green: 0.66, blue: 0.58), Color(red: 0.5, green: 0.46, blue: 0.4))
+        default: (Color(red: 0.66, green: 0.63, blue: 0.58), Color(red: 0.42, green: 0.4, blue: 0.37))
+        }
         func at(_ u: Double) -> CGPoint {
             let a = CGPoint(x: 250, y: 400), c = CGPoint(x: 470, y: 470), b = CGPoint(x: 690, y: 400)
             let v = 1 - u
             return CGPoint(x: v * v * a.x + 2 * v * u * c.x + u * u * b.x, y: v * v * a.y + 2 * v * u * c.y + u * u * b.y)
         }
-        let n = 40, height = 26.0
+        let n = 40
+        let height = [20.0, 26, 38][level - 1]
         var face = Path()
         face.move(to: at(0))
         for k in 1...n { face.addLine(to: at(Double(k) / Double(n))) }
         for k in stride(from: n, through: 0, by: -1) { let p = at(Double(k) / Double(n)); face.addLine(to: CGPoint(x: p.x, y: p.y - height)) }
         face.closeSubpath()
         ctx.fill(face, with: .linearGradient(Gradient(colors: [stone, shade]), startPoint: CGPoint(x: 0, y: 380), endPoint: CGPoint(x: 0, y: 470)))
+        switch level {
+        case 1:
+            // Courses of mud brick, staggered.
+            for row in 1..<4 {
+                var course = Path()
+                course.move(to: CGPoint(x: at(0).x, y: at(0).y - Double(row) * 5))
+                for k in 1...n { let p = at(Double(k) / Double(n)); course.addLine(to: CGPoint(x: p.x, y: p.y - Double(row) * 5)) }
+                ctx.stroke(course, with: .color(.black.opacity(0.12)), lineWidth: 0.8)
+            }
+        case 2:
+            for row in 1..<3 {
+                var course = Path()
+                course.move(to: CGPoint(x: at(0).x, y: at(0).y - Double(row) * 9))
+                for k in 1...n { let p = at(Double(k) / Double(n)); course.addLine(to: CGPoint(x: p.x, y: p.y - Double(row) * 9)) }
+                ctx.stroke(course, with: .color(.black.opacity(0.15)), lineWidth: 1)
+            }
+        default:
+            // Great rough blocks: joints at uneven angles, two tiers of them.
+            for k in 0..<n where k % 2 == 0 {
+                let p = at(Double(k) / Double(n)), q = at(Double(k + 2) / Double(n))
+                let lean = Double((k * 7) % 5) - 2
+                var joint = Path()
+                joint.move(to: CGPoint(x: p.x + lean, y: p.y)); joint.addLine(to: CGPoint(x: p.x - lean, y: p.y - height / 2))
+                joint.move(to: CGPoint(x: (p.x + q.x) / 2 - lean, y: (p.y + q.y) / 2 - height / 2))
+                joint.addLine(to: CGPoint(x: (p.x + q.x) / 2 + lean, y: (p.y + q.y) / 2 - height))
+                ctx.stroke(joint, with: .color(.black.opacity(0.25)), lineWidth: 1)
+            }
+            var mid = Path()
+            mid.move(to: CGPoint(x: at(0).x, y: at(0).y - height / 2))
+            for k in 1...n { let p = at(Double(k) / Double(n)); mid.addLine(to: CGPoint(x: p.x, y: p.y - height / 2 + Double((k * 3) % 4) - 1.5)) }
+            ctx.stroke(mid, with: .color(.black.opacity(0.25)), lineWidth: 1)
+        }
         ctx.stroke(face, with: .color(ink), lineWidth: 1)
-        // Courses of stone, and merlons along the top.
-        for row in 1..<3 {
-            var course = Path()
-            course.move(to: CGPoint(x: at(0).x, y: at(0).y - Double(row) * 9))
-            for k in 1...n { let p = at(Double(k) / Double(n)); course.addLine(to: CGPoint(x: p.x, y: p.y - Double(row) * 9)) }
-            ctx.stroke(course, with: .color(.black.opacity(0.15)), lineWidth: 1)
+        // Merlons along the top (mud-brick walls have a plain parapet).
+        if level >= 2 {
+            for k in stride(from: 0, to: n, by: 2) {
+                let p = at(Double(k) / Double(n) + 0.012)
+                let m = Path(CGRect(x: p.x - 5, y: p.y - height - 8, width: 10, height: 8))
+                ctx.fill(m, with: .color(stone))
+                ctx.stroke(m, with: .color(ink), lineWidth: 0.8)
+            }
         }
-        for k in stride(from: 0, to: n, by: 2) {
-            let p = at(Double(k) / Double(n) + 0.012)
-            let m = Path(CGRect(x: p.x - 5, y: p.y - height - 8, width: 10, height: 8))
-            ctx.fill(m, with: .color(stone))
-            ctx.stroke(m, with: .color(ink), lineWidth: 0.8)
-        }
-        for x in [440.0, 500] {
+        let towers: [Double] = level == 3 ? [300, 440, 500, 640] : [440, 500]
+        let towerHeight = [40.0, 62, 84][level - 1]
+        for x in towers {
             let base = at((x - 250) / 440).y
-            let tower = Path(CGRect(x: x - 20, y: base - 62, width: 40, height: 62))
-            ctx.fill(tower, with: .linearGradient(Gradient(colors: [stone, shade]), startPoint: CGPoint(x: x - 20, y: 0), endPoint: CGPoint(x: x + 20, y: 0)))
+            let w = level == 3 ? 46.0 : 40
+            let tower = Path(CGRect(x: x - w / 2, y: base - towerHeight, width: w, height: towerHeight))
+            ctx.fill(tower, with: .linearGradient(Gradient(colors: [stone, shade]), startPoint: CGPoint(x: x - w / 2, y: 0), endPoint: CGPoint(x: x + w / 2, y: 0)))
             ctx.stroke(tower, with: .color(ink), lineWidth: 1)
-            for k in 0..<3 { ctx.fill(Path(CGRect(x: x - 20 + Double(k) * 15, y: base - 70, width: 10, height: 8)), with: .color(stone)) }
-            ctx.fill(Path(CGRect(x: x - 4, y: base - 48, width: 8, height: 12)), with: .color(.black.opacity(0.5)))
+            if level >= 2 {
+                for k in 0..<3 { ctx.fill(Path(CGRect(x: x - w / 2 + Double(k) * (w - 10) / 2, y: base - towerHeight - 8, width: 10, height: 8)), with: .color(stone)) }
+            }
+            ctx.fill(Path(CGRect(x: x - 4, y: base - towerHeight * 0.75, width: 8, height: 12)), with: .color(.black.opacity(0.5)))
         }
         let gate = at(0.5)
-        ctx.fill(Path(roundedRect: CGRect(x: gate.x - 18, y: gate.y - 36, width: 36, height: 36), cornerRadius: 14), with: .color(Color(red: 0.28, green: 0.18, blue: 0.1)))
+        let gh = level == 1 ? 26.0 : 36
+        ctx.fill(Path(roundedRect: CGRect(x: gate.x - 18, y: gate.y - gh, width: 36, height: gh), cornerRadius: 14), with: .color(Color(red: 0.28, green: 0.18, blue: 0.1)))
+        if level == 3 {
+            // A great lintel over the gate, as at Mycenae.
+            ctx.fill(Path(CGRect(x: gate.x - 26, y: gate.y - gh - 8, width: 52, height: 9)), with: .color(shade))
+            ctx.stroke(Path(CGRect(x: gate.x - 26, y: gate.y - gh - 8, width: 52, height: 9)), with: .color(ink), lineWidth: 1)
+        }
     }
 
     private func granary(_ ctx: inout GraphicsContext) {

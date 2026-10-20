@@ -25,10 +25,26 @@ extension Engine {
         return base
     }
 
-    /// Whether a project can be built in a territory at all (ignoring costs).
+    /// How high a territory's walls stand: 0 without walls, then 1 up to `maxWallLevel`.
+    public func wallLevel(at territory: TerritoryID, _ state: GameState) -> Int {
+        guard let land = state.land[territory], land.improvements.contains(.walls) else { return 0 }
+        return land.wallLevel ?? 1
+    }
+
+    /// Whether a territory's walls can be raised a level now (the top level needs Construction).
+    func canRaiseWalls(_ territory: TerritoryID, _ state: GameState) -> Bool {
+        let lv = wallLevel(at: territory, state)
+        let fx = rules.projectEffects
+        guard lv >= 1, lv < fx.maxWallLevel else { return false }
+        return lv + 1 < fx.maxWallLevel || level(.construction, of: state.owner(of: territory), in: state) >= fx.topWallConstruction
+    }
+
+    /// Whether a project can be built in a territory at all (ignoring costs). Walls already
+    /// standing can be raised a level.
     public func canBuild(_ project: ProjectKind, in territory: TerritoryID, _ state: GameState) -> Bool {
-        guard let t = map.territory(territory), let land = state.land[territory],
-              !land.improvements.contains(project), land.construction == nil else { return false }
+        guard let t = map.territory(territory), let land = state.land[territory], land.construction == nil else { return false }
+        if project == .walls, land.improvements.contains(.walls) { return canRaiseWalls(territory, state) }
+        guard !land.improvements.contains(project) else { return false }
         switch project {
         case .mine: return [.copper, .tin, .iron, .gold, .stone].contains { (t.resources[$0] ?? 0) > 0 }
         case .harbor: return t.isCoastal
@@ -51,7 +67,7 @@ extension Engine {
         guard state.owner(of: territory) == civ else { throw GameError.notOwner(territory) }
         guard homeNetwork(of: civ, in: state).contains(territory) else { throw GameError.outOfSupply(territory) }
         guard canBuild(project, in: territory, state) else { throw GameError.projectUnavailable(territory, project) }
-        let cost = projectCost(project, for: civ, state)
+        let cost = projectCost(project, for: civ, state, at: territory)
         let cs = state.civs[civ]!
         guard cs.gold >= cost.gold else { throw GameError.insufficientGold(needed: cost.gold, available: cs.gold) }
         for (resource, needed) in [(Resource.stone, cost.stone), (.timber, cost.timber)] where needed > 0 {
@@ -75,6 +91,9 @@ extension Engine {
             guard var site = state.land[t]!.construction else { continue }
             site.turnsLeft -= pace
             if site.turnsLeft <= 0 {
+                if site.kind == .walls, state.land[t]!.improvements.contains(.walls) {
+                    state.land[t]!.wallLevel = wallLevel(at: t, state) + 1
+                }
                 state.land[t]!.improvements.insert(site.kind)
                 state.land[t]!.construction = nil
                 addExperience(civ, .construction, 4, &state)
@@ -91,7 +110,7 @@ extension Engine {
     /// Whether a project could be added to a territory's queue: it isn't built, under way or
     /// queued already, and the land suits it.
     public func canQueue(_ project: ProjectKind, in territory: TerritoryID, _ state: GameState) -> Bool {
-        guard let land = state.land[territory], !land.improvements.contains(project),
+        guard let land = state.land[territory], !land.improvements.contains(project) || project == .walls,
               land.construction?.kind != project, !land.queue.contains(project),
               land.queue.count < rules.economy.queueLength else { return false }
         var bare = state
@@ -125,7 +144,7 @@ extension Engine {
                 state.land[t]!.queue.removeFirst()
                 continue
             }
-            let cost = projectCost(next, for: civ, state)
+            let cost = projectCost(next, for: civ, state, at: t)
             let cs = state.civs[civ]!
             guard cs.gold >= cost.gold, (cs.stock[.stone] ?? 0) >= cost.stone, (cs.stock[.timber] ?? 0) >= cost.timber else { break }
             state.civs[civ]!.gold -= cost.gold

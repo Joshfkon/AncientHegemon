@@ -1824,3 +1824,39 @@ goals: everything here follows from how real Bronze Age empires held together or
   yet: it needs submission terms in diplomacy and changes to peace and alliances.
 - Debug launch arguments: `-demoAs <civ>` starts a game as that civ; `-demoVassal YES` makes
   the first people next to your capital your vassal and selects it (`look` only selects it).
+
+### Wall levels (Josh: "walls should have levels. Higher walls, more defense, can last for a siege longer")
+
+- Walls rise in three levels: **mud-brick** (+35% defence), **stone walls and towers**
+  (+50%), **cyclopean walls** (+65%, needs Masonry, Construction 1). Raising them is the walls
+  project again: gold and stone times the new level, a turn longer per level. Fortification is
+  capped at 80% so no wall makes a garrison invulnerable.
+- Each level above the first adds a round of stores against a siege before hunger starts, on
+  top of the town's own round and a granary's three; and higher walls take longer for a
+  siege's 10 points a round (20 with rams) to wear down.
+- An earthquake cracks high walls down a level instead of toppling them.
+- The town view paints each level: low mud-brick with a small gate; stone with battlements and
+  two gate towers; huge rough-fitted blocks with four towers and a lintel over the gate, as at
+  Mycenae. Troy (the scenario) has cyclopean walls; Kadesh's Syria has stone ones.
+- The AI raises its capital's walls with the threat: one level for a small one, two for a
+  host of 6+, three for 12+.
+- Debug launch argument `-demoWalls 1|2|3` paints walls of that height in the town view.
+
+### Soundtrack (Josh: "a soundtrack like CIV")
+
+- Six original pieces, composed and rendered by `tools/make_music.py` (deterministic; re-run
+  to change them): a title theme, one for each realm, and a war theme. The instruments are the
+  age's: a plucked lyre (Karplus-Strong strings, tuned with a fractional-delay allpass) or harp,
+  a double-reed pipe like the aulos or a breathy ney, a drone, frame drums or war drums, bronze
+  horn calls, in a hall's reverb. Each realm has its own mode and rhythm: Greece Dorian on a
+  light beat; Egypt the double-harmonic mode on a harp and ney over the maqsum rhythm;
+  Mesopotamia Phrygian, slower, with a heavier drone; Italia Mixolydian on the ney; war
+  Aeolian at 108 beats with war drums and horn calls. Each piece is a phrase and its answer,
+  sung again with ornaments, a contrasting phrase twice, and the return: 66–120 seconds,
+  about 1 MB each as AAC.
+- `MusicDirector` picks by mood and crossfades. Title theme on the title screen. In a game:
+  your realm's theme, then the title theme, yours again, then a neighbour's. The war theme
+  while you're besieged or besieging, or for a round after any battle you fought. Every realm
+  in turn while watching. Four seconds of silence between pieces. It stays silent while other
+  audio is playing (podcasts, your own music), respects the silent switch, and has an on/off
+  switch in the ⋯ menu ("Music").

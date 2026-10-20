@@ -107,6 +107,13 @@ public struct ProjectEffects: Codable, Sendable, Equatable {
     public let farmRiverValleyGrain: Int
     public let mineBonus: Int
     public let wallsDefensePercent: Int
+    /// Walls can be raised up to `maxWallLevel` (mud-brick, stone with towers, cyclopean). Each
+    /// level above the first adds defence and a round of stores against a siege; the last needs
+    /// this much Construction.
+    public let maxWallLevel: Int
+    public let wallLevelDefensePercent: Int
+    public let wallLevelStoreRounds: Int
+    public let topWallConstruction: Int
     public let harborGold: Int
     public let harborShipDiscount: Int
     /// Extra grain the realm's store can hold for each granary in the home network.

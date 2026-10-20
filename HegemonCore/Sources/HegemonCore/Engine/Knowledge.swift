@@ -130,13 +130,18 @@ extension Engine {
     }
 
     /// Project cost and time after Masonry and Engineering.
-    public func projectCost(_ kind: ProjectKind, for civ: CivilizationID, _ state: GameState) -> ProjectCost {
+    /// What a project costs `civ`. Raising walls already standing in `territory` costs more
+    /// for each level: gold and stone times the new level, and a turn more per level.
+    public func projectCost(_ kind: ProjectKind, for civ: CivilizationID, _ state: GameState,
+                            at territory: TerritoryID? = nil) -> ProjectCost {
         let base = rules.projects[kind]!
         let e = rules.knowledge.effects
         let lv = level(.construction, of: civ, in: state)
         let off = lv >= 3 ? e.engineeringDiscount : 0
-        return ProjectCost(gold: base.gold, stone: max(0, base.stone - off), timber: max(0, base.timber - off),
-                           turns: max(1, base.turns - (lv >= 1 ? e.masonryTurns : 0)))
+        let walls = kind == .walls ? territory.map { wallLevel(at: $0, state) } ?? 0 : 0
+        return ProjectCost(gold: base.gold * (walls + 1), stone: max(0, base.stone * (walls + 1) - off),
+                           timber: max(0, base.timber - off),
+                           turns: max(1, base.turns + walls - (lv >= 1 ? e.masonryTurns : 0)))
     }
 
     /// A civilization's army as it fights: its knowledge sharpens units and steadies morale.

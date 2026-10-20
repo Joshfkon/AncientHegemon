@@ -48,6 +48,8 @@ public struct TerritoryState: Codable, Sendable, Equatable {
     public var takenOnRound: Int?
     /// Projects to start, in order, as the one under way finishes (paid for when each starts).
     public var queue: [ProjectKind] = []
+    /// How high the walls stand, when there are walls: nil is the first level.
+    public var wallLevel: Int?
 }
 
 public struct Construction: Codable, Sendable, Equatable {

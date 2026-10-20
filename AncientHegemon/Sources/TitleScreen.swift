@@ -105,6 +105,7 @@ struct CivPickerView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) { appeared = true }
+            MusicDirector.shared.set(.title)
             drift = true
             #if DEBUG
             // Launch with -autoWatch YES to watch a whole AI game unattended.

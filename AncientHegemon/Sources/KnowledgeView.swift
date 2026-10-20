@@ -130,6 +130,31 @@ func projectName(_ kind: ProjectKind) -> String {
     }
 }
 
+/// Walls by height: 1 mud-brick, 2 stone with towers, 3 cyclopean.
+func wallName(_ level: Int) -> String {
+    switch level {
+    case ...1: "Mud-brick walls"
+    case 2: "Stone walls and towers"
+    default: "Cyclopean walls"
+    }
+}
+
+/// A project as offered for a particular territory: walls already standing are raised.
+func projectName(_ kind: ProjectKind, at t: TerritoryID, _ engine: Engine, _ state: GameState) -> String {
+    guard kind == .walls else { return projectName(kind) }
+    let lv = engine.wallLevel(at: t, state)
+    return lv == 0 ? wallName(1) : "Raise to " + wallName(lv + 1).lowercased()
+}
+
+func projectPurpose(_ kind: ProjectKind, at t: TerritoryID, _ engine: Engine, _ state: GameState) -> String {
+    guard kind == .walls else { return projectPurpose(kind) }
+    let fx = engine.rules.projectEffects
+    let lv = engine.wallLevel(at: t, state)
+    return lv == 0 ? "+\(fx.wallsDefensePercent)% defence here"
+        : "+\(fx.wallLevelDefensePercent)% defence and a round more of stores in a siege"
+        + (lv + 1 == fx.maxWallLevel ? " (needs Masonry)" : "")
+}
+
 func projectPurpose(_ kind: ProjectKind) -> String {
     switch kind {
     case .road: "free supply; troops on roads march twice"

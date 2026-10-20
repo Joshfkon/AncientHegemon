@@ -28,7 +28,7 @@ extension AIPlayer {
         let reserve = investmentReserve(civ, state)
         for _ in 0..<maxProjectsPerTurn {
             guard let (kind, territory) = nextProject(civ, state),
-                  state.civs[civ]!.gold - engine.projectCost(kind, for: civ, state).gold >= reserve,
+                  state.civs[civ]!.gold - engine.projectCost(kind, for: civ, state, at: territory).gold >= reserve,
                   attempt(.build(territory: territory, project: kind), &state, &turn) else { break }
         }
         // A great work, when gold is plentiful and nothing is already rising.
@@ -59,13 +59,12 @@ extension AIPlayer {
         let home = engine.homeNetwork(of: civ, in: state)
         let econ = engine.economy(of: civ, in: state)
         let cs = state.civs[civ]!
-        func affordable(_ kind: ProjectKind) -> Bool {
-            let cost = engine.projectCost(kind, for: civ, state)
-            return (cs.stock[.stone] ?? 0) >= cost.stone && (cs.stock[.timber] ?? 0) >= cost.timber
-        }
         func cheapest(_ kind: ProjectKind, _ candidates: [TerritoryID]) -> TerritoryID? {
-            guard affordable(kind) else { return nil }
-            return candidates.first { engine.canBuild(kind, in: $0, state) }
+            candidates.first { t in
+                let cost = engine.projectCost(kind, for: civ, state, at: t)
+                return engine.canBuild(kind, in: t, state)
+                    && (cs.stock[.stone] ?? 0) >= cost.stone && (cs.stock[.timber] ?? 0) >= cost.timber
+            }
         }
         func walled(_ t: TerritoryID) -> Bool { state.land[t]?.improvements.contains(.walls) ?? false }
         var plan: [(ProjectKind, TerritoryID?)] = []
@@ -74,9 +73,11 @@ extension AIPlayer {
             plan.append((.farm, cheapest(.farm, home.sorted { (map.territory($0)!.grain, $1) > (map.territory($1)!.grain, $0) })))
             plan.append((.harbor, cheapest(.harbor, home.filter { map.territory($0)!.isCoastal })))
         }
-        // A threatened capital gets walls.
-        if let capital = engine.seat(of: civ, in: state), threat(to: capital, for: civ, state) > 0 {
-            plan.append((.walls, cheapest(.walls, [capital])))
+        // A threatened capital gets walls, and raises them higher the bigger the threat.
+        if let capital = engine.seat(of: civ, in: state) {
+            let danger = threat(to: capital, for: civ, state)
+            let wanted = danger <= 0 ? 0 : danger < 6 ? 1 : danger < 12 ? 2 : 3
+            if engine.wallLevel(at: capital, state) < wanted { plan.append((.walls, cheapest(.walls, [capital]))) }
         }
         // Then the border posts facing the most enemy troops, where a garrison stands to use them.
         let threatened = home.filter { !walled($0) && state.armies[$0]?.owner == civ && threat(to: $0, for: civ, state) > 0 }

@@ -54,6 +54,7 @@ public struct Scenario: Sendable, Identifiable {
         s.armies["petraea"] = Army(owner: "egypt", units: UnitCounts(infantry: 6, archers: 3, cavalry: 5))
         s.armies["syria"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 7, archers: 3, cavalry: 3))
         s.land["syria"]!.improvements.insert(.walls)
+        s.land["syria"]!.wallLevel = 2
         moveGeneral(&s, "egypt", to: "petraea")
         moveGeneral(&s, "mesopotamia", to: "syria")
         for c in ["egypt", "mesopotamia"] { s.civs[c]!.gold += 20 }
@@ -67,6 +68,8 @@ public struct Scenario: Sendable, Identifiable {
         own(&s, "greece", ["macedonia", "crete", "thrace"])
         own(&s, "mesopotamia", ["anatolia", "taurus", "syria"])
         s.land["anatolia"]!.improvements.formUnion([.walls, .granary])
+        // The walls of Troy: the highest of the age.
+        s.land["anatolia"]!.wallLevel = 3
         s.armies["anatolia"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 6, archers: 3))
         s.armies["thrace"] = Army(owner: "greece", units: UnitCounts(infantry: 6, archers: 2))
         s.fleets.removeAll { $0.owner == "greece" }

@@ -181,6 +181,8 @@ final class GameSession {
     /// A rival's answer to the player's latest proposal, shown on its diplomacy card for the turn.
     var answers: [CivilizationID: (round: Int, text: String, good: Bool)] = [:]
     /// Big moments waiting to be shown, one at a time.
+    /// The last round the player fought a battle (for the music).
+    private var lastFight: Int?
     var moments: [Moment] = []
     /// Territories that just changed hands, with when, for a colour sweep on the map.
     private(set) var flashes: [TerritoryID: Date] = [:]
@@ -221,6 +223,8 @@ final class GameSession {
         message = nil
         replay = nil
         started = true
+        lastFight = nil
+        updateMusic()
         SaveStore.delete()
         saved = nil
         if civ != nil {
@@ -245,6 +249,8 @@ final class GameSession {
         message = nil
         replay = nil
         started = true
+        lastFight = nil
+        updateMusic()
         // If the app closed while the rivals were moving, let them finish.
         if state.activePlayer != human { Task { await runAITurns() } }
     }
@@ -278,6 +284,7 @@ final class GameSession {
     }
 
     func quit() {
+        MusicDirector.shared.set(.title)
         autosave()
         playing = false
         started = false
@@ -584,6 +591,30 @@ final class GameSession {
                                     knowledge: cs.knowledge.values.reduce(0, +))
         }
         statsHistory.append(stats)
+    }
+
+    // MARK: Music
+
+    /// Picks the music for the moment: war while the player fights or is besieged (and for a
+    /// round after), their realm's music otherwise, every realm in turn when watching.
+    func updateMusic() {
+        guard let human else { MusicDirector.shared.set(.watching); return }
+        let besieged = state.sieges.contains { state.owner(of: $0.key) == human || $0.value.civ == human }
+        let fighting = besieged || (lastFight.map { state.turn - $0 <= 1 } ?? false)
+        MusicDirector.shared.set(fighting ? .war(human) : .realm(human))
+    }
+
+    private func noteFighting(_ events: [GameEvent], before: GameState) {
+        guard let me = human else { return }
+        let fought = events.contains { event in
+            switch event {
+            case let .battle(r): r.setup.attacker.civ == me || r.setup.defender.civ == me
+            case let .navalBattle(_, r): r.attacker == me || r.defender == me
+            default: false
+            }
+        }
+        if fought { lastFight = state.turn }
+        updateMusic()
     }
 
     // MARK: Moments
@@ -930,6 +961,7 @@ final class GameSession {
             }
         }
         noteMoments(events, before: before, after: after)
+        noteFighting(events, before: before)
         log.insert(contentsOf: lines.reversed(), at: 0)
         if log.count > 300 { log.removeLast(log.count - 300) }
         if battles.count > 100 { battles.removeLast(battles.count - 100) }

@@ -51,6 +51,7 @@ extension Engine {
                     .projectDestroyed(territory: target, project: $0)
                 }
                 state.land[target]!.improvements = []
+                state.land[target]!.wallLevel = nil
             }
             return events
 
@@ -76,7 +77,13 @@ extension Engine {
                 state.land[target]!.construction = nil
                 events.append(.projectDestroyed(territory: target, project: site.kind))
             } else if let built = pick(state.land[target]!.improvements.sorted { $0.rawValue < $1.rawValue }) {
-                state.land[target]!.improvements.remove(built)
+                // High walls crack and lose a level; low ones fall.
+                let walls = wallLevel(at: target, state)
+                if built == .walls, walls > 1 {
+                    state.land[target]!.wallLevel = walls - 1 > 1 ? walls - 1 : nil
+                } else {
+                    state.land[target]!.improvements.remove(built)
+                }
                 events.append(.projectDestroyed(territory: target, project: built))
             }
             return events

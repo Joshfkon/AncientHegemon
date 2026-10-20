@@ -87,7 +87,9 @@ extension Engine {
             let rounds = siege.rounds + 1
             state.sieges[town]!.rounds = rounds
             var starved = 0
+            // Higher walls enclose bigger storehouses.
             let stores = rules.siege.storeRounds
+                + (wallLevel(at: town, state) - 1) * rules.projectEffects.wallLevelStoreRounds
                 + (state.land[town]?.improvements.contains(.granary) == true ? rules.siege.granaryRounds : 0)
             if rounds > stores, let garrison = state.armies[town], garrison.owner != civ {
                 starved = max(1, garrison.units.total * rules.siege.starvePercent / 100)

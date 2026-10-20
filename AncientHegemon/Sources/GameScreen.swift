@@ -39,6 +39,7 @@ struct GameScreen: View {
     @State private var showKnowledge = false
     @State private var showCodex = false
     @State private var showWalkthrough = false
+    @AppStorage(MusicDirector.enabledKey) private var musicOn = true
     @State private var showThrone = false
     @State private var showStandings = false
     @State private var showTrade = false
@@ -730,10 +731,12 @@ struct GameScreen: View {
                 Button("How to play", systemImage: "book") { showWalkthrough = true }
                 Button("Rules reference", systemImage: "text.book.closed") { showCodex = true }
                 Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
+                Toggle(isOn: $musicOn) { Label("Music", systemImage: "music.note") }
                 Button("New game", role: .destructive) { session.quit() }
             } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Bronze.gradient).frame(width: 34, height: 34)
             }
+            .onChange(of: musicOn) { _, _ in MusicDirector.shared.enabledChanged() }
         }
         .padding(4)
         .woodPanel(RoundedRectangle(cornerRadius: 12))

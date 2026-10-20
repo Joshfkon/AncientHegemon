@@ -650,7 +650,7 @@ extension TerritoryPanel {
                 .font(.caption)
         } else {
             ForEach(ProjectKind.allCases.filter { engine.canBuild($0, in: territory, state) }, id: \.self) { kind in
-                let cost = engine.projectCost(kind, for: human, state)
+                let cost = engine.projectCost(kind, for: human, state, at: territory)
                 let affordable = cs.gold >= cost.gold && (cs.stock[.stone] ?? 0) >= cost.stone
                     && (cs.stock[.timber] ?? 0) >= cost.timber
                 Button {
@@ -658,8 +658,8 @@ extension TerritoryPanel {
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(projectName(kind)).font(.caption.bold())
-                            Text(projectPurpose(kind)).font(.caption2).foregroundStyle(.secondary)
+                            Text(projectName(kind, at: territory, engine, state)).font(.caption.bold())
+                            Text(projectPurpose(kind, at: territory, engine, state)).font(.caption2).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Text(([("\(cost.gold) gold", cost.gold), ("\(cost.stone) stone", cost.stone),
