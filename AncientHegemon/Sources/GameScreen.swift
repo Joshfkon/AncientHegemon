@@ -234,6 +234,11 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
+            // Launch with -demoTown YES to walk into the capital.
+            if UserDefaults.standard.bool(forKey: "demoTown"), let human = session.human, let seat = engine.seat(of: human, in: state) {
+                if UserDefaults.standard.string(forKey: "demoTown") == "full" { session.demoBuildAll(seat) }
+                cityShown = CityPick(id: seat)
+            }
             // Launch with -demoAudience greece (or war:greece) to stand before that ruler.
             if let who = UserDefaults.standard.string(forKey: "demoAudience") {
                 let war = who.hasPrefix("war:")

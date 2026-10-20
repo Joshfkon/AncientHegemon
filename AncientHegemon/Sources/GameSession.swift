@@ -910,6 +910,13 @@ final class GameSession {
         state.land[seat]!.queue = [.road]
     }
 
+    /// For -demoTown full: every building in a territory, and a building site.
+    func demoBuildAll(_ t: TerritoryID) {
+        state.land[t]!.improvements.formUnion([.walls, .road, .farm, .granary, .harbor, .mine])
+        state.land[t]!.construction = Construction(kind: .walls, turnsLeft: 2)
+        state.land[t]!.population = 8
+    }
+
     /// Launch with -demoHost YES: the capital's army swells to 14, for trying quick battles.
     func demoHost() {
         guard let human, let seat = engine.seat(of: human, in: state), state.armies[seat]?.owner == human else { return }

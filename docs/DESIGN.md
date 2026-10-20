@@ -1655,3 +1655,26 @@ goals: everything here follows from how real Bronze Age empires held together or
   you outnumber them, neutral otherwise.
 - The hall's empty throne makes way for theirs; the realm's emblem hangs above. Debug launch
   argument `-demoAudience egypt` (or `war:greece`).
+
+### The town, painted (Josh: "can we make the city view nicer as well? looks a bit too much like just icons")
+
+- The town view is now a painted scene (`TownPainter`, in a 1000 × 600 frame fitted to the
+  view's height and centred on the town) instead of SF Symbols:
+  - **Landscape:** sky with a sun and drifting clouds; far hills, dunes or snow-capped
+    mountains by terrain; grass or sand; a river valley's river with reeds and moving glints; a
+    coast's sea with waves.
+  - **Town:** houses in the realm's style (whitewashed with red-tiled roofs for Greece and
+    Italy, flat-roofed mudbrick with awnings for Egypt and Mesopotamia), two per person, in
+    depth order around the centre. At the heart, the capital's great building: Egypt's temple
+    pylon, Mesopotamia's ziggurat, the Greek or Italian columned temple; elsewhere a hall. Flags
+    in the owner's colour stir in the wind.
+  - **Works:** irrigation channel and shaduf (farm), striped fields one per grain, a mine
+    tunnel and ore cart in a hill, a paved road, a stone wall with battlements and gate towers,
+    domed granaries, a quay and pier (harbour) with ships bobbing under coloured sails, a building
+    site with a crane swinging a block, and any great work standing there (pyramid, ziggurat,
+    Lion Gate, library, lighthouse with a pulsing light).
+  - **Produce:** vineyards (wine), grazing horses, stacked logs (timber), cut stone, a market
+    stall (luxuries).
+  - **The army:** tents in its colour, its flag and a smoking campfire.
+- Debug launch argument `-demoTown YES` opens the capital; `-demoTown full` paints every
+  building.
