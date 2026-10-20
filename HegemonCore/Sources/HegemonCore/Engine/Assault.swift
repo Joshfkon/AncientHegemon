@@ -47,8 +47,8 @@ extension Engine {
             state.generalsMoved.insert(g.id)
         }
 
-        // The largest land group sets the plan and the approach.
-        let lead = groups.filter { if case .land = $0.source { true } else { false } }.max { $0.units.total < $1.units.total }
+        // The first land group (the army that called the others) sets the plan and the approach.
+        let lead = groups.first { if case .land = $0.source { true } else { false } }
         var plan = BattlePlan()
         var approach: Approach = .amphibious
         if let lead, case .land(let from) = lead.source {

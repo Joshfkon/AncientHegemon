@@ -429,3 +429,24 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(moved)
     }
 }
+
+@Suite struct PlacementSurvivesTheChargeTests {
+    @Test func aPlanSetBeforeTheAttackKeepsItsPlacingsAndOrders() throws {
+        let engine = try Engine.bare()
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "mesopotamia"])
+        s.land["petraea"]!.owner = "mesopotamia"
+        s.armies["petraea"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 3))
+        s.armies["egypt"] = Army(owner: "egypt", units: UnitCounts(infantry: 6))
+        var plan = BattlePlan()
+        plan.placements = [0: GridPoint(0, 0)]
+        plan.orders = [1: .hold]
+        try engine.apply(.setBattlePlan(territory: "egypt", plan: plan), to: &s)
+        #expect(s.armies["egypt"]!.plan.placements == plan.placements)
+        #expect(s.armies["egypt"]!.plan.orders == plan.orders)
+        let events = try engine.apply(.move(from: "egypt", to: "petraea", units: UnitCounts(infantry: 6)), to: &s)
+        let report = events.compactMap { if case let .battle(r) = $0 { r } else { nil } }.first
+        let start = report?.frames.first?.blocks.first { $0.id == 0 }
+        #expect(start?.position == GridPoint(0, 0))
+        #expect(report?.frames.first?.blocks.first { $0.id == 1 }?.order == .hold)
+    }
+}

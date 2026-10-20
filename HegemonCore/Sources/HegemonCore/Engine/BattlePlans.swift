@@ -57,6 +57,8 @@ extension Engine {
         state.armies[territory]!.depth = plan.depth
         state.armies[territory]!.stratagem = plan.stratagem
         state.armies[territory]!.holdBack = plan.pursue ? nil : true
+        state.armies[territory]!.placements = plan.placements
+        state.armies[territory]!.orders = plan.orders
         return [.battlePlanSet(civ: civ, territory: territory, plan: plan)]
     }
 

@@ -1635,3 +1635,7 @@ goals: everything here follows from how real Bronze Age empires held together or
   Switching it on restores everything in "Limited sight" above, AI included.
 - Balance (80 games, seed 501): Egypt 37%, Mesopotamia ~32%, Italia 21%, Greece 10%; 2
   dominations, 1 trade win. Rules version 22; 258 tests.
+- Fixed (Josh: "I can position my troops… but it just seems to revert once the battle
+  starts"): an army stores its standing plan field by field, and placements and orders weren't
+  among them, so setting the plan at the charge dropped them. `Army` now keeps `placements` and
+  `orders`. In a combined attack, the army that called the others sets the plan.

@@ -168,6 +168,9 @@ public struct Army: Codable, Sendable, Equatable {
     public var holdBack: Bool?
     /// The soldiers' average number of battles survived (nil: green).
     public var battles: Int?
+    /// Blocks placed by hand and given their own orders on the battlefield (see `BattlePlan`).
+    public var placements: [Int: GridPoint]?
+    public var orders: [Int: BlockOrder]?
 
     public init(owner: CivilizationID, units: UnitCounts, formation: FormationID? = nil) {
         self.owner = owner
@@ -176,7 +179,8 @@ public struct Army: Codable, Sendable, Equatable {
     }
 
     public var plan: BattlePlan {
-        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem, pursue: !(holdBack ?? false))
+        BattlePlan(formation: formation, depth: depth ?? .deep, stratagem: stratagem, pursue: !(holdBack ?? false),
+                   placements: placements, orders: orders)
     }
 }
 
