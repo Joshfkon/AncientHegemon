@@ -314,6 +314,23 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(s.fleet(of: "greece", in: "aegean")!.cargo.isEmpty)
     }
 
+    @Test func shipsCanBeDisbandedButNotFromUnderTheTroops() throws {
+        var s = try greeceWithShipyards()
+        s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 3, cargo: UnitCounts(infantry: 3))]
+        #expect(throws: GameError.overCapacity("aegean")) {
+            try engine.apply(.disbandShips(sea: "aegean", ships: 2), to: &s)
+        }
+        let events = try engine.apply(.disbandShips(sea: "aegean", ships: 1), to: &s)
+        #expect(events == [.shipsDisbanded(civ: "greece", sea: "aegean", count: 1)])
+        #expect(s.fleet(of: "greece", in: "aegean")?.ships == 2)
+        s.fleets[0].cargo = .zero
+        try engine.apply(.disbandShips(sea: "aegean", ships: 2), to: &s)
+        #expect(s.fleet(of: "greece", in: "aegean") == nil)
+        #expect(throws: GameError.noFleet("aegean")) {
+            try engine.apply(.disbandShips(sea: "aegean", ships: 1), to: &s)
+        }
+    }
+
     @Test func fleetsCarryCargoBetweenSeas() throws {
         var s = try greeceWithShipyards()
         s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 2, cargo: UnitCounts(infantry: 3))]

@@ -28,6 +28,8 @@ struct CommandBar: View {
     @State private var showPlan = false
     @State private var showDisband = false
     @State private var toDisband = UnitCounts.zero
+    @State private var showScuttle = false
+    @State private var shipsToDisband = 1
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -418,6 +420,32 @@ struct CommandBar: View {
                         .padding()
                 }
                 .frame(width: 420, height: 320)
+                .presentationCompactAdaptation(.popover)
+            }
+            // Ships still needed to carry the troops aboard can't be broken up.
+            let cap = engine.shipCapacity(human, state)
+            let spare = fleet.ships - (fleet.cargo.total + cap - 1) / cap
+            Tile(symbol: "xmark.circle.fill", title: "Disband",
+                 detail: spare > 0 ? "Break up ships to save their upkeep" : "Every ship is carrying troops",
+                 cost: Text(spare > 0 ? "Saves grain" : "Land the troops first"), enabled: spare > 0) {
+                shipsToDisband = 1
+                showScuttle = true
+            }
+            .popover(isPresented: $showScuttle) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Disband ships").font(.headline)
+                    Stepper("\(shipsToDisband) of \(fleet.ships) ships", value: $shipsToDisband, in: 1...max(1, spare))
+                    Text("Saves \(shipsToDisband * engine.rules.ships.upkeep) grain a turn. No gold comes back."
+                         + (fleet.cargo.total > 0 ? " Ships carrying troops stay." : ""))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Disband \(shipsToDisband) ship\(shipsToDisband == 1 ? "" : "s")") {
+                        if session.order(.disbandShips(sea: sea, ships: shipsToDisband)) { showScuttle = false }
+                    }
+                    .buttonStyle(.borderedProminent).tint(.orange)
+                }
+                .padding()
+                .frame(width: 300)
                 .presentationCompactAdaptation(.popover)
             }
         }

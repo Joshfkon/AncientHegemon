@@ -1729,3 +1729,11 @@ goals: everything here follows from how real Bronze Age empires held together or
     the crisis peak.
 - Engine: `Engine.prepare(_:human:difficulty:scenario:)` in `Engine/Setup.swift`; the state
   remembers difficulty, scenario, round limit and prizes. Rules version 25.
+
+### Disbanding ships (Josh: "There doesn't seem to be a way to disband fleets")
+
+- The fleet menu has a **Disband** tile: pick how many ships to break up. Each saves its crew's
+  grain upkeep; no gold comes back, like disbanding troops. Ships still needed to carry the
+  troops aboard can't be disbanded (land them first). Order `Command.disbandShips(sea:ships:)`.
+- Title screen: difficulty and scenario sit on their own row with the blurb beside them, so a
+  saved game's "Continue" button no longer crowds them. Debug launch argument `-demoFleet YES`.

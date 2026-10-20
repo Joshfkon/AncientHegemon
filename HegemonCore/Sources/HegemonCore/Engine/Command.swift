@@ -35,6 +35,8 @@ public enum Command: Codable, Sendable, Equatable {
     /// Sail ships (and the cargo they carry) to an adjacent sea. Ships sail once per turn.
     /// Sailing into an enemy fleet is a naval battle.
     case moveFleet(from: SeaZoneID, to: SeaZoneID, ships: Int, cargo: UnitCounts = .zero)
+    /// Break up ships to save their upkeep. Ships still needed to carry the troops aboard stay.
+    case disbandShips(sea: SeaZoneID, ships: Int)
     /// Load units that haven't moved this turn onto the civilization's fleet in an adjacent sea.
     case embark(territory: TerritoryID, sea: SeaZoneID, units: UnitCounts)
     /// Land units from a fleet onto a coast. Uses their move; landing on an enemy army is an
@@ -119,6 +121,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case destroyed(civ: CivilizationID, units: UnitCounts, ships: Int)
     case generalKilled(GeneralID)
     case shipsBuilt(civ: CivilizationID, sea: SeaZoneID, count: Int)
+    case shipsDisbanded(civ: CivilizationID, sea: SeaZoneID, count: Int)
     case fleetMoved(civ: CivilizationID, from: SeaZoneID, to: SeaZoneID, ships: Int, cargo: UnitCounts)
     case embarked(civ: CivilizationID, territory: TerritoryID, sea: SeaZoneID, units: UnitCounts)
     case landed(civ: CivilizationID, sea: SeaZoneID, territory: TerritoryID, units: UnitCounts)

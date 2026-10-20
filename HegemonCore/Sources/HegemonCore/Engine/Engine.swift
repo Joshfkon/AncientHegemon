@@ -68,6 +68,8 @@ public struct Engine: Sendable {
             return try buildShips(territory, sea, count, &state)
         case let .moveFleet(from, to, ships, cargo):
             return try moveFleet(from, to, ships, cargo, &state)
+        case let .disbandShips(sea, ships):
+            return try disbandShips(sea, ships, &state)
         case let .embark(territory, sea, units):
             return try embark(territory, sea, units, &state)
         case let .land(sea, territory, units):

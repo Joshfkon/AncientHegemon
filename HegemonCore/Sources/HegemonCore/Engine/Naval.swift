@@ -137,6 +137,22 @@ extension Engine {
                                 from: .sea(sea), approach: .amphibious, &state)
     }
 
+    /// Ships broken up or laid up ashore: no gold comes back, but no more upkeep is owed.
+    func disbandShips(_ sea: SeaZoneID, _ ships: Int, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard ships > 0 else { throw GameError.invalidCount }
+        guard let i = fleetIndex(civ, sea, state) else { throw GameError.noFleet(sea) }
+        let fleet = state.fleets[i]
+        guard ships <= fleet.ships else { throw GameError.insufficientShips(sea) }
+        guard fleet.cargo.total <= (fleet.ships - ships) * shipCapacity(civ, state) else {
+            throw GameError.overCapacity(sea)
+        }
+        state.fleets[i].ships -= ships
+        state.fleets[i].movedShips = min(state.fleets[i].movedShips, state.fleets[i].ships)
+        if state.fleets[i].ships == 0 { state.fleets.remove(at: i) }
+        return [.shipsDisbanded(civ: civ, sea: sea, count: ships)]
+    }
+
     func moveFleet(_ from: SeaZoneID, _ to: SeaZoneID, _ ships: Int, _ cargo: UnitCounts,
                    _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer

@@ -235,6 +235,11 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
+            // Launch with -demoFleet YES to open the fleet's menu, two troops aboard.
+            if UserDefaults.standard.bool(forKey: "demoFleet"), let human = session.human,
+               let sea = session.demoFleet(human) {
+                selected = .sea(sea)
+            }
             // Launch with -demoTown YES to walk into the capital.
             if UserDefaults.standard.bool(forKey: "demoTown"), let human = session.human, let seat = engine.seat(of: human, in: state) {
                 if UserDefaults.standard.string(forKey: "demoTown") == "full" { session.demoBuildAll(seat) }

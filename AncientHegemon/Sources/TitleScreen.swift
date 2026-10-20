@@ -45,16 +45,20 @@ struct CivPickerView: View {
                 }
                 .padding(.horizontal, 24)
 
-                Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? "")
-                     + (engine.rules.difficulty[difficulty]?.blurb ?? ""))
-                    .font(.caption).foregroundStyle(.white.opacity(0.8))
-                    .opacity(appeared ? 1 : 0)
+                // How the game is set: difficulty and scenario, with what they mean.
                 HStack(spacing: 12) {
                     setupRow
+                    Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? "")
+                         + (engine.rules.difficulty[difficulty]?.blurb ?? ""))
+                        .font(.caption).foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(2).frame(maxWidth: 260, alignment: .leading)
+                }
+                .opacity(appeared ? 1 : 0)
+                HStack(spacing: 12) {
                     if let game = session.saved {
                         Button { session.resume() } label: {
                             VStack(spacing: 1) {
-                                Text("Continue as \(Palette.name(game.human, game.state))").font(.headline)
+                                Text("Continue as \(Palette.name(game.human, game.state))").font(.headline).lineLimit(1).fixedSize()
                                 Text("Round \(game.state.turn) · saved \(game.savedAt.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption2)
                             }
@@ -160,6 +164,7 @@ struct CivPickerView: View {
             .woodPanel(Capsule())
             Button { showScenarios = true } label: {
                 Label(scenario.map { "\($0.name) · \($0.year)" } ?? "Scenarios", systemImage: "scroll.fill")
+                    .lineLimit(1).fixedSize()
                     .font(.callout.bold())
                     .padding(.horizontal, 14).padding(.vertical, 9)
                     .foregroundStyle(scenario == nil ? Color.white : .black)

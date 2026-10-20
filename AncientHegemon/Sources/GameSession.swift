@@ -481,6 +481,7 @@ final class GameSession {
         case let .build(t, project): return "Work begins on \(projectName(project).lowercased()) in \(place(t))"
         case let .appointGeneral(t): return "A general takes command in \(place(t))"
         case let .disband(t, units): return "Disbanded \(units.total) in \(place(t))"
+        case let .disbandShips(sea, ships): return "Disbanded \(ships) ship\(ships == 1 ? "" : "s") in the \(place(sea))"
         case let .setTaxRate(r): return "Taxes set to \(r)%"
         default: return nil
         }
@@ -912,6 +913,14 @@ final class GameSession {
         state.civs[human]!.stock = [.stone: 10, .timber: 10]
         state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
         state.land[seat]!.queue = [.road]
+    }
+
+    /// For -demoFleet: three ships with two troops aboard. Returns their sea.
+    func demoFleet(_ human: CivilizationID) -> SeaZoneID? {
+        guard let i = state.fleets.firstIndex(where: { $0.owner == human }) else { return nil }
+        state.fleets[i].ships = 3
+        state.fleets[i].cargo = UnitCounts(infantry: 2)
+        return state.fleets[i].sea
     }
 
     /// Launch with -demoBesieged YES: a rival camps beside the walled capital and lays siege.
