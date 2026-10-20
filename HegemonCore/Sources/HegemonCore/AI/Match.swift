@@ -19,6 +19,9 @@ public struct CivRecord: Sendable, Equatable {
     public var shipsBuilt = 0
     public var landings = 0
     public var navalBattlesWon = 0
+    public var shipsLostToStorms = 0
+    public var goldPlundered = 0
+    public var bountyGold = 0
     public var navalBattlesLost = 0
     public var rulersDied = 0
     public var civilWars = 0
@@ -173,6 +176,12 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 civs[c]?.shipsBuilt += count
             case let .landed(c, _, _, _):
                 civs[c]?.landings += 1
+            case let .storm(c, _, ships, _):
+                civs[c]?.shipsLostToStorms += ships
+            case let .piratesPlundered(c, _, gold):
+                civs[c]?.goldPlundered += gold
+            case let .bountyPaid(c, gold):
+                civs[c]?.bountyGold += gold
             case let .navalBattle(_, report):
                 let won = report.winner == .attacker
                 civs[report.attacker]?.navalBattlesWon += won ? 1 : 0

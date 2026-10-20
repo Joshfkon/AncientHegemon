@@ -2,6 +2,9 @@
 public let nativesID: CivilizationID = "natives"
 /// The owner of barbarian hordes, which raid when a migration event strikes. Not a player.
 public let barbariansID: CivilizationID = "barbarians"
+/// The owner of pirate fleets, which prowl the seas, plunder unguarded coasts and close the
+/// sea lanes they sit on. Not a player: at war with everyone, always.
+public let piratesID: CivilizationID = "pirates"
 
 /// The ways to win.
 public enum VictoryKind: String, Codable, Sendable {

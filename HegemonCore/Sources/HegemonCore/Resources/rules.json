@@ -1,5 +1,5 @@
 {
-  "version": 25,
+  "version": 26,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -246,7 +246,24 @@
     "cost": 4,
     "upkeep": 1,
     "requires": "timber",
-    "capacity": 2
+    "capacity": 2,
+    "moves": 2,
+    "stormPercent": 4,
+    "stormSeafaringRelief": 1,
+    "stormMinPercent": 2,
+    "stormLossPercent": 34
+  },
+  "pirates": {
+    "fromRound": 4,
+    "spawnPercent": 18,
+    "maxFleets": 2,
+    "scatterPercent": 10,
+    "patrolScatterPercent": 35,
+    "patrolShips": 3,
+    "baseShips": 2,
+    "roundsPerExtraShip": 15,
+    "plunderGold": 4,
+    "bountyPerShip": 3
   },
   "battle": {
     "hpPerUnit": 60,

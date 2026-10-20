@@ -474,7 +474,7 @@ struct MapView: View {
             // Fleets are seen on seas that wash your sight, and your own everywhere.
             let watched = sight == nil || map.territories.contains { $0.seas.contains(sea) && seen($0.id) }
             for (i, fleet) in state.fleets.filter({ $0.sea == sea && (watched || $0.owner == focus) }).enumerated() {
-                let label = context.resolve(Text("⛵\(fleet.ships)\(fleet.cargo.total > 0 ? " · \(fleet.cargo.total) aboard" : "")")
+                let label = context.resolve(Text("\(fleet.owner == piratesID ? "☠︎" : "⛵")\(fleet.ships)\(fleet.cargo.total > 0 ? " · \(fleet.cargo.total) aboard" : "")")
                                 .font(.system(size: 9 * t.detail, weight: .bold)).foregroundStyle(.white))
                 let size = label.measure(in: CGSize(width: 300, height: 40))
                 let at = CGPoint(x: p.x, y: p.y + 6 * t.detail + CGFloat(i) * (size.height + 4))

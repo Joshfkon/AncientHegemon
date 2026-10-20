@@ -39,7 +39,8 @@ public struct AIPlayer: Sendable {
         attack(civ, &state, &turn)
         besiege(civ, &state, &turn)
         invest(civ, &state, &turn)
-        if let campaign { sail(civ, toward: campaign, &state, &turn) }
+        huntPirates(civ, &state, &turn)
+        if let campaign { sail(civ, toward: campaign, &state, &turn) } else { shelterFleets(civ, &state, &turn) }
         fortify(civ, &state, &turn)
         chooseDefensiveFormations(civ, &state, &turn)
         issue(.endTurn, &state, &turn)

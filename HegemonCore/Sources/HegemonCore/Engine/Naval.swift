@@ -8,6 +8,33 @@ extension Engine {
         return here.contains { f in travelers.contains { state.atWar(f.owner, $0) } }
     }
 
+    /// The shortest way for `civ`'s ships from one sea to another within a turn's sailing,
+    /// through open lanes, never through waters an enemy fleet holds (only into them, to fight).
+    /// The path excludes the starting sea.
+    public func fleetPath(from: SeaZoneID, to: SeaZoneID, for civ: CivilizationID, in state: GameState) -> [SeaZoneID]? {
+        fleetPaths(from: from, for: civ, in: state)[to]
+    }
+
+    /// Every sea `civ`'s ships in `from` can reach this turn, each with its path.
+    public func fleetPaths(from: SeaZoneID, for civ: CivilizationID, in state: GameState) -> [SeaZoneID: [SeaZoneID]] {
+        var paths: [SeaZoneID: [SeaZoneID]] = [from: []]
+        var frontier = [from]
+        for _ in 0..<max(1, rules.ships.moves) {
+            var next: [SeaZoneID] = []
+            for s in frontier {
+                // Enemy waters end the voyage: ships sail in to fight, not through.
+                if s != from, state.fleets.contains(where: { $0.sea == s && $0.ships > 0 && state.atWar(civ, $0.owner) }) { continue }
+                for n in map.seaNeighbors(of: s).sorted() where paths[n] == nil && seaLinkOpen(s, n, for: [civ], in: state) {
+                    paths[n] = paths[s]! + [n]
+                    next.append(n)
+                }
+            }
+            frontier = next
+        }
+        paths[from] = nil
+        return paths
+    }
+
     func fleetIndex(_ civ: CivilizationID, _ sea: SeaZoneID, _ state: GameState) -> Int? {
         state.fleets.firstIndex { $0.owner == civ && $0.sea == sea }
     }
@@ -27,7 +54,7 @@ extension Engine {
     }
 
     /// Drowns cargo that no longer fits after ship losses, most numerous type first.
-    private func drownExcess(_ cargo: inout UnitCounts, ships: Int, capacity: Int) -> UnitCounts {
+    func drownExcess(_ cargo: inout UnitCounts, ships: Int, capacity: Int) -> UnitCounts {
         var lost = UnitCounts.zero
         while cargo.total > ships * capacity {
             let type = UnitType.allCases.max { cargo[$0] < cargo[$1] }!
@@ -166,8 +193,12 @@ extension Engine {
         guard cargo.total <= ships * cap, (fleet.cargo - cargo).total <= (fleet.ships - ships) * cap else {
             throw GameError.overCapacity(from)
         }
-        guard map.seaNeighbors(of: from).contains(to) else { throw GameError.notAdjacent(from, to) }
-        guard seaLinkOpen(from, to, for: [civ], in: state) else { throw GameError.chokepointClosed(from, to) }
+        guard let path = fleetPath(from: from, to: to, for: civ, in: state) else {
+            if map.seaNeighbors(of: from).contains(to) { throw GameError.chokepointClosed(from, to) }
+            throw GameError.notAdjacent(from, to)
+        }
+        // The last sea before the destination: where a beaten squadron falls back to.
+        let lastLeg = path.count > 1 ? path[path.count - 2] : from
 
         let plan = fleet.plan
         let honours = fleet.cargoBattles ?? 0
@@ -180,11 +211,11 @@ extension Engine {
         var cargo = cargo
         let enemies = state.fleets.filter { $0.sea == to && state.atWar(civ, $0.owner) }.map(\.owner).sorted()
         for enemy in enemies {
-            let result = navalBattle(civ, ships: ships, cargo: cargo, from: from, against: enemy, in: to, plan: plan, &state)
+            let result = navalBattle(civ, ships: ships, cargo: cargo, from: lastLeg, against: enemy, in: to, plan: plan, &state)
             events += result.events
             (ships, cargo) = (result.ships, result.cargo)
             guard result.won else {
-                addToFleet(civ, from, ships: ships, moved: ships, cargo: cargo, &state)
+                addToFleet(civ, lastLeg, ships: ships, moved: ships, cargo: cargo, &state)
                 return events
             }
         }
@@ -279,6 +310,7 @@ extension Engine {
             events.append(.destroyed(civ: enemy, units: defenderDrowned, ships: defenderSunk))
         }
 
+        var lost = defenderSunk
         let won = report.winner == .attacker
         if !won {
             if defender.ships > 0 {
@@ -296,7 +328,14 @@ extension Engine {
                 events.append(.fleetRetreated(civ: enemy, from: sea, to: refuge, ships: defender.ships))
             } else {
                 events.append(.destroyed(civ: enemy, units: defender.cargo, ships: defender.ships))
+                lost += defender.ships
             }
+        }
+        // The coasts pay well for every pirate ship sent to the bottom.
+        if enemy == piratesID, lost > 0, state.civs[civ] != nil {
+            let bounty = lost * rules.pirates.bountyPerShip
+            state.civs[civ]!.gold += bounty
+            events.append(.bountyPaid(civ: civ, gold: bounty))
         }
         events += checkElimination(enemy, &state)
         return (won, report.attackerShipsLeft, cargo, events)

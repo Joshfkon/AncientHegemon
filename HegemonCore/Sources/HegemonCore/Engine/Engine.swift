@@ -252,7 +252,7 @@ public struct Engine: Sendable {
     }
 
     func checkElimination(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
-        guard !state.civs[civ]!.eliminated, state.territories(of: civ).isEmpty,
+        guard let cs = state.civs[civ], !cs.eliminated, state.territories(of: civ).isEmpty,
               state.armies(of: civ).isEmpty, state.fleets(of: civ).isEmpty else { return [] }
         state.civs[civ]!.eliminated = true
         state.civs[civ]!.eliminatedOnRound = state.turn
@@ -300,7 +300,7 @@ public struct Engine: Sendable {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return closing + ended }
-            age = dawnOfIron(&state)
+            age = dawnOfIron(&state) + piratesRound(&state)
         }
 
         return closing + beginTurn(age, &state)
@@ -316,6 +316,7 @@ public struct Engine: Sendable {
         // on turn 1, so every civ starts on equal terms whatever its seat.
         if state.turn > 1 {
             events += drawEvents(civ, &state)
+            events += storms(civ, &state)
             if !state.civs[civ]!.eliminated {
                 events += harvest(civ, &state)
                 events += pressSieges(civ, &state)

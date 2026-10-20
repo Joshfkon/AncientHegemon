@@ -122,6 +122,13 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case generalKilled(GeneralID)
     case shipsBuilt(civ: CivilizationID, sea: SeaZoneID, count: Int)
     case shipsDisbanded(civ: CivilizationID, sea: SeaZoneID, count: Int)
+    /// A storm sank ships away from shelter, drowning the troops that no longer fit aboard.
+    case storm(civ: CivilizationID, sea: SeaZoneID, ships: Int, drowned: UnitCounts)
+    case piratesAppeared(sea: SeaZoneID, ships: Int)
+    case piratesScattered(sea: SeaZoneID)
+    case piratesPlundered(civ: CivilizationID, territory: TerritoryID, gold: Int)
+    /// Gold paid for pirate ships sunk.
+    case bountyPaid(civ: CivilizationID, gold: Int)
     case fleetMoved(civ: CivilizationID, from: SeaZoneID, to: SeaZoneID, ships: Int, cargo: UnitCounts)
     case embarked(civ: CivilizationID, territory: TerritoryID, sea: SeaZoneID, units: UnitCounts)
     case landed(civ: CivilizationID, sea: SeaZoneID, territory: TerritoryID, units: UnitCounts)

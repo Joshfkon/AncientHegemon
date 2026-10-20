@@ -297,6 +297,8 @@ struct CodexView: View {
          "Empires at peace that can reach each other trade automatically, sharing ore, horses, timber and more. Copper and tin make bronze, which arms your troops; it wears out without fresh tin. Iron needs Ironworking."),
         ("shield.lefthalf.filled", "Battles",
          "Battles are fought on a 5×5 field. Your formation, line depth and stratagem matter, as do terrain, rivers, walls, generals and equipment. Defenders have the edge in even fights."),
+        ("sailboat.fill", "The sea",
+         "Ships sail up to two seas a turn, but never past an enemy fleet: sail into it to fight. Storms can sink a third of a fleet that isn't off a harbour of its own; your own coasts, Seafaring and the Lighthouse make them rarer. Pirates (☠) appear from round 4: they plunder unwalled coasts with none of the owner's ships in that sea or the next, and close the sea they sit on to trade and supply. A fleet of 3 or more patrols its sea and the seas next to it: pirates won't appear or sail there, and soon break up. Sinking them pays a bounty."),
         ("books.vertical.fill", "Knowledge",
          "Nobody picks technologies. Your people learn from what they do: farming, mining, sailing, fighting, trading. Neighbors and trade partners who know more pass some of it on."),
         ("crown.fill", "Rulers",

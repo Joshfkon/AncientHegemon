@@ -331,6 +331,112 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         }
     }
 
+    @Test func shipsSailTwoSeasButNotThroughEnemyWaters() throws {
+        var s = try greeceWithShipyards()
+        s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 2)]
+        let paths = engine.fleetPaths(from: "aegean", for: "greece", in: s)
+        let far = try #require(paths.filter { $0.value.count == 2 }.keys.sorted().first)
+        #expect(paths.values.allSatisfy { $0.count <= 2 })
+        try engine.apply(.moveFleet(from: "aegean", to: far, ships: 2), to: &s)
+        #expect(s.fleet(of: "greece", in: far)?.ships == 2)
+        // Three seas out is too far for one turn.
+        s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 2)]
+        let beyond = map(engine).seaNeighbors(of: far).first { paths[$0] == nil && $0 != "aegean" }
+        if let beyond {
+            #expect(throws: GameError.notAdjacent("aegean", beyond)) {
+                try engine.apply(.moveFleet(from: "aegean", to: beyond, ships: 2), to: &s)
+            }
+        }
+        // Pirates in every sea next door: the ships can sail in to fight, but not past.
+        for n in map(engine).seaNeighbors(of: "aegean") { s.fleets.append(Fleet(sea: n, owner: piratesID, ships: 1)) }
+        let hemmed = engine.fleetPaths(from: "aegean", for: "greece", in: s)
+        #expect(hemmed.values.allSatisfy { $0.count == 1 })
+    }
+
+    private func map(_ engine: Engine) -> GameMap { engine.map }
+
+    @Test func stormsSinkShipsAwayFromAHarbour() throws {
+        let stormy = try engine.modified { json in
+            var ships = json["ships"] as! [String: Any]
+            ships["stormPercent"] = 100
+            ships["stormMinPercent"] = 100
+            json["ships"] = ships
+        }
+        var s = try greeceWithShipyards()
+        s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 3, cargo: UnitCounts(infantry: 6))]
+        let events = stormy.storms("greece", &s)
+        #expect(events == [.storm(civ: "greece", sea: "aegean", ships: 1, drowned: UnitCounts(infantry: 2))])
+        #expect(s.fleet(of: "greece", in: "aegean")?.ships == 2)
+        #expect(s.fleet(of: "greece", in: "aegean")?.cargo.total == 4)
+        // A harbour of their own on these waters: the ships ride it out.
+        s.land["greece"]!.improvements.insert(.harbor)
+        #expect(stormy.storms("greece", &s).isEmpty)
+    }
+
+    @Test func piratesAppearAndPlunderUnguardedCoasts() throws {
+        let lawless = try engine.modified { json in
+            var p = json["pirates"] as! [String: Any]
+            p["spawnPercent"] = 100
+            p["fromRound"] = 1
+            json["pirates"] = p
+        }
+        var s = try greeceWithShipyards()
+        s.turn = 5
+        let appeared = lawless.piratesRound(&s)
+        #expect(appeared.contains { if case .piratesAppeared = $0 { true } else { false } })
+        #expect(lawless.pirateFleets(in: s).count == 1)
+
+        // A band off Greece's coast, hemmed in by single Egyptian ships (too few to patrol): it
+        // stays, and plunders Greece.
+        s.fleets = [Fleet(sea: "aegean", owner: piratesID, ships: 2)]
+        for n in lawless.map.seaNeighbors(of: "aegean") { s.fleets.append(Fleet(sea: n, owner: "egypt", ships: 1)) }
+        let gold = s.civs["greece"]!.gold
+        let events = lawless.piratesRound(&s)
+        #expect(events.contains { if case let .piratesPlundered(civ, _, g) = $0 { civ == "greece" && g == 4 } else { false } })
+        #expect(s.civs["greece"]!.gold == gold - 4)
+        // Their sea is closed to Greek trade and supply while they hold it.
+        #expect(lawless.blockaded("aegean", for: ["greece"], in: s))
+    }
+
+    @Test func strongNaviesKeepPiratesAway() throws {
+        let lawless = try engine.modified { json in
+            var p = json["pirates"] as! [String: Any]
+            p["spawnPercent"] = 100
+            p["fromRound"] = 1
+            p["maxFleets"] = 50
+            json["pirates"] = p
+        }
+        var s = try greeceWithShipyards()
+        s.turn = 5
+        s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 3)]
+        #expect(lawless.patrolled("aegean", in: s))
+        for n in lawless.map.seaNeighbors(of: "aegean") { #expect(lawless.patrolled(n, in: s)) }
+        // However many bands put to sea, none appears in the waters the Greek fleet patrols.
+        for _ in 0..<30 { _ = lawless.piratesRound(&s) }
+        let patrol = Set(["aegean"] + lawless.map.seaNeighbors(of: "aegean"))
+        #expect(!lawless.pirateFleets(in: s).isEmpty)
+        #expect(lawless.pirateFleets(in: s).allSatisfy { !patrol.contains($0.sea) })
+        // Greek ships next door guard Greece's Aegean coast from plunder.
+        s.fleets = [Fleet(sea: "aegean", owner: piratesID, ships: 2),
+                    Fleet(sea: lawless.map.seaNeighbors(of: "aegean").sorted()[0], owner: "greece", ships: 1)]
+        #expect(!lawless.plunderable("aegean", s).contains("greece"))
+    }
+
+    @Test func sinkingPiratesPaysABounty() throws {
+        var s = try greeceWithShipyards()
+        s.fleets = [Fleet(sea: "eastern_med", owner: "greece", ships: 8), Fleet(sea: "aegean", owner: piratesID, ships: 1)]
+        // Greek ships in every other sea next door: the pirates have nowhere to run.
+        for n in engine.map.seaNeighbors(of: "aegean") where n != "eastern_med" {
+            s.fleets.append(Fleet(sea: n, owner: "greece", ships: 1))
+        }
+        let gold = s.civs["greece"]!.gold
+        let events = try engine.apply(.moveFleet(from: "eastern_med", to: "aegean", ships: 8), to: &s)
+        #expect(events.contains(.bountyPaid(civ: "greece", gold: 3)))
+        #expect(s.civs["greece"]!.gold == gold + 3)
+        #expect(engine.pirateFleets(in: s).isEmpty)
+        #expect(s.civs["greece"]!.trophies.contains { $0.kind == .raiderShield })
+    }
+
     @Test func fleetsCarryCargoBetweenSeas() throws {
         var s = try greeceWithShipyards()
         s.fleets = [Fleet(sea: "aegean", owner: "greece", ships: 2, cargo: UnitCounts(infantry: 3))]

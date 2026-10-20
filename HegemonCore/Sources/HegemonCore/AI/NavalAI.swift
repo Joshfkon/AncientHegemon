@@ -125,12 +125,42 @@ extension AIPlayer {
                 : weak && ports.isEmpty && !homeSeas.isEmpty ? homeSeas
                 : campaign.landingSeas
             let dist = seaDistances(to: goal, ships: ready, civ, state)
+            // As far toward the goal as a turn's sailing goes.
             guard let here = dist[sea], here > 0,
-                  let next = map.seaNeighbors(of: sea).filter({
-                      dist[$0] == here - 1 && engine.seaLinkOpen(sea, $0, for: [civ], in: state)
-                  }).min() else { continue }
+                  let next = engine.fleetPaths(from: sea, for: civ, in: state)
+                      .compactMap({ s, path in dist[s].map { (s, $0, path.count) } })
+                      .filter({ $0.1 < here })
+                      .min(by: { ($0.1, $0.2, $0.0) < ($1.1, $1.2, $1.0) })?.0 else { continue }
             guard issue(.moveFleet(from: sea, to: next, ships: ready, cargo: fleet.cargo), &state, &turn) else { continue }
             if state.fleet(of: civ, in: next) != nil { _ = land(civ, from: next, campaign, &state, &turn) }
+        }
+    }
+
+    /// Sends ready ships against pirates within a turn's sailing, when the battle looks won.
+    func huntPirates(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        for sea in state.fleets(of: civ).map(\.sea).sorted() {
+            guard let fleet = state.fleet(of: civ, in: sea) else { continue }
+            let ready = fleet.ships - fleet.movedShips
+            guard ready > 0, fleet.cargo.total <= ready * engine.shipCapacity(civ, state) else { continue }
+            let reach = engine.fleetPaths(from: sea, for: civ, in: state)
+            let prey = engine.pirateFleets(in: state).map(\.sea).filter { reach[$0] != nil }.sorted()
+            for target in prey {
+                guard let odds = engine.fleetAttackOdds(civ, ships: ready, into: target, plan: fleet.plan, in: state),
+                      odds >= 0.65 else { continue }
+                if issue(.moveFleet(from: sea, to: target, ships: ready, cargo: fleet.cargo), &state, &turn) { break }
+            }
+        }
+    }
+
+    /// With no expedition afoot, idle empty ships ride out the weather off a harbour of their own.
+    func shelterFleets(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        for sea in state.fleets(of: civ).map(\.sea).sorted() where !engine.sheltered(sea, for: civ, in: state) {
+            guard let fleet = state.fleet(of: civ, in: sea), fleet.movedShips == 0, fleet.cargo.isEmpty else { continue }
+            let haven = engine.fleetPaths(from: sea, for: civ, in: state)
+                .filter { s, _ in engine.sheltered(s, for: civ, in: state)
+                    && !state.fleets.contains { $0.sea == s && state.atWar(civ, $0.owner) } }
+                .min { ($0.value.count, $0.key) < ($1.value.count, $1.key) }
+            if let haven { issue(.moveFleet(from: sea, to: haven.key, ships: fleet.ships), &state, &turn) }
         }
     }
 

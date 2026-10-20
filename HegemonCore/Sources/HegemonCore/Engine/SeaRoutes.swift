@@ -1,10 +1,10 @@
 /// Crossing the sea in one order: which coasts an army can reach this turn with the ships
 /// already off its shore. Either the ships sit in a sea that touches the target, or they're
-/// fresh enough to sail one sea further first.
+/// fresh enough to sail there first (up to a turn's sailing).
 public struct SeaRoute: Sendable, Equatable {
     /// Where the army boards.
     public let board: SeaZoneID
-    /// Where it lands from (the same sea, or the one next door).
+    /// Where it lands from (the same sea, or one within a turn's sailing).
     public let land: SeaZoneID
     /// How many troops fit aboard.
     public let room: Int
@@ -30,9 +30,11 @@ extension Engine {
             let room = fleet.ships * capacity - fleet.cargo.total
             guard room > 0 else { continue }
             for t in map.coastalTerritories(of: sea) { consider(t, SeaRoute(board: sea, land: sea, room: room)) }
-            // A fleet that hasn't moved can carry the army one sea further.
+            // A fleet that hasn't moved can carry the army a turn's sailing further, through
+            // waters no enemy fleet holds.
             guard fleet.movedShips == 0 else { continue }
-            for next in map.seaNeighbors(of: sea).sorted() where seaLinkOpen(sea, next, for: [civ], in: state) {
+            for (next, _) in fleetPaths(from: sea, for: civ, in: state).sorted(by: { $0.key < $1.key })
+                where !state.fleets.contains(where: { $0.sea == next && $0.ships > 0 && state.atWar(civ, $0.owner) }) {
                 for t in map.coastalTerritories(of: next) { consider(t, SeaRoute(board: sea, land: next, room: room)) }
             }
         }

@@ -170,6 +170,40 @@ public struct ShipRules: Codable, Sendable, Equatable {
     public let requires: Resource
     /// Land units carried per ship.
     public let capacity: Int
+    /// Seas a fleet can sail in one order.
+    public let moves: Int
+    /// Chance each turn that a storm catches a fleet far from a harbour of its own…
+    public let stormPercent: Int
+    /// …less this much for each level of Seafaring (never below `stormMinPercent`)…
+    public let stormSeafaringRelief: Int
+    public let stormMinPercent: Int
+    /// …and the share of its ships it sinks (at least one).
+    public let stormLossPercent: Int
+}
+
+/// Pirates: fleets of no nation that appear in the seas, raid coasts nobody guards and close
+/// the sea lanes they prowl, until someone hunts them down.
+public struct PirateRules: Codable, Sendable, Equatable {
+    /// From this round on…
+    public let fromRound: Int
+    /// …the chance each round that a new band puts to sea…
+    public let spawnPercent: Int
+    /// …while fewer than this many prowl.
+    public let maxFleets: Int
+    /// Chance each round that a band breaks up and goes home with its loot…
+    public let scatterPercent: Int
+    /// …and the chance when a navy patrols its waters.
+    public let patrolScatterPercent: Int
+    /// A fleet this strong patrols its sea and the seas next to it: no band puts to sea there
+    /// or sails in.
+    public let patrolShips: Int
+    /// A band's ships: base, plus one for every so many rounds.
+    public let baseShips: Int
+    public let roundsPerExtraShip: Int
+    /// Gold taken from a coast's owner when pirates plunder it (no fleet of theirs there, no walls).
+    public let plunderGold: Int
+    /// Gold paid to whoever sinks pirate ships, per ship sunk.
+    public let bountyPerShip: Int
 }
 
 public enum GeneralTrait: String, Codable, Sendable, CaseIterable, CodingKeyRepresentable {

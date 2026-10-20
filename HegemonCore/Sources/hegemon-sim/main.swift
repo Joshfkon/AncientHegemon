@@ -254,7 +254,7 @@ for civ in civs {
 }
 
 print("")
-print("civ          ships built  landings  sea battles won")
+print("civ          ships built  landings  sea battles won  lost to storms  plundered  bounties")
 for civ in civs {
     let rs = records.compactMap { $0.civs[civ] }
     let n = max(1, rs.count)
@@ -263,7 +263,10 @@ for civ in civs {
     print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
           + pad(String(format: "%.1f", Double(sum(\.shipsBuilt)) / Double(n)), 11)
           + pad(String(format: "%.1f", Double(sum(\.landings)) / Double(n)), 10)
-          + pad("\(pct(sum(\.navalBattlesWon), fights)) of \(fights)", 17))
+          + pad("\(pct(sum(\.navalBattlesWon), fights)) of \(fights)", 17)
+          + pad(String(format: "%.1f", Double(sum(\.shipsLostToStorms)) / Double(n)), 16)
+          + pad(String(format: "%.1f", Double(sum(\.goldPlundered)) / Double(n)), 11)
+          + pad(String(format: "%.1f", Double(sum(\.bountyGold)) / Double(n)), 10))
 }
 
 // Knowledge and investment: what each empire learned by round 20, and what it built.

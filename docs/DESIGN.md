@@ -1747,3 +1747,34 @@ goals: everything here follows from how real Bronze Age empires held together or
   painted marble with crested helmet, spear and spiral shield. Italia: cast bronze in a toga and
   laurel, arm raised to the crowd. Debug launch argument `-demoThrone <civ>` opens a fully
   decorated throne room.
+
+### Sailing, storms and pirates (Josh: "add pirates and ships lost at storms (if not at harbor) but also I think ships should move 2 spaces by default")
+
+- **Two seas a turn.** A fleet sails up to `ships.moves` (2) seas in one order, along open
+  lanes, never *through* a sea an enemy fleet holds (it may sail *into* one, to fight; a beaten
+  squadron falls back to the sea it came through). Sea assaults reach as far: an army boards,
+  sails up to two seas and lands in one order. The AI sails as far toward its goal as it can.
+- **Storms.** At the start of each turn, every fleet not off a harbour of its own (a coast of
+  that sea, owned, with a harbour) has a 4% chance of a storm, less 1 per Seafaring level (never
+  below 2%), halved off any coast of its own and halved again by the Lighthouse. (At 6% and
+  without the inshore halving, storms drowned Greek expeditions often enough to eliminate
+  Greece in 12–17% of sims.) A storm sinks a third of the ships (at least one) and
+  drowns the troops that no longer fit. Harbours were already worth building for cheaper
+  ships; now they also shelter fleets. The AI parks idle ships off its harbours.
+- **Pirates (☠).** From round 4, an 18% chance each round that a band of 2 ships (+1 per 15
+  rounds) puts to sea in waters where no ships ride, up to 2 bands at once. A band breaks up
+  with a 10% chance each round (without that, bands settled for good in the Persian Gulf and
+  bled Mesopotamia of ~85 gold a game). Each round a band drifts toward easy pickings (never into waters where any nation's ships ride) and plunders
+  one coast: 4 gold from the owner of an unwalled coast with none of the owner's ships in that
+  sea or the next.
+- **Navies keep pirates down** (Josh: "having strong navies should probably prevent pirates").
+  A fleet of 3+ ships patrols its sea and the seas next to it: no band puts to sea there, none
+  sails in, and a band caught there breaks up with a 35% chance a round (10% elsewhere). Pirates are at war with everyone, so the sea they hold is closed to trade, supply and
+  shipbuilding, just as an enemy fleet's would be. Sinking pirate ships pays a bounty of 3 gold
+  each (ships with nowhere to flee count as sunk) and wins a raider's shield for the throne
+  room. The AI hunts pirates within a turn's sailing when the odds are 65% or better.
+- Balance (80 games): Italia 36%, Egypt 22%, Greece 10% (eliminated 6%), Mesopotamia ~32%.
+  Gold plundered per game: Mesopotamia ~41 (no fleet in the Persian Gulf), others 1–13.
+  Ships lost to storms: 0.2–0.5 per empire per game. The sim's sea table now counts storm
+  losses, gold plundered and bounties. Rules version 26. Test rules (`Engine.calm()`) switch
+  storms and pirates off.

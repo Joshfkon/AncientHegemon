@@ -1033,7 +1033,8 @@ struct GameScreen: View {
             guard let fleet = state.fleet(of: human, in: sea) else { return [] }
             var picks: Set<MapPick> = []
             if fleet.ships > fleet.movedShips {
-                picks.formUnion(engine.map.seaNeighbors(of: sea).map(MapPick.sea))
+                // Up to two seas in one order, never past an enemy fleet.
+                picks.formUnion(engine.fleetPaths(from: sea, for: human, in: state).keys.map(MapPick.sea))
             }
             if fleet.cargo.total > 0 {
                 picks.formUnion(engine.map.coastalTerritories(of: sea).filter { to in

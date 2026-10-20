@@ -89,6 +89,7 @@ enum Palette {
         guard let civ else { return Color(white: 0.92) }
         if civ == nativesID { return Color(white: 0.72) }
         if civ == barbariansID { return Color(red: 0.45, green: 0.30, blue: 0.20) }
+        if civ == piratesID { return Color(white: 0.12) }
         if let parent = state.civs[civ]?.rebelledFrom {
             return color(parent, state).opacity(0.45)
         }
@@ -99,6 +100,7 @@ enum Palette {
         if let display = state.civs[civ]?.displayName { return display }
         if civ == nativesID { return "Natives" }
         if civ == barbariansID { return "Barbarians" }
+        if civ == piratesID { return "Pirates" }
         return civ.prefix(1).uppercased() + civ.dropFirst()
     }
 }

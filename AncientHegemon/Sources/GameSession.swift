@@ -711,6 +711,7 @@ final class GameSession {
         case let .allianceOffered(from, to), let .allianceRefused(from, to): return from == me || to == me
         case let .warDeclared(by, on): return by == me || on == me
         case let .navalBattle(_, r): return r.attacker == me || r.defender == me
+        case let .storm(civ, _, _, _), let .piratesPlundered(civ, _, _), let .bountyPaid(civ, _): return civ == me
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
         case let .eliminated(civ): return civ == me
@@ -731,7 +732,7 @@ final class GameSession {
         var lines: [LogLine] = []
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
-        func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name } ?? "?" }
+        func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name ?? engine.map.sea($0)?.name } ?? "?" }
         func monumentName(_ id: MonumentID) -> String { engine.rules.monuments.list.first { $0.id == id }?.name ?? id }
         var mine = false
         func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
@@ -812,6 +813,19 @@ final class GameSession {
                 add(civ, "A trophy for the throne room: \(ThroneRoomView.trophyName(kind, engine, after).lowercased())")
             case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
                 add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
+            case let .storm(civ, sea, ships, drowned) where civ == human:
+                add(civ, "A storm in the \(place(sea)) sinks \(ships) ship\(ships == 1 ? "" : "s")"
+                    + (drowned.total > 0 ? " and drowns \(drowned.total) troops" : "")
+                    + ". Ships off a harbour of your own ride storms out.")
+            case let .piratesAppeared(sea, ships):
+                add(piratesID, "Pirates, \(ships) ships strong, prowl the \(place(sea))")
+            case let .piratesScattered(sea):
+                add(piratesID, "The pirates of the \(place(sea)) break up and sail home with their loot")
+            case let .piratesPlundered(civ, t, gold) where civ == human:
+                add(piratesID, "Pirates plunder \(place(t))" + (gold > 0 ? " and carry off \(gold) gold" : "")
+                    + ". Ships of yours in those waters or the next, or walls, keep them off.", at: t)
+            case let .bountyPaid(civ, gold) where civ == human:
+                add(civ, "The coasts pay a bounty of \(gold) gold for the pirates sunk")
             case let .disbanded(civ, t, units, rejoined) where civ == human:
                 add(civ, "Disbanded \(units.total) troops in \(place(t))" + (rejoined > 0 ? "; \(rejoined) went home to farm" : ""), at: t)
             case let .tribeJoined(civ, t, parley, warriors) where civ == human:
@@ -921,12 +935,18 @@ final class GameSession {
         state.civs[human]!.decorations = Set(engine.rules.throneRoom.decorations.map(\.id))
     }
 
-    /// For -demoFleet: three ships with two troops aboard. Returns their sea.
+    /// For -demoFleet: three ships with two troops aboard, pirates two seas off. Returns their sea.
     func demoFleet(_ human: CivilizationID) -> SeaZoneID? {
         guard let i = state.fleets.firstIndex(where: { $0.owner == human }) else { return nil }
         state.fleets[i].ships = 3
         state.fleets[i].cargo = UnitCounts(infantry: 2)
-        return state.fleets[i].sea
+        let sea = state.fleets[i].sea
+        // A pirate band two seas off.
+        if let far = engine.fleetPaths(from: sea, for: human, in: state).filter({ $0.value.count == 2 }).keys.sorted().first {
+            state.fleets.append(Fleet(sea: far, owner: piratesID, ships: 2))
+            state.fleets.sort { ($0.sea, $0.owner) < ($1.sea, $1.owner) }
+        }
+        return sea
     }
 
     /// Launch with -demoBesieged YES: a rival camps beside the walled capital and lays siege.

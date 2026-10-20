@@ -38,7 +38,8 @@ public struct ThroneRoomRules: Codable, Sendable, Equatable {
 public enum TrophyKind: Codable, Sendable, Hashable {
     /// The standard of a rival whose capital you took.
     case standard(CivilizationID)
-    /// A shield taken from raiders (Sea Peoples or barbarians) beaten off your land.
+    /// A shield taken from raiders (Sea Peoples or barbarians) beaten off your land, or from
+    /// pirates beaten at sea.
     case raiderShield
     /// A tribe's totem, given when it swore to you.
     case totem(TerritoryID)
@@ -107,6 +108,8 @@ extension Engine {
             case let .battle(report):
                 let a = report.setup.attacker.civ, d = report.setup.defender.civ
                 if a == barbariansID, report.winner == .defender { give(d, .raiderShield) }
+            case let .navalBattle(_, report):
+                if report.defender == piratesID, report.winner == .attacker { give(report.attacker, .raiderShield) }
             case let .tribeJoined(civ, t, _, _):
                 give(civ, .totem(t))
             default:
