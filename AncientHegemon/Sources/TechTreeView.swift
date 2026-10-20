@@ -1,14 +1,18 @@
 import HegemonCore
 import SwiftUI
 
-/// The knowledge tree: seven fields, three levels each. Nobody picks what to learn; the tree
-/// fills in where the realm has experience. Known levels are lit, the next one shows its
-/// progress, later ones stay locked, and fields the realm has never touched show only a hint of
-/// what would reveal them.
+/// The knowledge tree: seven fields, three levels each. The tree fills in where the realm has
+/// experience, and the player steers it by funding the masters of one field. Known levels are
+/// lit, the next one shows its progress, later ones stay locked, and fields the realm has never
+/// touched show only a hint of what would reveal them.
 struct TechTreeView: View {
     let civ: CivilizationID
     let state: GameState
     let engine: Engine
+    /// To fund a field (the player's own tree); nil just shows it.
+    var session: GameSession?
+
+    private var funded: KnowledgeField? { state.civs[civ]?.patronage }
 
     private var levels: [Int] { engine.rules.knowledge.levels }
     private var revealed: Set<KnowledgeField> { Set(engine.revealedFields(of: civ, in: state)) }
@@ -16,6 +20,7 @@ struct TechTreeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                if session != nil { direction }
                 practice
                 VStack(spacing: 8) {
                     ForEach(KnowledgeField.allCases, id: \.self) { field in
@@ -27,6 +32,51 @@ struct TechTreeView: View {
         }
         .navigationTitle("Knowledge")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// The one choice the player makes here: which field to fund.
+    private var direction: some View {
+        let p = engine.rules.patronage
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "signpost.right.and.left.fill").font(.title3).foregroundStyle(Bronze.gradient)
+                Text("Choose a direction").font(.headline)
+                Spacer()
+                if let funded {
+                    Text("Funding \(Patrons.patrons(funded).lowercased())").font(.caption.bold())
+                        .foregroundStyle(Self.color(funded))
+                }
+            }
+            Text("Your people learn from what they do, but you can steer it: tap Fund beside a field to pay its masters \(p.gold) gold a turn for +\(p.experience) knowledge a turn there. One field at a time; change whenever you like.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if funded != nil, session?.isHumanTurn == true {
+                Button("Stop funding") { session?.order(.setPatronage(nil)) }
+                    .font(.caption.bold()).buttonStyle(.bordered).controlSize(.small)
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.96, green: 0.9, blue: 0.76).opacity(0.6)))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Bronze.gradient, lineWidth: 1.2))
+    }
+
+    /// Fund / Funded, under a field's name.
+    @ViewBuilder private func fundButton(_ field: KnowledgeField) -> some View {
+        if let session {
+            let on = funded == field
+            Button {
+                session.order(.setPatronage(on ? nil : field))
+                Feedback.select()
+            } label: {
+                Text(on ? "Funded ✓" : "Fund")
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(on ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color(.tertiarySystemFill))))
+                    .foregroundStyle(on ? Color.black : Color.primary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!session.isHumanTurn)
+        }
     }
 
     /// Where new knowledge is going this turn: the realm's recent experience, as shares.
@@ -76,6 +126,8 @@ struct TechTreeView: View {
                 levelCard(field, n, level: level, progress: progress)
             }
         }
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 12).strokeBorder(funded == field ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(.clear), lineWidth: 2))
     }
 
     private func hidden(_ field: KnowledgeField) -> some View {
@@ -102,6 +154,7 @@ struct TechTreeView: View {
             Text(known ? field.rawValue.capitalized : "?")
                 .font(.caption2.bold())
                 .lineLimit(1).minimumScaleFactor(0.7)
+            fundButton(field)
         }
         .frame(width: 84)
     }

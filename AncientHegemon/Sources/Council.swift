@@ -156,6 +156,10 @@ enum Council {
                 council.append(Advisor(role: .priest, name: names[.priest]!,
                     advice: "I have seen burning cities in the smoke. Sea Peoples and droughts will come; wall the coasts and fill the granaries.",
                     mood: .warning, target: nil))
+            } else if cs.patronage == nil, cs.gold >= engine.rules.patronage.gold * 3 {
+                council.append(Advisor(role: .priest, name: names[.priest]!,
+                    advice: "The scribes ask for a patron. Fund the masters of one craft (\(engine.rules.patronage.gold) gold a turn) and that knowledge grows far faster: open the books and choose a field.",
+                    mood: .calm, target: nil))
             } else {
                 council.append(Advisor(role: .priest, name: names[.priest]!,
                     advice: "The gods smile on \(who(civ)). Their favour will not last forever; the age is ending.",

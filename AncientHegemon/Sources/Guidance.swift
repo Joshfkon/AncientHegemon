@@ -253,7 +253,7 @@ enum Tip: String, CaseIterable {
         case .battle: "Pick a battle plan. Your officers judge each formation for this fight; locked plans show what would unlock them."
         case .rivals: "Arrows show what your rivals did. They stay on the map until you end your turn."
         case .collapse: "The Bronze Age is ending: Sea Peoples, droughts, earthquakes and broken trade will grow more common. Wall your coasts."
-        case .knowledge: "Your people discovered something. The books button opens the knowledge tree."
+        case .knowledge: "Your people discovered something. The books button opens the knowledge tree, where you can fund one field to steer what they learn next."
         }
     }
 

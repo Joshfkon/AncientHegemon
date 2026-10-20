@@ -803,7 +803,7 @@ final class GameSession {
             case let .monumentLost(civ, t, id) where civ == human:
                 add(civ, "Work on the \(monumentName(id)) in \(place(t)) is abandoned: a rival finished first", at: t)
             case let .patronageSet(civ, field) where civ == human:
-                add(civ, field.map { "The court now pays \(PatronagePicker.patrons($0).lowercased())" } ?? "The court ends its patronage")
+                add(civ, field.map { "The court now pays \(Patrons.patrons($0).lowercased())" } ?? "The court ends its patronage")
             case let .decided(civ, kind, accepted) where civ == human:
                 add(civ, Self.decisionLine(kind, accepted, after, engine))
             case let .taxRateSet(civ, rate) where civ == human:

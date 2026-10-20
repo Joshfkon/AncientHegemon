@@ -1508,3 +1508,12 @@ goals: everything here follows from how real Bronze Age empires held together or
 - The board can slide about a third of the screen past any edge (a fifth when fully zoomed
   out), so land in the corners can be brought out from under the status panel, toolbar and
   buttons (Josh: "playing in a corner of the map it's somewhat obscured by menus").
+
+### Steering knowledge, made obvious (Josh: "make it more clear you can give the tech tree direction")
+
+- The Knowledge sheet opens with "Choose a direction": people learn from what they do, but you
+  steer by funding one field (3 gold a turn, +12 knowledge a turn there). Every field on the tree
+  has a Fund button under its name; the funded one shows "Funded ✓" and a bronze outline, and the
+  header names it with a "Stop funding" button. (The separate patronage strip is gone.)
+- Nudges while nothing is funded: a bronze dot on the toolbar's books button, the priest's advice
+  in the council when the treasury can afford it, and the first-discovery tip.

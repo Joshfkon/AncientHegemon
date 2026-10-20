@@ -1,50 +1,8 @@
 import HegemonCore
 import SwiftUI
 
-/// Choosing which craft the court pays for.
-struct PatronagePicker: View {
-    let session: GameSession
-
-    private var engine: Engine { session.engine }
-    private var state: GameState { session.state }
-
-    var body: some View {
-        if let human = session.human, let cs = state.civs[human] {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Patronage").font(.headline)
-                Text("\(engine.rules.patronage.gold) gold a turn → +\(engine.rules.patronage.experience) knowledge a turn in the field you fund. Stops by itself if the treasury runs dry.")
-                    .font(.caption).foregroundStyle(.secondary)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        chip(nil, "None", "xmark", chosen: cs.patronage == nil)
-                        ForEach(KnowledgeField.allCases, id: \.self) { f in
-                            chip(f, Self.patrons(f), Self.symbol(f), chosen: cs.patronage == f)
-                        }
-                    }
-                }
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
-        }
-    }
-
-    private func chip(_ f: KnowledgeField?, _ title: String, _ symbol: String, chosen: Bool) -> some View {
-        Button {
-            session.order(.setPatronage(f))
-            Feedback.select()
-        } label: {
-            VStack(spacing: 3) {
-                Image(systemName: symbol).font(.title3)
-                Text(title).font(.caption2.bold()).multilineTextAlignment(.center)
-            }
-            .frame(width: 84, height: 58)
-            .background(RoundedRectangle(cornerRadius: 10).fill(chosen ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color(.tertiarySystemBackground))))
-            .foregroundStyle(chosen ? .black : .primary)
-        }
-        .buttonStyle(.plain)
-        .disabled(!session.isHumanTurn)
-    }
-
+/// Names and symbols for the masters the court can fund (the choice itself is on the knowledge tree).
+enum Patrons {
     static func patrons(_ f: KnowledgeField) -> String {
         switch f {
         case .agriculture: "Farmers"

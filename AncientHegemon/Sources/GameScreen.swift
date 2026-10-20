@@ -143,11 +143,8 @@ struct GameScreen: View {
         .sheet(isPresented: $showKnowledge) {
             if let human = session.human {
                 NavigationStack {
-                    ScrollView {
-                        PatronagePicker(session: session).padding([.horizontal, .top])
-                        TechTreeView(civ: human, state: state, engine: engine)
-                    }
-                    .toolbar { Button("Done") { showKnowledge = false } }
+                    TechTreeView(civ: human, state: state, engine: engine, session: session)
+                        .toolbar { Button("Done") { showKnowledge = false } }
                 }
             }
         }
@@ -641,7 +638,9 @@ struct GameScreen: View {
                 toolButton("Empire", "building.columns.fill") { open(.empire) }
                 toolButton("Trade", "arrow.left.arrow.right") { showTrade = true }
                 toolButton("Diplomacy", "person.2.fill", badge: offerCount) { open(.diplomacy) }
-                toolButton("Knowledge", "books.vertical.fill") { showKnowledge = true }
+                toolButton("Knowledge", "books.vertical.fill", hint: session.human.map { state.civs[$0]?.patronage == nil } ?? false) {
+                    showKnowledge = true
+                }
             }
             toolButton("Chronicle", "scroll.fill", badge: unreadLog) { open(.log); seenLog = session.log.first?.id ?? 0 }
             Menu {
@@ -663,13 +662,20 @@ struct GameScreen: View {
         return Council.advice(session, quick: true).filter { $0.mood == .alarm }.count
     }
 
-    private func toolButton(_ title: String, _ symbol: String, badge: Int = 0, action: @escaping () -> Void) -> some View {
+    /// `hint` puts a small bronze dot on the button: something there is waiting for a choice.
+    private func toolButton(_ title: String, _ symbol: String, badge: Int = 0, hint: Bool = false,
+                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Bronze.gradient)
                 .frame(width: 34, height: 34)
                 .overlay(alignment: .topTrailing) {
+                    if badge == 0, hint {
+                        Circle().fill(Bronze.gradient).frame(width: 9, height: 9)
+                            .overlay(Circle().stroke(.black.opacity(0.6), lineWidth: 1))
+                            .offset(x: 3, y: -1)
+                    }
                     if badge > 0 {
                         Text(badge > 9 ? "9+" : "\(badge)")
                             .font(.system(size: 10, weight: .bold))
