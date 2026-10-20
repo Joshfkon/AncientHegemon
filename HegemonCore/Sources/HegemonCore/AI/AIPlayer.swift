@@ -379,6 +379,7 @@ public struct AIPlayer: Sendable {
             // No siege under a bad omen, as no attack.
             let towns = map.landNeighbors(of: camp).filter {
                 engine.canBesiege($0, from: camp, by: civ, state) && (try? engine.checkOmen(civ, attacking: $0, state)) != nil
+                    && !engine.spared($0, state)
             }
             for town in towns.sorted() {
                 guard let d = engine.defenders(of: town, against: civ, state),
@@ -404,7 +405,7 @@ public struct AIPlayer: Sendable {
                 let owner = state.owner(of: to)
                 if owner == civ { continue }
                 if let owner, state.atPeace(civ, owner) { continue }
-                if engine.shielded(to, from: civ, in: state) { continue }
+                if engine.shielded(to, from: civ, in: state) || engine.spared(to, state) { continue }
                 if (try? engine.checkOmen(civ, attacking: to, state)) == nil { continue }
                 let keep = garrison(from, for: civ, state, excluding: to)
                 guard ready.total + (state.armies[from]!.units.total - ready.total) > keep else { continue }

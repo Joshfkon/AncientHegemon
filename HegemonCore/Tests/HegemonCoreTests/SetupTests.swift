@@ -57,3 +57,54 @@ import Testing
         #expect(engine.prestige(of: "mesopotamia", in: s) < meso)
     }
 }
+
+@Suite struct QuietOpeningTests {
+    let engine = try! Engine.calm()
+
+    /// A guided Greece, holding Macedonia with one soldier, beside a Mesopotamian host in Thrace.
+    func guided() throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "mesopotamia"])
+        s.civs["greece"]!.isHuman = true
+        engine.prepare(&s, human: "greece", difficulty: .medium, scenario: nil, guided: true)
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 1))
+        s.land["thrace"]!.owner = "mesopotamia"
+        s.armies["thrace"] = Army(owner: "mesopotamia", units: UnitCounts(infantry: 12))
+        // Thrace's other neighbours are already Mesopotamian: Macedonia is the only prize.
+        for t in ["dacia", "anatolia"] { s.land[t]!.owner = "mesopotamia"; s.armies[t] = nil }
+        s.activePlayerIndex = s.players.firstIndex(of: "mesopotamia")!
+        return s
+    }
+
+    @Test func rivalsLeaveAGuidedPlayerAloneAtFirst() throws {
+        var s = try guided()
+        #expect(s.quietUntil == s.turn - 1 + Engine.quietRounds)
+        #expect(engine.inQuietOpening("greece", s))
+        #expect(!engine.inQuietOpening("mesopotamia", s))
+        let ai = AIPlayer(engine: engine, personality: .conqueror)
+        let turn = ai.playTurn(&s)
+        #expect(!turn.events.contains { if case let .battle(r) = $0 { r.setup.defender.civ == "greece" } else { false } })
+        #expect(s.owner(of: "macedonia") == "greece")
+    }
+
+    @Test func afterTheQuietOpeningTheyCome() throws {
+        var s = try guided()
+        s.turn = s.quietUntil! + 1
+        #expect(!engine.inQuietOpening("greece", s))
+        let ai = AIPlayer(engine: engine, personality: .conqueror)
+        _ = ai.playTurn(&s)
+        #expect(s.owner(of: "macedonia") == "mesopotamia")
+    }
+
+    @Test func noDisastersInTheQuietOpening() throws {
+        let stormy = try engine.modified { json in
+            var events = json["events"] as! [String: Any]
+            events["chancePercent"] = 100
+            json["events"] = events
+        }
+        var s = try guided()
+        #expect(stormy.drawEvents("greece", &s).isEmpty)
+        s.turn = s.quietUntil! + 1
+        #expect(!stormy.drawEvents("greece", &s).isEmpty)
+    }
+}

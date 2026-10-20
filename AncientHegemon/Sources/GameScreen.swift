@@ -127,6 +127,25 @@ struct GameScreen: View {
                 }
                 .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
+            if let human = session.human, let memory = session.guide, !memory.finished, guideClear {
+                let steps = Guide.steps(session)
+                if memory.step < steps.count {
+                    let step = steps[memory.step]
+                    VStack {
+                        GuideCard(step: step, index: memory.step, count: steps.count,
+                                  done: step.kind == .task && Guide.isDone(step, memory, session),
+                                  civ: human, state: state,
+                                  go: { if let go = step.go { follow(go) } },
+                                  next: { withAnimation { Guide.advance(session) } },
+                                  skip: { withAnimation { Guide.advance(session, finish: true) } })
+                        Spacer()
+                    }
+                    // Below the treasury and standings.
+                    .padding(.top, 100)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .id(step.id)
+                }
+            }
             if let call = advisor, let human = session.human, advisorClear {
                 VStack {
                     Spacer()
@@ -358,7 +377,15 @@ struct GameScreen: View {
             // Keep what's selected in view, above the command bar.
             if case .territory(let t)? = pick { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
             if case .territory(let t)? = pick, state.armies[t]?.owner == session.human, session.human != nil { offer(.orders) }
+            // The guided tour's first task: look at the capital.
+            if case .territory(let t)? = pick, let human = session.human, engine.seat(of: human, in: state) == t {
+                Guide.mark("capital", session)
+            }
         }
+        .onChange(of: session.kingdomAudience != nil) { _, open in if open { Guide.mark("neighbours", session) } }
+        // Each step of the tour brings its place into view.
+        .onChange(of: session.guide?.step) { _, _ in lookAtGuide() }
+        .onAppear { lookAtGuide() }
         .onChange(of: engine.collapsePressure(state) > 0) { _, on in if on { offer(.collapse) } }
         .onChange(of: knowledgeLevels) { old, new in if new > old { offer(.knowledge) } }
         .onChange(of: state.victory != nil) { _, over in
@@ -613,6 +640,29 @@ struct GameScreen: View {
 
     // MARK: Guidance
 
+    /// The guide stays up while the player works (that's the point), but not over cards that need
+    /// an answer, or while the rivals move.
+    private var guideClear: Bool {
+        guard let human = session.human else { return false }
+        return session.isHumanTurn && readyForAudience && session.audience == nil && state.civs[human]?.decision == nil
+            && session.crisis == nil && session.moments.isEmpty
+    }
+
+    /// A guided tour is under way: the advisors and tips wait their turn.
+    private var touring: Bool { session.touring }
+
+    /// Brings the guide's current step's place into view, without selecting it.
+    private func lookAtGuide() {
+        guard let memory = session.guide, !memory.finished else { return }
+        let steps = Guide.steps(session)
+        guard memory.step < steps.count else { return }
+        let place: TerritoryID? = switch steps[memory.step].go {
+        case let .territory(t)?, let .city(t)?: t
+        default: session.human.flatMap { engine.seat(of: $0, in: state) }
+        }
+        if let place { mapCenter = MapCenter(territory: place, id: (mapCenter?.id ?? 0) + 1) }
+    }
+
     /// Nothing else on screen: an advisor may step forward.
     private var advisorClear: Bool {
         guard let human = session.human else { return false }
@@ -622,7 +672,7 @@ struct GameScreen: View {
 
     /// The next advisor with something to say, if advisors are on and none is speaking.
     private func callAdvisor() {
-        guard advisorsOn, advisor == nil, advisorClear else { return }
+        guard advisorsOn, advisor == nil, advisorClear, !touring else { return }
         var memory = AdvisorMemory.load(game: Advisors.gameKey(session))
         guard let call = Advisors.next(session, memory: memory) else { return }
         memory.note(call, round: state.turn)
@@ -645,7 +695,7 @@ struct GameScreen: View {
     }
 
     private func offer(_ t: Tip) {
-        guard session.human != nil, t.isNew, tip != t, !tipQueue.contains(t) else { return }
+        guard session.human != nil, !touring, t.isNew, tip != t, !tipQueue.contains(t) else { return }
         tipQueue.append(t)
         if tip == nil { showNextTip() }
     }

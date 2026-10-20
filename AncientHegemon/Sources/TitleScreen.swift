@@ -49,7 +49,8 @@ struct CivPickerView: View {
                 HStack(spacing: 12) {
                     setupRow
                     Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? "")
-                         + (engine.rules.difficulty[difficulty]?.blurb ?? ""))
+                         + (engine.rules.difficulty[difficulty]?.blurb ?? "")
+                         + (guided && scenario == nil ? " Guided: a quiet start, and your council shows you the ropes." : ""))
                         .font(.caption).foregroundStyle(.white.opacity(0.8))
                         .lineLimit(2).frame(maxWidth: 260, alignment: .leading)
                 }
@@ -115,7 +116,7 @@ struct CivPickerView: View {
             }
             // Launch with -demoThrone egypt to walk into that realm's finished throne room.
             if let civ = UserDefaults.standard.string(forKey: "demoThrone") ?? UserDefaults.standard.string(forKey: "demoAs") {
-                session.start(as: civ)
+                session.start(as: civ, guided: UserDefaults.standard.bool(forKey: "demoGuided"))
             }
             #endif
         }
@@ -149,6 +150,8 @@ struct CivPickerView: View {
     /// The difficulty chosen for new games (remembered), and the scenario, if one is picked.
     @AppStorage("difficulty") private var difficultyRaw = Difficulty.medium.rawValue
     @State private var scenario: Scenario?
+    /// A guided start: on until the player turns it off.
+    @AppStorage("guidedStart") private var guided = true
     @State private var showScenarios = false
     private var difficulty: Difficulty { Difficulty(rawValue: difficultyRaw) ?? .medium }
 
@@ -181,6 +184,17 @@ struct CivPickerView: View {
                 Button { scenario = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.7)) }
                     .buttonStyle(.plain).accessibilityLabel("The whole age instead")
             }
+            // A guided start: a quiet opening, and the council walking you through the basics.
+            Button { guided.toggle(); Feedback.select() } label: {
+                Label("Guided", systemImage: guided ? "checkmark.circle.fill" : "circle")
+                    .font(.callout.bold()).lineLimit(1).fixedSize()
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .foregroundStyle(guided ? Color.black : .white)
+                    .background(Capsule().fill(guided ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color.clear)))
+                    .woodPanel(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(guided ? "Guided start on" : "Guided start off")
         }
     }
 
@@ -191,7 +205,7 @@ struct CivPickerView: View {
         withAnimation(.spring(duration: 0.4)) { chosen = civ }
         Task {
             try? await Task.sleep(for: .milliseconds(650))
-            session.start(as: civ, difficulty: difficulty, scenario: scenario)
+            session.start(as: civ, difficulty: difficulty, scenario: scenario, guided: guided && scenario == nil)
             chosen = nil
             scenario = nil
         }

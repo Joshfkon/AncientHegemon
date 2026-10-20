@@ -32,6 +32,7 @@
 		64BF5AA30EDE587F90306A86 /* italia.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 0FCEE35A1C25107FDE363ED9 /* italia.m4a */; };
 		6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B35133F6C1422877D8A459 /* UnitIcons.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
+		7E4348ABA726684162F1B759 /* GuidedOpening.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821EC596738E6EAD5B72DCA9 /* GuidedOpening.swift */; };
 		7F0ED4E597E9C3E9F68B373C /* Peoples.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14768232649EF1859B451DAC /* Peoples.swift */; };
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
@@ -89,6 +90,7 @@
 		7E7B5FD5E53683B4C70351A3 /* map_shapes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = map_shapes.json; sourceTree = "<group>"; };
 		81666E7D20EECA8701512537 /* arrows.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = arrows.wav; sourceTree = "<group>"; };
 		8174C96AEEC6F7CD3E672281 /* defeat.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = defeat.wav; sourceTree = "<group>"; };
+		821EC596738E6EAD5B72DCA9 /* GuidedOpening.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedOpening.swift; sourceTree = "<group>"; };
 		8264F7FC3FCC73EAA576137C /* SaveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStore.swift; sourceTree = "<group>"; };
 		84160A606F9979A055583705 /* wardrums.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = wardrums.wav; sourceTree = "<group>"; };
 		87DF88279096FCF589EA9D0E /* Walkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Walkthrough.swift; sourceTree = "<group>"; };
@@ -212,6 +214,7 @@
 				A9FFEA270691335D57E5FC99 /* GameScreen.swift */,
 				FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */,
 				185BAB29A57542F88154144A /* Guidance.swift */,
+				821EC596738E6EAD5B72DCA9 /* GuidedOpening.swift */,
 				94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */,
 				7DEFB823D986E1A428DCF40F /* MapLayout.swift */,
 				095BFA7DCC2670D90123446F /* MapMarks.swift */,
@@ -357,6 +360,7 @@
 				2FF708BA94D850497A8890ED /* GameScreen.swift in Sources */,
 				4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */,
 				448AE0E2B8D9C06A0E52879F /* Guidance.swift in Sources */,
+				7E4348ABA726684162F1B759 /* GuidedOpening.swift in Sources */,
 				357F90F3D82D376A8FC62CCC /* KnowledgeView.swift in Sources */,
 				70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */,
 				4189AA9CA92DB2DDFA1C25AB /* MapMarks.swift in Sources */,

@@ -172,6 +172,9 @@ final class GameSession {
     var audience: Audience?
     /// An audience with a minor kingdom's ruler, opened from its land.
     var kingdomAudience: KingdomAudience?
+    /// The guided start's progress, when the game began with one.
+    var guide: GuideMemory?
+    var touring: Bool { guide.map { !$0.finished } ?? false }
     private var waitingAudiences: [Audience] = []
 
     /// Shows the next ruler waiting for an audience, if any.
@@ -210,13 +213,13 @@ final class GameSession {
     }
 
     /// Starts a game as `civ`, or as a spectator when nil.
-    func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil) {
+    func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil, guided: Bool = false) {
         playing = false
         seed = UInt64.random(in: 1...99_999)
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         human = civ
         if let civ { state.civs[civ]!.isHuman = true }
-        engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario)
+        engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario, guided: guided)
         refreshEconomy()
         log = []
         battles = []
@@ -229,6 +232,12 @@ final class GameSession {
         started = true
         lastFight = nil
         updateMusic()
+        guide = nil
+        if guided, civ != nil {
+            let memory = GuideMemory(game: Advisors.gameKey(self), startRound: state.turn)
+            memory.save()
+            guide = memory
+        }
         SaveStore.delete()
         saved = nil
         if civ != nil {
@@ -255,6 +264,7 @@ final class GameSession {
         started = true
         lastFight = nil
         updateMusic()
+        guide = GuideMemory.load(game: Advisors.gameKey(self))
         // If the app closed while the rivals were moving, let them finish.
         if state.activePlayer != human { Task { await runAITurns() } }
     }
@@ -416,7 +426,9 @@ final class GameSession {
         // Back to the player: sum up what happened since they ended their turn.
         report = log.filter { $0.id > reportFrom }.sorted { $0.id < $1.id }
         // Only interrupt for news that touches the player; the rest waits behind the News button.
-        showReport = human != nil && report.contains { $0.mine == true } && !isOver
+        // A guided game opens quietly: no flood of news before the player has made a move.
+        let firstGuidedTurn = touring && state.turn <= (guide?.startRound ?? 0)
+        showReport = human != nil && report.contains { $0.mine == true } && !isOver && !firstGuidedTurn
         if !showReport { releaseGains() }
         autosave()
     }
@@ -434,8 +446,9 @@ final class GameSession {
         }.value
         record(events, round: start.turn, before: start, after: after)
         state = after
-        // Rulers who come to the player in person: to offer peace, or to declare war.
-        if let human {
+        // Rulers who come to the player in person: to offer peace, or to declare war. Not during
+        // a guided tour: their offers wait in Rivals.
+        if let human, !touring {
             for event in events {
                 switch event {
                 case let .peaceOffered(from, to) where to == human:
@@ -983,6 +996,7 @@ final class GameSession {
         }
         noteMoments(events, before: before, after: after)
         noteFighting(events, before: before)
+        Guide.note(events, self)
         log.insert(contentsOf: lines.reversed(), at: 0)
         if log.count > 300 { log.removeLast(log.count - 300) }
         if battles.count > 100 { battles.removeLast(battles.count - 100) }

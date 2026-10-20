@@ -114,7 +114,25 @@ public struct Scenario: Sendable, Identifiable {
 
 extension Engine {
     /// Sets up a new game for a person playing `human` (nil: watching), at a difficulty, from a scenario.
-    public func prepare(_ state: inout GameState, human: CivilizationID?, difficulty: Difficulty, scenario: Scenario?) {
+    /// Rounds of a guided start in which the world leaves the player alone.
+    public static let quietRounds = 5
+
+    /// Whether `civ` is still in a guided start's quiet opening: nobody attacks its land, no
+    /// raider or pirate falls on it, no storm or disaster strikes it.
+    public func inQuietOpening(_ civ: CivilizationID?, _ state: GameState) -> Bool {
+        guard let civ, let until = state.quietUntil, state.civs[civ]?.isHuman == true else { return false }
+        return state.turn <= until
+    }
+
+    /// Whether an army of someone else's would leave `t` alone in a quiet opening: the land, or
+    /// the army standing on it, belongs to a player still being guided.
+    public func spared(_ t: TerritoryID, _ state: GameState) -> Bool {
+        inQuietOpening(state.owner(of: t), state) || inQuietOpening(state.armies[t]?.owner, state)
+    }
+
+    public func prepare(_ state: inout GameState, human: CivilizationID?, difficulty: Difficulty, scenario: Scenario?,
+                        guided: Bool = false) {
+        if guided, human != nil { state.quietUntil = state.turn - 1 + Self.quietRounds }
         if let scenario {
             scenario.setup(self, &state)
             state.scenario = scenario.id

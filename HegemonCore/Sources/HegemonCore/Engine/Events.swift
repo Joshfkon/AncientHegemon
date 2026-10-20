@@ -6,6 +6,8 @@
 /// sprawling realms see distant provinces revolt; shaky rulers see bad omens.
 extension Engine {
     func drawEvents(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+        // A guided start: no disasters (nor windfalls) while the player learns the ropes.
+        if inQuietOpening(civ, state) { return [] }
         var events: [GameEvent] = []
         if state.civs[civ]!.plagueIncoming {
             state.civs[civ]!.plagueIncoming = false

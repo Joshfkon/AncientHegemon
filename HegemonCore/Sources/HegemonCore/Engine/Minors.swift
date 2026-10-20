@@ -454,7 +454,8 @@ extension Engine {
             let band = warriors(at: from, in: state) - 1
             guard band + 1 >= m.expandMinWarriors else { continue }
             for to in map.landNeighbors(of: from).sorted() {
-                guard !seats.contains(to), kingdom(at: to, in: state) != k, overlord(of: to, in: state) == nil else { continue }
+                guard !seats.contains(to), kingdom(at: to, in: state) != k, overlord(of: to, in: state) == nil,
+                      !spared(to, state) else { continue }
                 let owner = state.owner(of: to)
                 if let owner {
                     // Empires' land: only the warlike, and only from empires they hate.
@@ -497,7 +498,7 @@ extension Engine {
         guard warriors >= m.raidMinWarriors else { return [] }
         let band = warriors / 2 + 1
         let targets = map.landNeighbors(of: home).sorted().filter { t in
-            guard let owner = state.owner(of: t), state.isPlayer(owner),
+            guard let owner = state.owner(of: t), state.isPlayer(owner), !spared(t, state),
                   attitude(of: k, toward: owner, in: state) <= m.raidAttitude else { return false }
             let held = defenders(of: t, against: k, state).map { $0.army.units.total + $0.levy } ?? 0
             return held * 2 < band

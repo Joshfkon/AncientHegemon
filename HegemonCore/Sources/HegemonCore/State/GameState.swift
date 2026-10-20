@@ -244,6 +244,9 @@ public struct GameState: Codable, Sendable, Equatable {
     public var difficulty: Difficulty?
     public var scenario: ScenarioID?
     public var roundLimit: Int?
+    /// A guided start: through this round, the player is left alone (no attacks on their land,
+    /// no raids, no disasters) while they learn the ropes.
+    public var quietUntil: Int?
     public var objectives: [TerritoryID: Int]?
     /// Consecutive rounds each civ has held the conditions for a trade victory.
     public var tradeHold: [CivilizationID: Int]

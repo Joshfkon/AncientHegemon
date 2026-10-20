@@ -24,7 +24,7 @@ extension Engine {
     /// and drown the troops that no longer fit aboard.
     func storms(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         let chance = stormChance(for: civ, in: state)
-        guard chance > 0 else { return [] }
+        guard chance > 0, !inQuietOpening(civ, state) else { return [] }
         var events: [GameEvent] = []
         for sea in state.fleets(of: civ).map(\.sea).sorted() {
             // Off a coast of their own, ships can run for a beach: half the danger.
@@ -61,7 +61,7 @@ extension Engine {
     func plunderable(_ sea: SeaZoneID, _ state: GameState) -> [TerritoryID] {
         let near = Set([sea] + map.seaNeighbors(of: sea))
         return map.coastalTerritories(of: sea).filter { t in
-            guard let owner = state.owner(of: t), state.isPlayer(owner),
+            guard let owner = state.owner(of: t), state.isPlayer(owner), !inQuietOpening(owner, state),
                   state.land[t]?.improvements.contains(.walls) != true else { return false }
             return !state.fleets.contains { $0.owner == owner && near.contains($0.sea) }
         }
