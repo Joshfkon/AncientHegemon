@@ -49,7 +49,10 @@ extension Engine {
 
     private func neighbors(of node: NetworkNode, through owners: Set<CivilizationID>,
                            travelers: [CivilizationID], in state: GameState) -> [NetworkNode] {
-        func passable(_ t: TerritoryID) -> Bool { state.owner(of: t).map(owners.contains) ?? false }
+        // Owned land, and a vassal people's land: supply and trade pass through it.
+        func passable(_ t: TerritoryID) -> Bool {
+            state.owner(of: t).map(owners.contains) ?? overlord(of: t, in: state).map(owners.contains) ?? false
+        }
         func open(_ s: SeaZoneID) -> Bool { !blockaded(s, for: travelers, in: state) }
         switch node {
         case .land(let t):
@@ -109,8 +112,9 @@ extension Engine {
         var pockets: [[TerritoryID]] = []
         for start in remaining where !assigned.contains(start) {
             let reached = search(from: [.land(start)], through: [civ], travelers: [civ], in: state).parents
+            // Supply passes through vassals' land, but a pocket is the civ's own land.
             let pocket = reached.keys.compactMap { node -> TerritoryID? in
-                if case .land(let t) = node { t } else { nil }
+                if case .land(let t) = node, state.owner(of: t) == civ { t } else { nil }
             }.sorted()
             assigned.formUnion(pocket)
             pockets.append(pocket)
@@ -150,7 +154,7 @@ extension Engine {
         }
         var result: [TerritoryID: Int] = [:]
         for (node, n) in steps {
-            if case .land(let t) = node { result[t] = n }
+            if case .land(let t) = node, state.owner(of: t) == civ { result[t] = n }
         }
         return result
     }

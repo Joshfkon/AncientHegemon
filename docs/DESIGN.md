@@ -1812,6 +1812,22 @@ goals: everything here follows from how real Bronze Age empires held together or
     wasn't conquered, it isn't restless.
   A vassal with none of your troops next door may break free (8% a round), and is freed if you
   fall. Someone at war with you may still conquer it.
+- **Passage** (Josh: "I need to be able to move troops through a vassal's land to reach other
+  territory"). An army marches straight through its own vassal's land to the land beyond in
+  one order (the vassal's warriors stand aside; the crossing that counts in battle is the last
+  one). Supply and trade pass through vassals' land too, though it never becomes yours: it
+  isn't in your pockets, taxes or harvest. The AI marches through its vassals as well.
+- **Garrisons** (Josh: "you should also be able to station troops in a vassal territory, to
+  defend them"). Marching into your own vassal's land stations a garrison there, with no
+  battle. The people's warriors stand aside with it (kept in `MinorState.stationed`) and
+  fight beside it as its levy if anyone attacks; their dead come off their number. The vassal
+  feeds the garrison (no cut-off attrition, no grain from you; you still pay the soldiers),
+  and a garrisoned vassal never breaks free. When the last soldier leaves, the warriors hold
+  the land alone again. Annexing a garrisoned vassal folds its warriors into the garrison.
+- Balance: passage and supply through vassals favoured Italia (the conqueror) most, since it
+  took the poor mountain peoples as vassals and they linked its far conquests: 48% wins. A
+  true conqueror (aggression 1.3+) now takes no vassals and conquers outright; with that,
+  80 games: Mesopotamia 37%, Italia 26%, Egypt 21%, Greece 15%.
 - **AI** (Josh: "in some cases it may make sense to just conquer outright"). Rich land (grain
   5+) is conquered outright; poor land (grain 3 or less) is taken as a vassal when they'd
   swear; in between, merchants and turtles take vassals and conquerors and opportunists fight.

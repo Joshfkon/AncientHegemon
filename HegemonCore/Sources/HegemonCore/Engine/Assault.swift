@@ -30,7 +30,9 @@ extension Engine {
             case .land(let from):
                 guard let army = state.armies[from], army.owner == civ,
                       g.units.fits(in: army.units - (state.moved[from] ?? .zero)) else { throw GameError.insufficientUnits(from) }
-                guard map.areLandAdjacent(from, target) else { throw GameError.notAdjacent(from, target) }
+                guard map.areLandAdjacent(from, target) || vassalPassage(from, target, for: civ, in: state) != nil else {
+                    throw GameError.notAdjacent(from, target)
+                }
             case .sea(let sea):
                 guard t.seas.contains(sea) else { throw GameError.notCoastal(target, sea) }
                 guard let i = fleetIndex(civ, sea, state), g.units.fits(in: state.fleets[i].cargo) else { throw GameError.noFleet(sea) }
@@ -54,7 +56,8 @@ extension Engine {
         var approach: Approach = .amphibious
         if let lead, case .land(let from) = lead.source {
             plan = state.armies[from]!.plan
-            approach = switch map.crossing(between: from, and: target) {
+            let last = map.areLandAdjacent(from, target) ? from : vassalPassage(from, target, for: civ, in: state) ?? from
+            approach = switch map.crossing(between: last, and: target) {
             case .river: .river
             case .strait: .strait
             case nil: .overland

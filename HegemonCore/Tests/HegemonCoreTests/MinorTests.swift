@@ -32,12 +32,16 @@ import Testing
         #expect(s.armies["thrace"]?.units.total == warriors)
         #expect(engine.peoplesGold(of: "greece", in: s).tribute == engine.tribute(of: "thrace"))
         #expect(engine.prestigeBreakdown(of: "greece", in: s).contains { $0.source == "Vassals" })
-        // Nobody at peace with Greece may touch them, nor Greece itself.
+        // Nobody at peace with Greece may touch them, nor Greece itself (its troops march in
+        // only as a garrison).
         s.peace.insert(CivPair("greece", "egypt"))
         #expect(engine.shielded("thrace", from: "egypt", in: s))
         #expect(engine.shielded("thrace", from: "greece", in: s))
+        s.land["dacia"]!.owner = "egypt"
+        s.armies["dacia"] = Army(owner: "egypt", units: UnitCounts(infantry: 9))
+        s.activePlayerIndex = s.players.firstIndex(of: "egypt")!
         #expect(throws: GameError.shielded("thrace")) {
-            try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 1)), to: &s)
+            try engine.apply(.move(from: "dacia", to: "thrace", units: UnitCounts(infantry: 1)), to: &s)
         }
         #expect(engine.tribe(at: "thrace", for: "greece", in: s) == nil)
     }
@@ -137,5 +141,108 @@ import Testing
         s.armies["macedonia"] = nil
         #expect(restless.minorsRound(&s).contains(.vassalFreed(civ: "greece", territory: "thrace")))
         #expect(restless.overlord(of: "thrace", in: s) == nil)
+    }
+}
+
+@Suite struct VassalPassageTests {
+    let engine = try! Engine.calm()
+
+    /// Greece holds Macedonia with an army; Thrace is its vassal; beyond Thrace lies Anatolia.
+    func greeceWithThraceSworn() throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 12))
+        s.minors["thrace"]!.overlord = "greece"
+        s.minors["thrace"]!.vassalSince = s.turn
+        return s
+    }
+
+    @Test func armiesMarchThroughAVassalsLand() throws {
+        var s = try greeceWithThraceSworn()
+        #expect(engine.passageTargets(from: "macedonia", for: "greece", in: s)["anatolia"] == "thrace")
+        let warriors = s.armies["thrace"]!.units
+        try engine.apply(.move(from: "macedonia", to: "anatolia", units: UnitCounts(infantry: 12)), to: &s)
+        #expect(s.owner(of: "anatolia") == "greece")
+        // The vassal's warriors stand aside and stay home.
+        #expect(s.armies["thrace"]?.units == warriors)
+        #expect(s.armies["thrace"]?.owner == nativesID)
+        // No passage without a vassal on the way.
+        s.minors["thrace"]!.overlord = nil
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 3))
+        #expect(throws: GameError.notAdjacent("macedonia", "anatolia")) {
+            try engine.apply(.move(from: "macedonia", to: "anatolia", units: UnitCounts(infantry: 1)), to: &s)
+        }
+    }
+
+    @Test func supplyRunsThroughAVassalButItIsNotYourLand() throws {
+        var s = try greeceWithThraceSworn()
+        s.land["greece"]!.owner = "greece"
+        s.land["anatolia"]!.owner = "greece"
+        s.armies["anatolia"] = nil
+        // Anatolia is reached through Thrace, so it's in the home network...
+        #expect(engine.homeNetwork(of: "greece", in: s).contains("anatolia"))
+        // ...but Thrace itself isn't Greek land.
+        #expect(!engine.homeNetwork(of: "greece", in: s).contains("thrace"))
+        // Egyptian ships close every sea: the only way is overland, through Thrace.
+        s.fleets = engine.map.seas.map { Fleet(sea: $0.id, owner: "egypt", ships: 1) }
+        #expect(engine.supplyRoute(of: "greece", to: "anatolia", in: s)?.contains(.land("thrace")) == true)
+        s.minors["thrace"]!.overlord = nil
+        #expect(!engine.homeNetwork(of: "greece", in: s).contains("anatolia"))
+    }
+}
+
+@Suite struct VassalGarrisonTests {
+    let engine = try! Engine.calm()
+
+    func greeceWithThraceSworn() throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 8))
+        s.armies["thrace"] = Army(owner: nativesID, units: UnitCounts(infantry: 3))
+        s.minors["thrace"]!.overlord = "greece"
+        s.minors["thrace"]!.vassalSince = s.turn
+        return s
+    }
+
+    @Test func troopsStationedInAVassalStandWithItsWarriors() throws {
+        var s = try greeceWithThraceSworn()
+        let events = try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
+        #expect(!events.contains { if case .battle = $0 { true } else { false } })
+        #expect(s.armies["thrace"]?.owner == "greece")
+        #expect(s.armies["thrace"]?.units.infantry == 5)
+        #expect(engine.warriors(at: "thrace", in: s) == 3)
+        #expect(engine.garrisoned("thrace", in: s))
+        // Still their land, still a vassal.
+        #expect(s.owner(of: "thrace") == nil)
+        #expect(engine.overlord(of: "thrace", in: s) == "greece")
+        // The warriors fight beside the garrison, as its levy.
+        #expect(engine.defenders(of: "thrace", against: "egypt", s)?.levy == 3)
+        #expect(engine.defenders(of: "thrace", against: "greece", s) == nil)
+    }
+
+    @Test func whenTheGarrisonLeavesThePeopleHoldTheirLandAgain() throws {
+        var s = try greeceWithThraceSworn()
+        try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
+        s.moved = [:]
+        try engine.apply(.move(from: "thrace", to: "macedonia", units: UnitCounts(infantry: 5)), to: &s)
+        #expect(s.armies["thrace"]?.owner == nativesID)
+        #expect(s.armies["thrace"]?.units.infantry == 3)
+        #expect(s.minors["thrace"]?.stationed == nil)
+        #expect(engine.overlord(of: "thrace", in: s) == "greece")
+    }
+
+    @Test func aGarrisonedVassalStaysLoyalAndFeedsItsGarrison() throws {
+        let restless = try engine.modified { json in
+            var minors = json["minors"] as! [String: Any]
+            minors["breakFreePercent"] = 100
+            json["minors"] = minors
+        }
+        var s = try greeceWithThraceSworn()
+        try restless.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
+        s.armies["macedonia"] = nil
+        #expect(!restless.minorsRound(&s).contains(.vassalFreed(civ: "greece", territory: "thrace")))
+        // Through Greece's turns, the garrison loses nobody to hunger or cut-off supply.
+        for _ in 0..<4 { try restless.apply(.endTurn, to: &s) }
+        #expect(s.armies["thrace"]?.units.infantry == 5)
     }
 }

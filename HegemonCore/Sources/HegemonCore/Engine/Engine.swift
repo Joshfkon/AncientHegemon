@@ -22,6 +22,7 @@ public struct Engine: Sendable {
     @discardableResult
     public func apply(_ command: Command, to state: inout GameState) throws -> [GameEvent] {
         let events = try perform(command, &state)
+        settleGarrisons(&state)
         return events + awardTrophies(events, &state)
     }
 
@@ -185,10 +186,13 @@ public struct Engine: Sendable {
         guard let army = state.armies[from], army.owner == civ else { throw GameError.insufficientUnits(from) }
         let ready = army.units - (state.moved[from] ?? .zero)
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
-        guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
+        // Next door, or beyond a vassal's land in one march.
+        let through = map.areLandAdjacent(from, to) ? nil : vassalPassage(from, to, for: civ, in: state)
+        guard map.areLandAdjacent(from, to) || through != nil else { throw GameError.notAdjacent(from, to) }
         if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
-        if shielded(to, from: civ, in: state) { throw GameError.shielded(to) }
-        try checkOmen(civ, attacking: to, state)
+        let garrison = overlord(of: to, in: state) == civ
+        if shielded(to, from: civ, in: state), !garrison { throw GameError.shielded(to) }
+        if !garrison { try checkOmen(civ, attacking: to, state) }
         var general: General?
         if withGeneral {
             guard let g = state.general(of: civ, at: from), !state.generalsMoved.contains(g.id) else {
@@ -205,16 +209,22 @@ public struct Engine: Sendable {
         state.roadMoved[from] = onRoad - second
         if state.roadMoved[from]!.isEmpty { state.roadMoved[from] = nil }
         // A road march: from road to road, through our own land, with no one to fight.
-        let roadMarch = roadLinks(from, to, for: civ, in: state)
+        let roadMarch = through == nil && roadLinks(from, to, for: civ, in: state)
 
         state.armies[from]!.units -= units
         if state.armies[from]!.units.isEmpty { state.armies[from] = nil }
-        let approach: Approach = switch map.crossing(between: from, and: to) {
+        let approach: Approach = switch map.crossing(between: through ?? from, and: to) {
         case .river: .river
         case .strait: .strait
         case nil: .overland
         }
         let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
+        // Into our vassal's land: a garrison to defend it, no battle.
+        if garrison {
+            station(units, battles: army.battles ?? 0, in: to, by: civ, &state)
+            if let g = general { state.generals[g.id]!.location = to }
+            return events
+        }
         let result = events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
                                       from: .territory(from), approach: approach, &state)
         // Fresh units that marched by road may move once more this turn, and their general with them.

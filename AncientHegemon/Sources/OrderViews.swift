@@ -132,6 +132,10 @@ struct OrderComposer: View {
         switch order {
         case let .march(from, to):
             if let via { return "\(isBattle ? "Attack" : "March to") \(place(to)) by road through \(place(via))" }
+            if !engine.map.areLandAdjacent(from, to), let human = session.human,
+               let vassal = engine.vassalPassage(from, to, for: human, in: state) {
+                return "\(isBattle ? "Attack" : "March to") \(place(to)) through your vassal \(place(vassal))"
+            }
             return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
         case let .embark(from, sea): return "Board ships in the \(place(sea)) from \(place(from))"
         case let .land(sea, to): return "\(isBattle ? "Land and attack" : "Land in") \(place(to)) from the \(place(sea))"

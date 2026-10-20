@@ -73,6 +73,9 @@ public struct MinorState: Codable, Sendable, Equatable {
     public var lastLevy: Int?
     /// Warriors at the start of the game; they grow back to a little beyond this.
     public var startWarriors: Int
+    /// While the overlord's troops are stationed here, the people's own warriors (they stand
+    /// with the garrison and fight beside it).
+    public var stationed: Int?
 
     public init(startWarriors: Int) {
         self.startWarriors = startWarriors
@@ -82,11 +85,47 @@ public struct MinorState: Codable, Sendable, Equatable {
 extension Engine {
     // MARK: Who they are and how they feel
 
-    /// The people living in an unclaimed territory, if a minor kingdom holds it.
+    /// The people living in an unclaimed territory, if a minor kingdom holds it: their warriors
+    /// hold it, or their overlord's garrison stands with them.
     public func people(at territory: TerritoryID, in state: GameState) -> People? {
-        guard state.minors[territory] != nil, state.owner(of: territory) == nil,
-              state.armies[territory]?.owner == nativesID else { return nil }
-        return rules.minors.peoples[territory]
+        guard let minor = state.minors[territory], state.owner(of: territory) == nil else { return nil }
+        let holder = state.armies[territory]?.owner
+        let held = minor.stationed != nil ? holder == nil || holder == minor.overlord : holder == nativesID
+        return held ? rules.minors.peoples[territory] : nil
+    }
+
+    /// The people's own warriors, whether they hold the land alone or beside a garrison.
+    public func warriors(at territory: TerritoryID, in state: GameState) -> Int {
+        state.minors[territory]?.stationed ?? state.armies[territory].map { $0.owner == nativesID ? $0.units.total : 0 } ?? 0
+    }
+
+    /// Whether the overlord's troops are stationed in a vassal's land.
+    public func garrisoned(_ territory: TerritoryID, in state: GameState) -> Bool {
+        state.minors[territory]?.stationed != nil && state.armies[territory]?.owner == state.minors[territory]?.overlord
+    }
+
+    /// The overlord's troops march into a vassal's land to defend it: the people's warriors
+    /// stand with them.
+    func station(_ units: UnitCounts, battles: Int, in territory: TerritoryID, by civ: CivilizationID, _ state: inout GameState) {
+        if state.minors[territory]!.stationed == nil {
+            state.minors[territory]!.stationed = warriors(at: territory, in: state)
+            state.armies[territory] = nil
+        }
+        join(units, battles: battles, to: territory, owner: civ, &state)
+        state.moved[territory, default: .zero] += units
+    }
+
+    /// Once the last of a garrison has gone, the people hold their land alone again.
+    func settleGarrisons(_ state: inout GameState) {
+        for (t, minor) in state.minors where minor.stationed != nil {
+            if state.armies[t] == nil {
+                let w = minor.stationed!
+                state.armies[t] = w > 0 ? Army(owner: nativesID, units: UnitCounts(infantry: w)) : nil
+                state.minors[t]!.stationed = nil
+            } else if state.armies[t]?.owner != minor.overlord {
+                state.minors[t]!.stationed = nil
+            }
+        }
     }
 
     public func baseAttitude(_ territory: TerritoryID) -> Int {
@@ -122,8 +161,7 @@ extension Engine {
     /// Whether the people would swear to `civ` as vassals now.
     public func wouldSwear(_ territory: TerritoryID, to civ: CivilizationID, in state: GameState) -> Bool {
         let m = rules.minors
-        let warriors = state.armies[territory]?.units.total ?? 0
-        return troopsNextTo(territory, for: civ, in: state) >= m.vassalRatio * max(1, warriors)
+        return troopsNextTo(territory, for: civ, in: state) >= m.vassalRatio * max(1, warriors(at: territory, in: state))
             || attitude(of: territory, toward: civ, in: state) >= m.vassalAttitude
     }
 
@@ -157,6 +195,30 @@ extension Engine {
         return max(0, since + rules.minors.annexRounds - state.turn)
     }
 
+    /// A vassal's land an army of `civ` can march straight through from `from` to reach `to`
+    /// in one order (its warriors stand aside for their overlord), if there is one.
+    public func vassalPassage(_ from: TerritoryID, _ to: TerritoryID, for civ: CivilizationID,
+                              in state: GameState) -> TerritoryID? {
+        guard from != to else { return nil }
+        return map.landNeighbors(of: from).sorted().first { v in
+            overlord(of: v, in: state) == civ && v != to && map.areLandAdjacent(v, to)
+        }
+    }
+
+    /// Land beyond `civ`'s vassals that an army in `from` can reach in one march, with the vassal
+    /// passed through.
+    public func passageTargets(from: TerritoryID, for civ: CivilizationID, in state: GameState) -> [TerritoryID: TerritoryID] {
+        let near = Set(map.landNeighbors(of: from))
+        var result: [TerritoryID: TerritoryID] = [:]
+        for v in near.sorted() where overlord(of: v, in: state) == civ {
+            for to in map.landNeighbors(of: v).sorted() where to != from && !near.contains(to) && result[to] == nil {
+                if overlord(of: to, in: state) == civ { continue }
+                result[to] = v
+            }
+        }
+        return result
+    }
+
     // MARK: Being attacked
 
     /// An empire attacks a people: they hate it for it, and their neighbours fear it.
@@ -187,10 +249,13 @@ extension Engine {
         guard map.areLandAdjacent(territory, to), state.owner(of: to) == civ,
               state.armies[to].map({ $0.owner == civ }) ?? true else { throw GameError.notAdjacent(territory, to) }
         guard levyWait(territory, in: state) == 0 else { throw GameError.tooSoon(territory) }
-        let warriors = state.armies[territory]!.units.total
-        let called = warriors / 2
+        let called = warriors(at: territory, in: state) / 2
         guard called > 0 else { throw GameError.insufficientUnits(territory) }
-        state.armies[territory]!.units.infantry -= called
+        if state.minors[territory]!.stationed != nil {
+            state.minors[territory]!.stationed! -= called
+        } else {
+            state.armies[territory]!.units.infantry -= called
+        }
         let units = UnitCounts(infantry: called)
         join(units, battles: 0, to: to, owner: civ, &state)
         state.moved[to, default: .zero] += units
@@ -204,8 +269,13 @@ extension Engine {
         let civ = state.activePlayer
         guard overlord(of: territory, in: state) == civ else { throw GameError.notVassal(territory) }
         guard annexWait(territory, in: state) == 0 else { throw GameError.tooSoon(territory) }
-        let warriors = state.armies[territory]?.units ?? .zero
-        state.armies[territory] = warriors.isEmpty ? nil : Army(owner: civ, units: warriors)
+        // The people's warriors take service, beside any garrison already there.
+        let warriors = UnitCounts(infantry: warriors(at: territory, in: state))
+        if garrisoned(territory, in: state) {
+            state.armies[territory]!.units += warriors
+        } else {
+            state.armies[territory] = warriors.isEmpty ? nil : Army(owner: civ, units: warriors)
+        }
         state.land[territory]!.owner = civ
         state.minors[territory] = nil
         var events: [GameEvent] = [.annexed(civ: civ, territory: territory)]
@@ -238,14 +308,15 @@ extension Engine {
             }
             // Warriors grow back.
             if state.turn % max(1, m.growthRounds) == 0,
-               state.armies[t]!.units.total < state.minors[t]!.startWarriors + m.growthCap {
-                state.armies[t]!.units.infantry += 1
+               warriors(at: t, in: state) < state.minors[t]!.startWarriors + m.growthCap {
+                if state.minors[t]!.stationed != nil { state.minors[t]!.stationed! += 1 }
+                else if state.armies[t] != nil { state.armies[t]!.units.infantry += 1 }
             }
             if let lord = state.minors[t]!.overlord {
                 // A vassal with none of its overlord's troops at hand, or whose overlord has
                 // fallen, may throw off the yoke.
                 let fallen = state.civs[lord]?.eliminated ?? true
-                let watched = troopsNextTo(t, for: lord, in: state) > 0
+                let watched = troopsNextTo(t, for: lord, in: state) > 0 || garrisoned(t, in: state)
                 if fallen || (!watched && Int(state.rng.next() % 100) < m.breakFreePercent) {
                     state.minors[t]!.overlord = nil
                     state.minors[t]!.vassalSince = nil

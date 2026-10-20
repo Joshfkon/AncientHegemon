@@ -332,11 +332,13 @@ public struct AIPlayer: Sendable {
 
     /// Peoples next door that would swear fealty: rich land is worth conquering outright; poor
     /// land is taken as a vassal (and annexed when the time comes, without battle or unrest);
-    /// in between, the gentler empires take vassals and the warlike conquer.
+    /// in between, the gentler empires take vassals and the warlike conquer. A true conqueror
+    /// takes no vassals at all.
     func courtPeoples(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         for t in state.minors.keys.sorted() {
             let grain = map.territory(t)!.grain
-            let swear = grain <= 3 || (grain < 5 && personality.aggression < 1)
+            // A true conqueror takes no oaths: it conquers.
+            let swear = personality.aggression < 1.3 && (grain <= 3 || (grain < 5 && personality.aggression < 1))
             if swear, engine.tribe(at: t, for: civ, in: state) != nil, engine.people(at: t, in: state) != nil,
                !state.parleyed.contains(t), engine.wouldSwear(t, to: civ, in: state) {
                 attempt(.parley(territory: t, .vassalage), &state, &turn)
@@ -383,7 +385,9 @@ public struct AIPlayer: Sendable {
             let ready = readyUnits(at: from, state)
             guard ready.total > 0 else { continue }
             let supplied = home.contains(from) ? 1.0 : 0.3
-            for to in map.landNeighbors(of: from) {
+            // Next door, and beyond our vassals' land.
+            let reach = map.landNeighbors(of: from) + engine.passageTargets(from: from, for: civ, in: state).keys.sorted()
+            for to in reach {
                 let owner = state.owner(of: to)
                 if owner == civ { continue }
                 if let owner, state.atPeace(civ, owner) { continue }
@@ -476,7 +480,8 @@ public struct AIPlayer: Sendable {
     func battleSetup(_ civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts,
                              plan: BattlePlan, seed: UInt64, _ state: GameState) -> BattleSetup {
         let general = state.general(of: civ, at: from).flatMap { state.generalsMoved.contains($0.id) ? nil : $0 }
-        let approach: Approach = switch map.crossing(between: from, and: to) {
+        let last = map.areLandAdjacent(from, to) ? from : engine.vassalPassage(from, to, for: civ, in: state) ?? from
+        let approach: Approach = switch map.crossing(between: last, and: to) {
         case .river: .river
         case .strait: .strait
         case nil: .overland

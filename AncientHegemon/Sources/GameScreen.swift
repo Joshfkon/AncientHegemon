@@ -236,8 +236,12 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
+            // -demoVassal YES|look|march: a sworn vassal (or not) selected, or the capital's army
+            // selected with a vassal next door to march through.
             if let how = UserDefaults.standard.string(forKey: "demoVassal"),
-               let t = session.demoVassal(sworn: how != "look") { selected = .territory(t) }
+               let t = session.demoVassal(sworn: how != "look") {
+                selected = .territory(how == "march" ? (session.human.flatMap { engine.seat(of: $0, in: state) } ?? t) : t)
+            }
             if UserDefaults.standard.string(forKey: "demoThrone") != nil {
                 session.demoDecorate()
                 showThrone = true
@@ -1033,6 +1037,11 @@ struct GameScreen: View {
             picks.formUnion(seaRoutes.keys.map(MapPick.territory))
             // Land two steps away along a road, in one order.
             picks.formUnion(roadTargets.keys.map(MapPick.territory))
+            // Land beyond a vassal's, marching straight through it.
+            picks.formUnion(engine.passageTargets(from: from, for: human, in: state).keys.filter { to in
+                !(state.owner(of: to).map { $0 != human && state.atPeace(human, $0) } ?? false)
+                    && !engine.shielded(to, from: human, in: state)
+            }.map(MapPick.territory))
             return picks
         case .sea(let sea)?:
             guard let fleet = state.fleet(of: human, in: sea) else { return [] }
@@ -1060,6 +1069,10 @@ struct GameScreen: View {
                 roadVia = nil
                 if !engine.map.areLandAdjacent(a, b), let via = roadTargets[b] {
                     roadVia = via
+                    pending = .march(from: a, to: b)
+                } else if !engine.map.areLandAdjacent(a, b), let human = session.human,
+                          engine.vassalPassage(a, b, for: human, in: state) != nil {
+                    // Straight through a vassal's land.
                     pending = .march(from: a, to: b)
                 } else if !engine.map.areLandAdjacent(a, b), let route = seaRoutes[b] {
                     pending = .seaAssault(from: a, to: b, route: SeaRouteKey(route))

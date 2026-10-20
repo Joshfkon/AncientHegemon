@@ -24,7 +24,11 @@ extension Engine {
         let landOwner = state.owner(of: territory)
         let owner = garrison?.owner ?? landOwner
         guard let owner, owner != civ else { return nil }
-        let levy = landOwner == owner ? self.levy(at: territory, state) : 0
+        // Nobody fights their own vassal's warriors.
+        if overlord(of: territory, in: state) == civ { return nil }
+        // Beside a garrison in vassal land, the people's warriors fight as its levy.
+        let levy = landOwner == owner ? self.levy(at: territory, state)
+            : garrisoned(territory, in: state) ? warriors(at: territory, in: state) : 0
         if garrison == nil && levy == 0 { return nil }
         return (owner, garrison ?? Army(owner: owner, units: .zero), levy)
     }
@@ -145,7 +149,9 @@ extension Engine {
 
         // The levy's dead are the land's people.
         let fallen = d.levy - report.defenderLevySurvivors
-        if fallen > 0 {
+        if fallen > 0, state.minors[to]?.stationed != nil, state.owner(of: to) == nil {
+            state.minors[to]!.stationed = max(0, state.minors[to]!.stationed! - fallen)
+        } else if fallen > 0 {
             state.land[to]!.population = max(rules.economy.minPopulation, state.population(of: to) - fallen)
         }
         let defenderBattles = seasoned(defender.battles ?? 0)
@@ -270,7 +276,9 @@ extension Engine {
         if amphibious {
             approach = .amphibious
         } else {
-            approach = switch origin.flatMap({ map.crossing(between: $0, and: to) }) {
+            // Beyond a vassal's land, the crossing that counts is the last one.
+            let last = origin.map { map.areLandAdjacent($0, to) ? $0 : vassalPassage($0, to, for: civ, in: state) ?? $0 }
+            approach = switch last.flatMap({ map.crossing(between: $0, and: to) }) {
             case .river: .river
             case .strait: .strait
             case nil: .overland

@@ -233,7 +233,9 @@ struct CommandBar: View {
             return "Tap a glowing territory to march."
         }
         if let lord = engine.overlord(of: id, in: state) {
-            return lord == human ? "Your vassal holds its own land: no garrison needed. Levy its warriors or, in time, annex it below."
+            return lord == human ? (engine.garrisoned(id, in: state)
+                    ? "Your garrison stands with their \(engine.warriors(at: id, in: state)) warriors. The vassal feeds it."
+                    : "Your vassal holds its own land. March troops in to defend it, levy its warriors, or in time annex it.")
                 : state.atPeace(human, lord) ? "Protected by \(Palette.name(lord, state)) while you are at peace."
                 : "At war with its overlord: you may attack it."
         }
@@ -402,7 +404,7 @@ struct CommandBar: View {
     @ViewBuilder private func tribeSection(_ id: TerritoryID, _ human: CivilizationID) -> some View {
         let warriors = state.armies[id].flatMap { $0.owner == nativesID ? $0.units.total : nil } ?? 0
         if engine.overlord(of: id, in: state) == human {
-            vassalSection(id, human, warriors)
+            vassalSection(id, human, engine.warriors(at: id, in: state))
         } else {
         section("Diplomacy") {
             if let lord = engine.overlord(of: id, in: state) {
