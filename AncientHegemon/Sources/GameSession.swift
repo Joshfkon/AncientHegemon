@@ -41,7 +41,8 @@ final class GameSession {
     private(set) var state: GameState {
         didSet {
             refreshEconomy()
-            sight = human.map { engine.sight(of: $0, in: state) }
+            // Limited sight is a rules option; on the open board (the default) nothing is hidden.
+            sight = engine.rules.sight.limited ? human.map { engine.sight(of: $0, in: state) } : nil
             // Borders and prestige are recorded once a round, whoever's move began it.
             if started, state.turn != recordedTurn || (state.winner != nil && oldValue.winner == nil) {
                 recordedTurn = state.turn

@@ -1626,3 +1626,12 @@ goals: everything here follows from how real Bronze Age empires held together or
 - A battle you drew up on the battlefield always plays out there, even at three to one (quick
   battles are for attacks sent straight from the map).
 - 257 tests. AI armies don't place or order blocks (unchanged balance).
+
+### The open board (Josh: "let's remove the fog of war. make it more like a board game")
+
+- Limited sight is now a rules option, off by default (`sight.limited: false`): every player
+  and every AI court sees the whole board — every army, its size, people and works — as on the
+  tabletop. No haze, no "?" rumours, and rivals' moves anywhere are shown (and paced) again.
+  Switching it on restores everything in "Limited sight" above, AI included.
+- Balance (80 games, seed 501): Egypt 37%, Mesopotamia ~32%, Italia 21%, Greece 10%; 2
+  dominations, 1 trade win. Rules version 22; 258 tests.

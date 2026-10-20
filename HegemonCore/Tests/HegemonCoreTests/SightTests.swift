@@ -2,7 +2,7 @@ import Testing
 @testable import HegemonCore
 
 @Suite struct SightTests {
-    let engine = try! Engine.bare()
+    let engine = try! Engine.bare().limitedSight()
 
     @Test func youSeeYourLandAndWhatBordersIt() throws {
         let s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
@@ -40,7 +40,7 @@ import Testing
 }
 
 @Suite struct AISightTests {
-    let engine = try! Engine.bare()
+    let engine = try! Engine.bare().limitedSight()
 
     /// Mesopotamia hemmed in by a peaceful Egypt, which keeps one great host somewhere.
     private func hemmedIn(hostAt place: TerritoryID) throws -> GameState {
@@ -83,11 +83,31 @@ import Testing
         #expect(army?.owner == "egypt")
         #expect(army?.units == engine.rules.sight.assumedGarrison)
         // Unclaimed land out of sight is assumed to hold the tribe that lived there.
-        let full = try Engine.bundled()
+        let full = try Engine.bundled().limitedSight()
         var w = try full.newGame(seed: 1, civilizations: ["mesopotamia"])
         w.armies["gaul"] = nil
         let tribe = full.perceivedArmy(at: "gaul", by: "mesopotamia", sight: full.sight(of: "mesopotamia", in: w), in: w)
         #expect(tribe?.owner == nativesID)
         #expect(tribe?.units == full.rules.start.natives.tribe(in: full.map.territory("gaul")!, island: false))
+    }
+}
+
+
+extension Engine {
+    /// The same rules with limited sight switched on.
+    func limitedSight() throws -> Engine {
+        try modified { json in
+            var sight = json["sight"] as! [String: Any]
+            sight["limited"] = true
+            json["sight"] = sight
+        }
+    }
+}
+
+@Suite struct OpenBoardTests {
+    @Test func byDefaultEveryoneSeesTheWholeBoard() throws {
+        let engine = try Engine.bare()
+        let s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        #expect(engine.sight(of: "egypt", in: s).count == engine.map.territories.count)
     }
 }

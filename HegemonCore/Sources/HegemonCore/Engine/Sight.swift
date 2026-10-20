@@ -5,6 +5,8 @@ import Foundation
 /// land, troops and ships, through allies' eyes, and in the capitals your merchants visit.
 /// Very large armies are talked about everywhere.
 public struct SightRules: Codable, Sendable, Equatable {
+    /// Off (the default): everything on the board is in plain view, as on the tabletop.
+    public let limited: Bool
     /// An army at least this large is rumoured far beyond your sight.
     public let rumouredArmy: Int
     /// The garrison a court assumes holds each piece of a rival's land it can't see.
@@ -14,6 +16,7 @@ public struct SightRules: Codable, Sendable, Equatable {
 extension Engine {
     /// Territories a civ sees clearly.
     public func sight(of civ: CivilizationID, in state: GameState) -> Set<TerritoryID> {
+        guard rules.sight.limited else { return Set(map.territories.map(\.id)) }
         var seen = Set<TerritoryID>()
         func look(from t: TerritoryID) {
             seen.insert(t)
