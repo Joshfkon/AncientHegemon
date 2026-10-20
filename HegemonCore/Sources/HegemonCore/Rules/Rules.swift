@@ -206,6 +206,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let patronage: PatronageRules
     public let decisions: DecisionRules
     public let sight: SightRules
+    public let difficulty: [Difficulty: DifficultyLevel]
     public let splendour: SplendourRules
     public let ironAge: IronAgeRules
     public let sack: SackRules

@@ -45,7 +45,12 @@ struct CivPickerView: View {
                 }
                 .padding(.horizontal, 24)
 
+                Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? "")
+                     + (engine.rules.difficulty[difficulty]?.blurb ?? ""))
+                    .font(.caption).foregroundStyle(.white.opacity(0.8))
+                    .opacity(appeared ? 1 : 0)
                 HStack(spacing: 12) {
+                    setupRow
                     if let game = session.saved {
                         Button { session.resume() } label: {
                             VStack(spacing: 1) {
@@ -60,7 +65,7 @@ struct CivPickerView: View {
                         .buttonStyle(.plain)
                     }
                     Button { showWalkthrough = true } label: {
-                        Label("How to play", systemImage: "book.fill")
+                        Label("How to play", systemImage: "book.fill").lineLimit(1).fixedSize()
                             .font(.callout.bold())
                             .padding(.horizontal, 16).padding(.vertical, 10)
                             .background(.ultraThinMaterial, in: Capsule())
@@ -70,7 +75,7 @@ struct CivPickerView: View {
                     .foregroundStyle(.white)
                     .symbolEffect(.bounce, options: .repeat(walkthroughSeen ? 0 : 3), value: appeared)
                     Button { session.start(as: nil) } label: {
-                        Label("Watch the empires", systemImage: "eye")
+                        Label("Watch", systemImage: "eye").lineLimit(1).fixedSize()
                             .font(.callout.bold())
                             .padding(.horizontal, 16).padding(.vertical, 10)
                             .background(.ultraThinMaterial, in: Capsule())
@@ -81,6 +86,12 @@ struct CivPickerView: View {
                 .opacity(appeared ? 1 : 0)
             }
             .padding(.vertical)
+        }
+        .sheet(isPresented: $showScenarios) {
+            ScenarioPicker(engine: engine, state: session.state) { picked in
+                scenario = picked
+                showScenarios = false
+            }
         }
         .fullScreenCover(isPresented: $showWalkthrough) {
             WalkthroughView {
@@ -126,6 +137,43 @@ struct CivPickerView: View {
         return s
     }
 
+    /// The difficulty chosen for new games (remembered), and the scenario, if one is picked.
+    @AppStorage("difficulty") private var difficultyRaw = Difficulty.medium.rawValue
+    @State private var scenario: Scenario?
+    @State private var showScenarios = false
+    private var difficulty: Difficulty { Difficulty(rawValue: difficultyRaw) ?? .medium }
+
+    private var setupRow: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 2) {
+                ForEach(Difficulty.allCases, id: \.self) { d in
+                    Button { difficultyRaw = d.rawValue; Feedback.select() } label: {
+                        Text(d.name).font(.callout.bold()).lineLimit(1).fixedSize()
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Capsule().fill(difficulty == d ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color.clear)))
+                            .foregroundStyle(difficulty == d ? Color.black : .white)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .woodPanel(Capsule())
+            Button { showScenarios = true } label: {
+                Label(scenario.map { "\($0.name) · \($0.year)" } ?? "Scenarios", systemImage: "scroll.fill")
+                    .font(.callout.bold())
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .foregroundStyle(scenario == nil ? Color.white : .black)
+                    .background(Capsule().fill(scenario == nil ? AnyShapeStyle(Color.clear) : AnyShapeStyle(Bronze.gradient)))
+                    .woodPanel(Capsule())
+            }
+            .buttonStyle(.plain)
+            if scenario != nil {
+                Button { scenario = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.7)) }
+                    .buttonStyle(.plain).accessibilityLabel("The whole age instead")
+            }
+        }
+    }
+
     private func choose(_ civ: CivilizationID) {
         guard chosen == nil else { return }
         Feedback.impact(0.7)
@@ -133,8 +181,9 @@ struct CivPickerView: View {
         withAnimation(.spring(duration: 0.4)) { chosen = civ }
         Task {
             try? await Task.sleep(for: .milliseconds(650))
-            session.start(as: civ)
+            session.start(as: civ, difficulty: difficulty, scenario: scenario)
             chosen = nil
+            scenario = nil
         }
     }
 }
@@ -235,5 +284,69 @@ struct BannerShape: Shape {
         p.addLine(to: CGPoint(x: r.minX, y: r.maxY))
         p.closeSubpath()
         return p
+    }
+}
+
+/// The age's great moments, to play out over a few rounds instead of the whole age.
+struct ScenarioPicker: View {
+    let engine: Engine
+    let state: GameState
+    let pick: (Scenario?) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button { pick(nil) } label: {
+                        row(title: "The whole age", year: "1200 BC", blurb: "Fifty rounds from the end of the Bronze Age to the dawn of iron. The full game.", suggested: [], rounds: engine.rules.victory.roundLimit)
+                    }
+                    .buttonStyle(.plain)
+                    ForEach(Scenario.all) { s in
+                        Button { pick(s) } label: {
+                            row(title: s.name, year: s.year, blurb: s.blurb, suggested: s.suggested, rounds: s.rounds,
+                                prizes: s.objectives.map { "\(engine.map.territory($0.key)?.name ?? $0.key) +\($0.value) prestige" })
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Text("Then choose your empire on the banners.").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding()
+            }
+            .background(Parchment())
+            .navigationTitle("Scenarios")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { Button("Cancel") { pick(nil) } }
+        }
+    }
+
+    private func row(title: String, year: String, blurb: String, suggested: [CivilizationID], rounds: Int, prizes: [String] = []) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title).font(.system(.title3, design: .serif).weight(.bold))
+                Text(year).font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(rounds) rounds").font(.caption.bold()).padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(Color.black.opacity(0.08)))
+            }
+            Text(blurb).font(.callout).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                if !suggested.isEmpty {
+                    Text("Best as").font(.caption).foregroundStyle(.secondary)
+                    ForEach(suggested, id: \.self) { c in
+                        HStack(spacing: 4) {
+                            Circle().fill(Palette.color(c, state)).frame(width: 8, height: 8)
+                            Text(Palette.name(c, state)).font(.caption.bold())
+                        }
+                    }
+                }
+                ForEach(prizes, id: \.self) { p in
+                    Label(p, systemImage: "star.fill").font(.caption.bold()).foregroundStyle(Color(red: 0.6, green: 0.42, blue: 0.1))
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.55)))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Bronze.gradient, lineWidth: 1.5))
     }
 }

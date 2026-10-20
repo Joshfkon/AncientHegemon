@@ -1704,3 +1704,28 @@ goals: everything here follows from how real Bronze Age empires held together or
   it trades.
 - Balance (80 games): Egypt 33%, Italia 26%, Mesopotamia ~33%, Greece 8%. Rules version 24; 264
   tests.
+
+### Difficulty and scenarios (Josh: "add an easy medium hard and god mode. and maybe some scenarios")
+
+- **Difficulty** is picked on the title screen (remembered between games) and only matters when
+  a human plays; watched games are always even. Rivals' income, their opening troops and their
+  appetite for war scale; the player gets a head start only on Easy. No cheating on dice.
+
+  | Level  | Rival income | Rival extra infantry | Rival aggression | Player start |
+  |--------|--------------|----------------------|------------------|--------------|
+  | Easy   | 80%          | 0                    | 75%              | +15 gold, +3 infantry |
+  | Medium | 100%         | 0                    | 100%             | —            |
+  | Hard   | 125%         | 2                    | 115%             | —            |
+  | God    | 160%         | 4                    | 130%             | —            |
+
+- **Scenarios** (the Scenarios button) start from a historical moment with a short round limit.
+  Prizes are named territories worth extra prestige to whoever holds them at the end (shown in
+  the prestige breakdown as "Prizes held"); otherwise victory works as usual.
+  - *Kadesh* (1274 BC, 15 rounds): Egypt's chariot army in Sinai against Mesopotamia's host in
+    walled Syria. Prize: Syria +30.
+  - *The Siege of Troy* (c. 1190 BC, 20 rounds): Greece with a fleet of a thousand ships (five)
+    against walled, stocked Anatolia. Prize: Anatolia +40.
+  - *The Collapse* (1177 BC, 15 rounds): every court larger, armed and richer, ten rounds from
+    the crisis peak.
+- Engine: `Engine.prepare(_:human:difficulty:scenario:)` in `Engine/Setup.swift`; the state
+  remembers difficulty, scenario, round limit and prizes. Rules version 25.

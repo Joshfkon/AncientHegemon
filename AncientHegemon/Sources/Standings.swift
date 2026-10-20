@@ -84,7 +84,7 @@ struct StandingsView: View {
         let order = engine.standings(in: state).filter { state.isPlayer($0) }
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Round \(state.turn) of \(engine.rules.victory.roundLimit). The empire with the most prestige when the age ends wins, unless someone holds \(engine.rules.victory.territoryPercent)% of the land first.")
+                Text("Round \(state.turn) of \(engine.roundLimit(state)). The empire with the most prestige when the age ends wins, unless someone holds \(engine.rules.victory.territoryPercent)% of the land first.")
                     .font(.callout).foregroundStyle(.secondary)
                 chart(order)
                 ForEach(Array(order.enumerated()), id: \.element) { i, civ in card(i + 1, civ) }

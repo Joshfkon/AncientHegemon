@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -708,6 +708,16 @@
     "storeRounds": 1,
     "campSicknessFrom": 3,
     "campSicknessPercent": 8
+  },
+  "difficulty": {
+    "easy": { "aiIncomePercent": 80, "aiStartUnits": 0, "aiAggressionPercent": 75, "playerStartGold": 15, "playerStartUnits": 3,
+              "blurb": "Gentler rivals, and a head start: a stronger army and a fuller treasury." },
+    "medium": { "aiIncomePercent": 100, "aiStartUnits": 0, "aiAggressionPercent": 100, "playerStartGold": 0, "playerStartUnits": 0,
+                "blurb": "The age as it was: every court on equal terms." },
+    "hard": { "aiIncomePercent": 125, "aiStartUnits": 2, "aiAggressionPercent": 115, "playerStartGold": 0, "playerStartUnits": 0,
+              "blurb": "Richer rivals with bigger armies, quicker to war." },
+    "god": { "aiIncomePercent": 160, "aiStartUnits": 4, "aiAggressionPercent": 130, "playerStartGold": 0, "playerStartUnits": 0,
+             "blurb": "The gods favour every court but yours. Rich, armed and hungry for your land." }
   },
   "sight": {
     "limited": false,

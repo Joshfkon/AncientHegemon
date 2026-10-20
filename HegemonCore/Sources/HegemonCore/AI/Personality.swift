@@ -1,5 +1,13 @@
 /// Weights that give AI empires different temperaments (DESIGN §12).
 public struct Personality: Codable, Sendable, Equatable {
+    public init(name: String, aggression: Double, caution: Double, trade: Double, opportunism: Double) {
+        self.name = name
+        self.aggression = aggression
+        self.caution = caution
+        self.trade = trade
+        self.opportunism = opportunism
+    }
+
     public let name: String
     /// Scales how much conquests are worth; higher attacks more readily.
     public let aggression: Double

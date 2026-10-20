@@ -18,6 +18,7 @@ extension Engine {
             + magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence
             + monumentPrestige(of: civ, in: state)
             + cs.sacked * rules.sack.prestige
+            + objectivePrestige(of: civ, in: state)
     }
 
     /// Where a civilization's prestige comes from, part by part (they sum to `prestige`).
@@ -35,6 +36,7 @@ extension Engine {
             ("Court's magnificence", magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence),
             ("Great works", monumentPrestige(of: civ, in: state)),
             ("Capitals sacked", cs.sacked * rules.sack.prestige),
+            ("Prizes held", objectivePrestige(of: civ, in: state)),
         ].filter { $0.1 != 0 }
     }
 
@@ -94,8 +96,8 @@ extension Engine {
                 return declareVictory(civ, .trade, &state)
             }
         }
-        if state.turn > rules.victory.roundLimit, let best = standings(in: state).first {
-            state.turn = rules.victory.roundLimit
+        if state.turn > roundLimit(state), let best = standings(in: state).first {
+            state.turn = roundLimit(state)
             return declareVictory(best, .legacy, &state)
         }
         return []

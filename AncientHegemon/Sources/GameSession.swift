@@ -204,12 +204,13 @@ final class GameSession {
     }
 
     /// Starts a game as `civ`, or as a spectator when nil.
-    func start(as civ: CivilizationID?) {
+    func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil) {
         playing = false
         seed = UInt64.random(in: 1...99_999)
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         human = civ
         if let civ { state.civs[civ]!.isHuman = true }
+        engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario)
         refreshEconomy()
         log = []
         battles = []
@@ -412,7 +413,9 @@ final class GameSession {
         let start = state
         let (after, events) = await Task.detached(priority: .userInitiated) { () -> (GameState, [GameEvent]) in
             var s = start
-            let ai = AIPlayer(engine: engine, personality: .default(for: s.activePlayer))
+            let level = engine.rules.difficulty[s.difficulty ?? .medium]
+            let ai = AIPlayer(engine: engine, personality: Personality.default(for: s.activePlayer)
+                .withAggression(percent: level?.aiAggressionPercent ?? 100))
             let turn = ai.playTurn(&s)
             return (s, turn.events)
         }.value

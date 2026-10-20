@@ -649,7 +649,7 @@ struct GameScreen: View {
                 } else {
                     Text("Watching").font(.headline)
                 }
-                Text((state.playingOn == true ? "Round \(state.turn) · playing on" : "Round \(state.turn)/\(engine.rules.victory.roundLimit)")
+                Text((state.playingOn == true ? "Round \(state.turn) · playing on" : "Round \(state.turn)/\(engine.roundLimit(state))")
                      + (state.ironAge ? " · Iron Age" : ""))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }

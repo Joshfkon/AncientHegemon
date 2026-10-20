@@ -138,7 +138,8 @@ extension Engine {
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
             + harborGold(civ, homeNet, routes, state)
         let splendour = state.civs[civ]!.splendour > 0 ? rules.splendour.goldPercent : 0
-        return (taxes, mines, trade, ((taxes + mines) * (100 + administration) / 100 + trade) * (100 + splendour) / 100)
+        let total = ((taxes + mines) * (100 + administration) / 100 + trade) * (100 + splendour) / 100
+        return (taxes, mines, trade, total * aiIncomePercent(civ, state) / 100)
     }
 
     /// Most grain a civilization can buy from its trade partners this turn.
