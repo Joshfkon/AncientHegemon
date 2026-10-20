@@ -1505,3 +1505,6 @@ goals: everything here follows from how real Bronze Age empires held together or
   order card offers "Attack" (straight in with the army's standing plan) beside "Battlefield".
   Close fights still go to the battlefield.
 - Debug launch argument `-demoHost YES` swells the capital's army to 14 for trying quick battles.
+- The board can slide about a third of the screen past any edge (a fifth when fully zoomed
+  out), so land in the corners can be brought out from under the status panel, toolbar and
+  buttons (Josh: "playing in a corner of the map it's somewhat obscured by menus").
