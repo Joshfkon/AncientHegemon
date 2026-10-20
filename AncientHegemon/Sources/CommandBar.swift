@@ -270,7 +270,8 @@ struct CommandBar: View {
         let home = engine.homeNetwork(of: human, in: state).contains(id)
         let army = state.armies[id].flatMap { $0.owner == human ? $0 : nil }
         let cs = state.civs[human]!
-        if let siege = state.sieges[id], let army, state.armies[siege.camp].map({ $0.owner != human }) == true {
+        if let siege = state.sieges[id], let army, state.armies[siege.camp].map({ $0.owner != human }) == true,
+           state.atWar(human, siege.civ) {
             let ready = army.units - (state.moved[id] ?? .zero)
             section("Besieged") {
                 Tile(symbol: "flag.2.crossed.fill", title: "Sally out",

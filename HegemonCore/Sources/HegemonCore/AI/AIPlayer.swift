@@ -350,7 +350,9 @@ public struct AIPlayer: Sendable {
 
     /// A besieged garrison goes out to meet the besiegers when it has a fair chance.
     func sally(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
-        for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where state.owner(of: town) == civ {
+        // A siege made peace with lingers until the besieger's turn: no sallying against friends.
+        for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where state.owner(of: town) == civ
+            && state.atWar(civ, siege.civ) {
             let ready = readyUnits(at: town, state)
             guard ready.total > 0, state.armies[siege.camp].map({ $0.owner != civ }) == true else { continue }
             let pWin = estimate(civ, from: town, to: siege.camp, units: ready, plan: state.armies[town]!.plan, state)
