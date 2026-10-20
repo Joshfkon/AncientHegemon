@@ -249,7 +249,8 @@ extension Engine {
     private func attrition(_ civ: CivilizationID, outside home: Set<TerritoryID>,
                            _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
-        for (territory, units) in state.armies(of: civ) where !home.contains(territory) {
+        // Garrisons in a vassal empire's land are fed by the vassal.
+        for (territory, units) in state.armies(of: civ) where !home.contains(territory) && !hasAccess(civ, to: territory, in: state) {
             var loss = rules.supply.outOfSupplyAttrition
             if map.territory(territory)!.terrain == .desert { loss += rules.supply.desertAttrition }
             loss = min(loss, units.total)

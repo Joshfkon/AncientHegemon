@@ -1852,6 +1852,25 @@ bow to Mesopotamia instead of fighting to the last town. `Engine/Submission.swif
   off the yoke; the peace stays, but can now be broken. When an overlord falls, its vassals go
   free at once. There is no way to renounce vassalage by choice, and the overlord can't release a
   vassal (not needed yet).
+- **Military access** (Josh: "I need to be able to move troops through a vassal's land to reach
+  other territory"; "you should also be able to station troops in a vassal territory, to defend
+  them"). The overlord's armies may enter its vassal empire's land without a fight or a capture,
+  and stand there as a garrison; the land stays the vassal's. Since one territory holds one
+  army, they can only stop where the vassal has no army of its own; but they may march through
+  any of the vassal's land, its army there or not, in one order, to the land beyond (a battle
+  there is fought from the vassal's land, its crossing included). A garrison:
+  - is fed by the vassal: no attrition for being outside the overlord's supply network (and,
+    for now, it eats none of the overlord's grain either);
+  - shields the land: nobody at peace with the overlord may attack or land on it, and the
+    vassal can't move into it (an army of someone you're at peace with bars the way anywhere);
+    an enemy of both must beat the garrison first;
+  - keeps the vassal from recruiting in that territory (it's held by another's army);
+  - goes home when the vassal goes free: into the overlord's land next door, or dismissed if
+    there is none (its general rides back to the capital).
+  Supply and trade don't run through a vassal empire's land yet. The AI marches through its
+  vassals to attack; it doesn't yet garrison them.
+  Submission also lifts any siege between the two at once. Balance with access (80 games):
+  Mesopotamia 32%, Italia 28%, Greece 22%, Egypt 16%, unchanged within noise. 306 tests.
 - What vassalage doesn't do: the overlord isn't called to defend its vassal, and a vassal's land
   doesn't count toward the overlord's domination victory.
 - **AI**: an AI at war demands submission whenever the target would bow (a person: once, then
@@ -1872,7 +1891,7 @@ bow to Mesopotamia instead of fighting to the last town. `Engine/Submission.swif
   game armies are small and a rival's strength is only guessed at, so empires bowed to rivals
   across the sea on round 1 (seen in the Simulator), there were 1.8 submissions a game, and
   Italia won 45%. Halving the prestige (25 → 12) changed almost nothing, so it stays at 25.
-  Raw runs are in the session notes (`empire-vassals/`). Rules version 29; 301 tests.
+  Raw runs are in the session notes (`empire-vassals/`). Rules version 29.
 
 ### Wall levels (Josh: "walls should have levels. Higher walls, more defense, can last for a siege longer")
 

@@ -124,7 +124,10 @@ extension Engine {
         guard t.seas.contains(sea) else { throw GameError.notCoastal(territory, sea) }
         guard let i = fleetIndex(civ, sea, state) else { throw GameError.noFleet(sea) }
         guard units.fits(in: state.fleets[i].cargo) else { throw GameError.insufficientUnits(territory) }
-        if let owner = state.owner(of: territory), state.atPeace(civ, owner) { throw GameError.atPeace(territory) }
+        if let owner = state.owner(of: territory), state.atPeace(civ, owner), !hasAccess(civ, to: territory, in: state) {
+            throw GameError.atPeace(territory)
+        }
+        try checkEntry(civ, into: territory, state)
         if shielded(territory, from: civ, in: state) { throw GameError.shielded(territory) }
         try checkOmen(civ, attacking: territory, state)
 

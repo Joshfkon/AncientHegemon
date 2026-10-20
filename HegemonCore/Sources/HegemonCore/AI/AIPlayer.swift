@@ -367,7 +367,8 @@ public struct AIPlayer: Sendable {
     func sally(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where state.owner(of: town) == civ {
             let ready = readyUnits(at: town, state)
-            guard ready.total > 0, state.armies[siege.camp].map({ $0.owner != civ }) == true else { continue }
+            guard ready.total > 0, state.armies[siege.camp].map({ $0.owner != civ }) == true,
+                  engine.defenders(of: siege.camp, against: civ, state) != nil else { continue }
             let pWin = estimate(civ, from: town, to: siege.camp, units: ready, plan: state.armies[town]!.plan, state)
             // Hunger makes a garrison bolder.
             let bar = siege.rounds > rules.siege.storeRounds ? 0.4 : 0.55
@@ -400,7 +401,9 @@ public struct AIPlayer: Sendable {
             let ready = readyUnits(at: from, state)
             guard ready.total > 0 else { continue }
             let supplied = home.contains(from) ? 1.0 : 0.3
-            for to in map.landNeighbors(of: from) {
+            // Next door, or beyond a vassal empire's land, which its armies may march through.
+            let reach = map.landNeighbors(of: from) + engine.empirePassageTargets(from: from, for: civ, in: state).map(\.to)
+            for to in reach {
                 let owner = state.owner(of: to)
                 if owner == civ { continue }
                 if let owner, state.atPeace(civ, owner) { continue }

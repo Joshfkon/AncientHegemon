@@ -189,8 +189,13 @@ public struct Engine: Sendable {
         guard let army = state.armies[from], army.owner == civ else { throw GameError.insufficientUnits(from) }
         let ready = army.units - (state.moved[from] ?? .zero)
         guard units.fits(in: ready) else { throw GameError.insufficientUnits(from) }
-        guard map.areLandAdjacent(from, to) else { throw GameError.notAdjacent(from, to) }
-        if let owner = state.owner(of: to), state.atPeace(civ, owner) { throw GameError.atPeace(to) }
+        // Through a vassal empire's land, in one order.
+        let via = empirePassage(from: from, to: to, for: civ, in: state)
+        guard map.areLandAdjacent(from, to) || via != nil else { throw GameError.notAdjacent(from, to) }
+        if let owner = state.owner(of: to), state.atPeace(civ, owner), !hasAccess(civ, to: to, in: state) {
+            throw GameError.atPeace(to)
+        }
+        try checkEntry(civ, into: to, state)
         if shielded(to, from: civ, in: state) { throw GameError.shielded(to) }
         try checkOmen(civ, attacking: to, state)
         var general: General?
@@ -213,12 +218,13 @@ public struct Engine: Sendable {
 
         state.armies[from]!.units -= units
         if state.armies[from]!.units.isEmpty { state.armies[from] = nil }
-        let approach: Approach = switch map.crossing(between: from, and: to) {
+        let approach: Approach = switch map.crossing(between: via ?? from, and: to) {
         case .river: .river
         case .strait: .strait
         case nil: .overland
         }
-        let events: [GameEvent] = [.moved(civ: civ, from: from, to: to, units: units)]
+        let events: [GameEvent] = via.map { [.moved(civ: civ, from: from, to: $0, units: units), .moved(civ: civ, from: $0, to: to, units: units)] }
+            ?? [.moved(civ: civ, from: from, to: to, units: units)]
         let result = events + advance(civ, units, general: general, plan: army.plan, battles: army.battles ?? 0, into: to,
                                       from: .territory(from), approach: approach, &state)
         // Fresh units that marched by road may move once more this turn, and their general with them.

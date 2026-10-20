@@ -132,6 +132,10 @@ struct OrderComposer: View {
         switch order {
         case let .march(from, to):
             if let via { return "\(isBattle ? "Attack" : "March to") \(place(to)) by road through \(place(via))" }
+            if let through = engine.empirePassage(from: from, to: to, for: human, in: state) {
+                return "\(isBattle ? "Attack" : "March to") \(place(to)) through \(place(through)), your vassal's land"
+            }
+            if engine.hasAccess(human, to: to, in: state) { return "Station troops in \(place(to)), your vassal's land" }
             return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
         case let .embark(from, sea): return "Board ships in the \(place(sea)) from \(place(from))"
         case let .land(sea, to): return "\(isBattle ? "Land and attack" : "Land in") \(place(to)) from the \(place(sea))"
@@ -368,7 +372,7 @@ struct OrderComposer: View {
                 units[type] = min(left, available[type])
                 left -= units[type]
             }
-        case .march(_, let to) where !isBattle && state.owner(of: to) != human:
+        case .march(_, let to) where !isBattle && state.owner(of: to) != human && !engine.hasAccess(human, to: to, in: state):
             // Claiming empty land takes one unit.
             let type = UnitType.allCases.first { available[$0] > 0 } ?? .infantry
             units = .zero

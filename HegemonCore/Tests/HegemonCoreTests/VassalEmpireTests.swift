@@ -230,4 +230,80 @@ import Testing
             #expect(s.atPeace("egypt", "mesopotamia"))
         }
     }
+
+    // MARK: Military access
+
+    /// Egypt, Mesopotamia's vassal, holds Syria (next to Mesopotamia) with no army in it.
+    func vassalWorld(civs: [CivilizationID] = ["mesopotamia", "egypt"]) throws -> GameState {
+        var s = try world(egypt: 3, meso: 10, civs: civs)
+        _ = try engine.apply(.demandSubmission(of: "egypt"), to: &s)
+        return s
+    }
+
+    @Test func anOverlordStationsTroopsInItsVassalsLand() throws {
+        var s = try vassalWorld()
+        let events = try engine.apply(.move(from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 3)), to: &s)
+        #expect(events == [.moved(civ: "mesopotamia", from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 3))])
+        #expect(s.owner(of: "syria") == "egypt")
+        #expect(s.armies["syria"]?.owner == "mesopotamia")
+        #expect(engine.hasAccess("mesopotamia", to: "syria", in: s))
+        // The vassal feeds them: no losses out of supply at the overlord's harvest.
+        var harvest: [GameEvent] = []
+        for _ in 0..<4 { harvest += try passTurn(&s) }
+        #expect(!harvest.contains { if case .outOfSupply("mesopotamia", "syria", _) = $0 { true } else { false } })
+        #expect(s.armies["syria"]?.units.total == 3)
+    }
+
+    @Test func troopsMarchThroughAVassalsLandInOneOrder() throws {
+        var s = try vassalWorld()
+        // The vassal's own army stands in Syria: no room to stop, but the road is open.
+        s.armies["syria"] = Army(owner: "egypt", units: UnitCounts(infantry: 2))
+        #expect(throws: GameError.contested("syria")) {
+            try engine.apply(.move(from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 2)), to: &s)
+        }
+        #expect(engine.empirePassage(from: "mesopotamia", to: "petraea", for: "mesopotamia", in: s) == "syria")
+        #expect(engine.empirePassageTargets(from: "mesopotamia", for: "mesopotamia", in: s).contains { $0 == ("petraea", "syria") })
+        let events = try engine.apply(.move(from: "mesopotamia", to: "petraea", units: UnitCounts(infantry: 2)), to: &s)
+        #expect(events.contains(.moved(civ: "mesopotamia", from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 2))))
+        #expect(events.contains(.moved(civ: "mesopotamia", from: "syria", to: "petraea", units: UnitCounts(infantry: 2))))
+        #expect(s.owner(of: "petraea") == "mesopotamia")
+        #expect(s.armies["syria"]?.owner == "egypt")
+        // Nobody else gets through: Greece has no vassal there.
+        #expect(engine.empirePassage(from: "mesopotamia", to: "petraea", for: "greece", in: s) == nil)
+    }
+
+    @Test func aGarrisonShieldsTheVassalFromTheOverlordsFriends() throws {
+        var s = try vassalWorld(civs: ["mesopotamia", "egypt", "greece"])
+        _ = try engine.apply(.move(from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 3)), to: &s)
+        // Greece, at peace with Mesopotamia but at war with Egypt, stands next door in Taurus.
+        s.peace.insert(CivPair("greece", "mesopotamia"))
+        s.land["taurus"]!.owner = "greece"
+        s.armies["taurus"] = Army(owner: "greece", units: UnitCounts(infantry: 8))
+        s.activePlayerIndex = s.players.firstIndex(of: "greece")!
+        #expect(throws: GameError.atPeace("syria")) {
+            try engine.apply(.move(from: "taurus", to: "syria", units: UnitCounts(infantry: 8)), to: &s)
+        }
+    }
+
+    @Test func theVassalCannotFallOnTheGarrison() throws {
+        var s = try vassalWorld()
+        _ = try engine.apply(.move(from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 3)), to: &s)
+        s.land["petraea"]!.owner = "egypt"
+        s.armies["petraea"] = Army(owner: "egypt", units: UnitCounts(infantry: 2))
+        s.activePlayerIndex = s.players.firstIndex(of: "egypt")!
+        #expect(throws: GameError.atPeace("syria")) {
+            try engine.apply(.move(from: "petraea", to: "syria", units: UnitCounts(infantry: 2)), to: &s)
+        }
+    }
+
+    @Test func garrisonsGoHomeWhenTheVassalGoesFree() throws {
+        var s = try vassalWorld()
+        _ = try engine.apply(.move(from: "mesopotamia", to: "syria", units: UnitCounts(infantry: 3)), to: &s)
+        s.armies["egypt"]!.units = UnitCounts(infantry: 20)
+        let events = try passTurn(&s)
+        #expect(events.contains(.vassalEmpireFreed(vassal: "egypt", overlord: "mesopotamia", overlordFell: false)))
+        #expect(events.contains(.moved(civ: "mesopotamia", from: "syria", to: "mesopotamia", units: UnitCounts(infantry: 3))))
+        #expect(s.armies["syria"] == nil)
+        #expect(s.armies["mesopotamia"]?.units.total == 10)
+    }
 }

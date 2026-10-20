@@ -20,6 +20,8 @@ extension Engine {
     /// Nil when nobody would fight.
     public func defenders(of territory: TerritoryID, against civ: CivilizationID, _ state: GameState)
         -> (owner: CivilizationID, army: Army, levy: Int)? {
+        // A vassal empire's land is open to its overlord.
+        if hasAccess(civ, to: territory, in: state) { return nil }
         let garrison = state.armies[territory].flatMap { $0.owner != civ ? $0 : nil }
         let landOwner = state.owner(of: territory)
         let owner = garrison?.owner ?? landOwner
@@ -57,7 +59,9 @@ extension Engine {
         var battles = battles
         var general = general
 
-        if defenders(of: to, against: civ, state) != nil {
+        // A vassal's land takes its overlord's troops in peace: no fight, no capture.
+        let access = hasAccess(civ, to: to, in: state)
+        if !access, defenders(of: to, against: civ, state) != nil {
             notePeopleAttacked(to, by: civ, &state)
             let result = fight(civ, units, general: general, plan: plan, battles: battles, at: to,
                                approach: approach, &state)
@@ -81,13 +85,13 @@ extension Engine {
 
         // Enemy generals left standing without an army are captured.
         for g in state.generals.values.sorted(by: { $0.id < $1.id })
-        where g.location == to && g.owner != civ {
+        where g.location == to && g.owner != civ && !access {
             state.generals[g.id]!.location = nil
             events.append(.generalKilled(g.id))
         }
 
         let previous = state.land[to]!.owner
-        if previous != civ, state.armies[to]?.owner == civ {
+        if previous != civ, !access, state.armies[to]?.owner == civ {
             state.land[to]!.owner = civ
             state.land[to]!.construction = nil
             state.land[to]!.queue = []

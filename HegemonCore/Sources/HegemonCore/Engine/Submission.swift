@@ -144,6 +144,14 @@ extension Engine {
             events.append(.vassalEmpireFreed(vassal: freed, overlord: vassal, overlordFell: false))
         }
         events += makeVassalPeace(&state)
+        // Sieges between them end at once (and with them any sally against a vassal's camp).
+        for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) {
+            let owner = state.owner(of: town)
+            if (siege.civ == lord && owner == vassal) || (siege.civ == vassal && owner == lord) {
+                state.sieges[town] = nil
+                events.append(.siegeLifted(civ: siege.civ, territory: town))
+            }
+        }
         return events
     }
 
@@ -172,6 +180,7 @@ extension Engine {
         guard fell || trueStrength(civ, state) > trueStrength(v.overlord, state) else { return [] }
         state.vassalage[civ] = nil
         return [.vassalEmpireFreed(vassal: civ, overlord: v.overlord, overlordFell: fell)]
+            + withdrawGarrisons(of: v.overlord, from: civ, &state)
     }
 
     /// A fallen empire's vassals go free at once; a fallen vassal is forgotten.
@@ -195,5 +204,81 @@ extension Engine {
         state.civs[civ]!.gold -= gold
         state.civs[v.overlord]!.gold += gold
         return [.tributePaid(vassal: civ, overlord: v.overlord, gold: gold)]
+    }
+}
+
+// MARK: Military access (Josh: "I need to be able to move troops through a vassal's land to reach
+// other territory"; "you should also be able to station troops in a vassal territory, to defend
+// them")
+
+extension Engine {
+    /// Whether `territory` is the land of one of `civ`'s vassal empires, which its armies may
+    /// enter, stand in and march through without a fight.
+    public func hasAccess(_ civ: CivilizationID, to territory: TerritoryID, in state: GameState) -> Bool {
+        guard let owner = state.owner(of: territory), owner != civ else { return false }
+        return liege(of: owner, in: state) == civ
+    }
+
+    /// Checks an army of `civ` may go into `territory`. In a vassal's land it may only stop
+    /// where the vassal has no army of its own (one army to a territory). Anywhere, an army of
+    /// someone at peace with `civ` bars the way: an overlord's garrison shields its vassal's
+    /// land from the overlord's friends, and the vassal can't fall on it either.
+    func checkEntry(_ civ: CivilizationID, into territory: TerritoryID, _ state: GameState) throws {
+        guard let army = state.armies[territory], army.owner != civ, state.isPlayer(army.owner) else { return }
+        if hasAccess(civ, to: territory, in: state) { throw GameError.contested(territory) }
+        if state.atPeace(civ, army.owner) { throw GameError.atPeace(territory) }
+    }
+
+    /// The vassal land an army of `civ` marches through to get from `from` to `to` in one order:
+    /// next to both, with no army in it but the vassal's or `civ`'s own.
+    public func empirePassage(from: TerritoryID, to: TerritoryID, for civ: CivilizationID, in state: GameState) -> TerritoryID? {
+        guard from != to, !map.areLandAdjacent(from, to) else { return nil }
+        return map.landNeighbors(of: from).sorted().first { via in
+            hasAccess(civ, to: via, in: state) && map.areLandAdjacent(via, to)
+                && (state.armies[via].map { $0.owner == civ || $0.owner == state.owner(of: via) } ?? true)
+        }
+    }
+
+    /// Land beyond `civ`'s vassals that an army in `from` can reach in one order, with the
+    /// vassal land it passes.
+    public func empirePassageTargets(from: TerritoryID, for civ: CivilizationID, in state: GameState)
+        -> [(to: TerritoryID, via: TerritoryID)] {
+        var seen = Set(map.landNeighbors(of: from)).union([from])
+        var result: [(to: TerritoryID, via: TerritoryID)] = []
+        for via in map.landNeighbors(of: from).sorted() where hasAccess(civ, to: via, in: state) {
+            for to in map.landNeighbors(of: via).sorted() where !seen.contains(to) {
+                if empirePassage(from: from, to: to, for: civ, in: state) == via {
+                    seen.insert(to)
+                    result.append((to, via))
+                }
+            }
+        }
+        return result
+    }
+
+    /// A vassal gone free sends its overlord's garrisons home: each falls back into the
+    /// overlord's land next door, or is dismissed if there is none.
+    func withdrawGarrisons(of lord: CivilizationID, from vassal: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+        var events: [GameEvent] = []
+        for (t, units) in state.armies(of: lord) where state.owner(of: t) == vassal {
+            let army = state.armies[t]!
+            state.armies[t] = nil
+            if let home = map.landNeighbors(of: t).sorted().first(where: {
+                state.owner(of: $0) == lord && (state.armies[$0].map { $0.owner == lord } ?? true)
+            }) {
+                join(units, battles: army.battles ?? 0, to: home, owner: lord, &state)
+                events.append(.moved(civ: lord, from: t, to: home, units: units))
+                for g in state.generals.values.sorted(by: { $0.id < $1.id }) where g.location == t && g.owner == lord {
+                    state.generals[g.id]!.location = home
+                }
+            } else {
+                events.append(.disbanded(civ: lord, territory: t, units: units, rejoined: 0))
+                // Their general rides home to the capital.
+                for g in state.generals.values.sorted(by: { $0.id < $1.id }) where g.location == t && g.owner == lord {
+                    state.generals[g.id]!.location = seat(of: lord, in: state)
+                }
+            }
+        }
+        return events
     }
 }
