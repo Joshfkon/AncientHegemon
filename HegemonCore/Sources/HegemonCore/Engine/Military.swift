@@ -43,6 +43,15 @@ extension Engine {
     func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
                  battles: Int = 0, into to: TerritoryID, from origin: Origin, approach: Approach,
                  _ state: inout GameState) -> [GameEvent] {
+        advance(civ, units, general: general, plan: plan, battles: battles, into: to, from: [(origin, units)],
+                approach: approach, &state)
+    }
+
+    /// As above, for a host gathered from several places: beaten, each part falls back where it
+    /// came from, in proportion.
+    func advance(_ civ: CivilizationID, _ units: UnitCounts, general: General?, plan: BattlePlan,
+                 battles: Int = 0, into to: TerritoryID, from origins: [(Origin, UnitCounts)], approach: Approach,
+                 _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
         var units = units
         var battles = battles
@@ -56,7 +65,9 @@ extension Engine {
             battles = seasoned(battles)
             if let g = general { general = state.generals[g.id]!.isAlive ? state.generals[g.id] : nil }
             if !result.won {
-                fallBack(civ, units, battles: battles, to: origin, &state)
+                for (origin, part) in zip(origins.map(\.0), shares(of: units, among: origins.map(\.1))) {
+                    fallBack(civ, part, battles: battles, to: origin, &state)
+                }
                 return events
             }
         }
@@ -78,12 +89,15 @@ extension Engine {
         if previous != civ, state.armies[to]?.owner == civ {
             state.land[to]!.owner = civ
             state.land[to]!.construction = nil
+            state.land[to]!.queue = []
             state.monumentSites[to] = nil
+            state.sieges[to] = nil
             taken(to, &state)
             events.append(.captured(civ: civ, territory: to, from: previous))
             adjustLegitimacy(civ, rules.government.legitimacy.capture, &state)
             if let previous, map.civilization(previous)?.capital == to {
                 adjustLegitimacy(previous, rules.government.legitimacy.capitalLost, &state)
+                events += sack(to, of: previous, by: civ, &state)
             }
             if let previous { events += checkElimination(previous, &state) }
             if state.winner == nil,
@@ -188,12 +202,35 @@ extension Engine {
         }
     }
 
+    /// Splits survivors back among the parts of a host, in proportion to what each brought.
+    func shares(of survivors: UnitCounts, among parts: [UnitCounts]) -> [UnitCounts] {
+        var result = parts.map { _ in UnitCounts.zero }
+        for type in UnitType.allCases {
+            let brought = parts.reduce(0) { $0 + $1[type] }
+            guard brought > 0 else { continue }
+            var left = survivors[type]
+            for (i, part) in parts.enumerated() {
+                let n = survivors[type] * part[type] / brought
+                result[i][type] = n
+                left -= n
+            }
+            // Remainders go to the parts that brought the most.
+            for i in parts.indices.sorted(by: { parts[$0][type] > parts[$1][type] }) where left > 0 && parts[i][type] > 0 {
+                result[i][type] += 1
+                left -= 1
+            }
+        }
+        return result
+    }
+
     /// Damage reduction walls give a territory's defenders.
     public func fortification(at territory: TerritoryID, _ state: GameState) -> Int {
         let gate = state.monuments["lionGate"] == territory ? 30 : 0
         guard state.land[territory]?.improvements.contains(.walls) == true else { return gate }
         let builders = level(.construction, of: state.owner(of: territory), in: state) >= 2
-        return rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0) + gate
+        let walls = rules.projectEffects.wallsDefensePercent + (builders ? rules.knowledge.effects.fortificationPercent : 0) + gate
+        // A siege wears the walls down.
+        return max(0, walls - breach(at: territory, state))
     }
 
     /// The chance an attack succeeds, estimated by running the battle several times with seeds
@@ -257,7 +294,7 @@ extension Engine {
         guard let cs = state.civs[civ] else { return 0 }
         let units = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
         let metal = level(.metallurgy, of: civ, in: state)
-        let ironWeight = metal >= 3 ? rules.knowledge.effects.steelIronWeight : metal >= 2 ? 1 : 0
+        let ironWeight = metal >= 3 ? rules.knowledge.effects.steelIronWeight : ironWorked(civ, state) ? 1 : 0
         return min(100, (cs.bronze + (cs.stock[.iron] ?? 0) * ironWeight) * 100 / max(1, units))
     }
 }

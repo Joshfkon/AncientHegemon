@@ -189,3 +189,55 @@ struct GreatWorksList: View {
         }
     }
 }
+
+/// What the next turn brings, Civilization-style: works finishing, discoveries close, sieges
+/// biting, the end of an age of splendour. A reason to press End turn.
+struct NextTurnLine: View {
+    let session: GameSession
+
+    var body: some View {
+        let items = Self.items(session)
+        if !items.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "hourglass").foregroundStyle(Bronze.gradient)
+                Text("Next turn: " + items.prefix(3).joined(separator: " · ") + (items.count > 3 ? " · +\(items.count - 3)" : ""))
+                    .font(.caption.bold()).foregroundStyle(.white)
+                    .lineLimit(2).multilineTextAlignment(.trailing)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .woodPanel(Capsule())
+            .frame(maxWidth: 360, alignment: .trailing)
+        }
+    }
+
+    @MainActor static func items(_ session: GameSession) -> [String] {
+        let engine = session.engine, state = session.state
+        guard let human = session.human, let cs = state.civs[human] else { return [] }
+        func place(_ t: TerritoryID) -> String { engine.map.territory(t)?.name ?? t }
+        let pace = cs.splendour > 0 ? 2 : 1
+        var items: [String] = []
+        for t in state.territories(of: human).sorted() {
+            if let site = state.land[t]?.construction, site.turnsLeft <= pace {
+                items.append("\(projectName(site.kind)) in \(place(t))")
+            }
+        }
+        for (t, site) in state.monumentSites.sorted(by: { $0.key < $1.key }) where state.owner(of: t) == human && site.turnsLeft <= 1 {
+            items.append(engine.rules.monuments.monument(site.id)?.name ?? site.id)
+        }
+        // A discovery within a turn or two of practice.
+        for field in KnowledgeField.allCases {
+            let level = engine.level(field, of: human, in: state)
+            guard level < engine.rules.knowledge.levels.count, engine.revealedFields(of: human, in: state).contains(field) else { continue }
+            let need = engine.rules.knowledge.levels[level] - (cs.knowledge[field] ?? 0)
+            if need > 0, need <= 12 + (cs.patronage == field ? engine.rules.patronage.experience : 0) {
+                items.append("\(engine.levelName(field, level + 1) ?? field.rawValue) close")
+            }
+        }
+        for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) {
+            if siege.civ == human { items.append("siege of \(place(town)), round \(siege.rounds + 1)") }
+            else if state.owner(of: town) == human { items.append("\(place(town)) starves under siege") }
+        }
+        if cs.splendour == 1 { items.append("splendour ends") }
+        return items
+    }
+}

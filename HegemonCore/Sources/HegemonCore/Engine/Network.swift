@@ -223,7 +223,7 @@ extension Engine {
     public func effectiveYield(of resource: Resource, for civ: CivilizationID, in state: GameState,
                                routes: [TradeRoute]? = nil) -> Int {
         // Iron ore is just rock until a civilization learns ironworking.
-        if resource == .iron, level(.metallurgy, of: civ, in: state) < 2 { return 0 }
+        if resource == .iron, !ironWorked(civ, state) { return 0 }
         let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {
@@ -242,7 +242,7 @@ extension Engine {
             let mine = homeNetwork(of: to, in: state)
             var received: [Resource: Int] = [:]
             for r in Resource.allCases where r != .grain && r != .wine {
-                if r == .iron, level(.metallurgy, of: to, in: state) < 2 { continue }
+                if r == .iron, !ironWorked(to, state) { continue }
                 let n = yield(of: r, in: theirs, state) / rules.trade.shareDivisor
                 if n > 0 { received[r] = n }
             }

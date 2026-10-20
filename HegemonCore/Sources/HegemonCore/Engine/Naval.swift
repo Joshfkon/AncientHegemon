@@ -8,7 +8,7 @@ extension Engine {
         return here.contains { f in travelers.contains { state.atWar(f.owner, $0) } }
     }
 
-    private func fleetIndex(_ civ: CivilizationID, _ sea: SeaZoneID, _ state: GameState) -> Int? {
+    func fleetIndex(_ civ: CivilizationID, _ sea: SeaZoneID, _ state: GameState) -> Int? {
         state.fleets.firstIndex { $0.owner == civ && $0.sea == sea }
     }
 

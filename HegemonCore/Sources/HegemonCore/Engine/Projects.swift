@@ -67,9 +67,12 @@ extension Engine {
     /// Advances a civilization's building sites by a turn, finishing what's due.
     func progressConstruction(_ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
+        // An age of splendour builds twice as fast.
+        let pace = state.civs[civ]!.splendour > 0 ? 2 : 1
         for t in state.territories(of: civ) {
+            defer { events += startQueued(civ, t, &state) }
             guard var site = state.land[t]!.construction else { continue }
-            site.turnsLeft -= 1
+            site.turnsLeft -= pace
             if site.turnsLeft <= 0 {
                 state.land[t]!.improvements.insert(site.kind)
                 state.land[t]!.construction = nil
@@ -82,6 +85,56 @@ extension Engine {
             }
         }
         return events
+    }
+
+    /// Whether a project could be added to a territory's queue: it isn't built, under way or
+    /// queued already, and the land suits it.
+    public func canQueue(_ project: ProjectKind, in territory: TerritoryID, _ state: GameState) -> Bool {
+        guard let land = state.land[territory], !land.improvements.contains(project),
+              land.construction?.kind != project, !land.queue.contains(project),
+              land.queue.count < rules.economy.queueLength else { return false }
+        var bare = state
+        bare.land[territory]!.construction = nil
+        return canBuild(project, in: territory, bare)
+    }
+
+    func queueProject(_ project: ProjectKind, in territory: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        guard state.owner(of: territory) == civ else { throw GameError.notOwner(territory) }
+        guard canQueue(project, in: territory, state) else { throw GameError.alreadyQueued(territory) }
+        // With nothing under way, queueing simply starts it if it can be paid for.
+        if state.land[territory]!.construction == nil, let started = try? build(project, in: territory, &state) {
+            return started
+        }
+        state.land[territory]!.queue.append(project)
+        return [.projectQueued(civ: civ, territory: territory, project: project)]
+    }
+
+    func clearQueue(_ territory: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
+        guard state.owner(of: territory) == state.activePlayer else { throw GameError.notOwner(territory) }
+        state.land[territory]!.queue = []
+        return []
+    }
+
+    /// Starts the next queued project once the site is free, if it can be paid for; one that no
+    /// longer fits is dropped.
+    private func startQueued(_ civ: CivilizationID, _ t: TerritoryID, _ state: inout GameState) -> [GameEvent] {
+        while state.land[t]?.construction == nil, let next = state.land[t]?.queue.first {
+            guard canBuild(next, in: t, state), homeNetwork(of: civ, in: state).contains(t) else {
+                state.land[t]!.queue.removeFirst()
+                continue
+            }
+            let cost = projectCost(next, for: civ, state)
+            let cs = state.civs[civ]!
+            guard cs.gold >= cost.gold, (cs.stock[.stone] ?? 0) >= cost.stone, (cs.stock[.timber] ?? 0) >= cost.timber else { break }
+            state.civs[civ]!.gold -= cost.gold
+            state.civs[civ]!.stock[.stone, default: 0] -= cost.stone
+            state.civs[civ]!.stock[.timber, default: 0] -= cost.timber
+            state.land[t]!.construction = Construction(kind: next, turnsLeft: cost.turns)
+            state.land[t]!.queue.removeFirst()
+            return [.projectStarted(civ: civ, territory: t, project: next)]
+        }
+        return []
     }
 
     /// Stone, timber and iron pile up from the home network (and trade access), up to a cap.
@@ -126,7 +179,8 @@ extension Engine {
     func growthPercent(_ civ: CivilizationID, _ state: GameState) -> Int {
         let e = rules.economy
         let rate = state.civs[civ]!.taxRate
-        guard rate > e.defaultTax else { return 100 }
-        return max(0, (100 - rate) * 100 / max(1, 100 - e.defaultTax))
+        let splendour = state.civs[civ]!.splendour > 0 ? rules.splendour.growthPercent : 0
+        guard rate > e.defaultTax else { return 100 + splendour }
+        return max(0, (100 - rate) * 100 / max(1, 100 - e.defaultTax)) * (100 + splendour) / 100
     }
 }

@@ -71,6 +71,8 @@ public struct EconomyRules: Codable, Sendable, Equatable {
     public let soldiersPerGold: Int
     /// Share (percent) of the soldiers going unpaid who desert when the treasury runs dry.
     public let unpaidDesertPercent: Int
+    /// Projects a territory can have waiting in line.
+    public let queueLength: Int
 }
 
 /// Building projects in territories: the "industrializing" side of the economy.
@@ -200,6 +202,10 @@ public struct Rules: Codable, Sendable, Equatable {
     public let patronage: PatronageRules
     public let decisions: DecisionRules
     public let sight: SightRules
+    public let splendour: SplendourRules
+    public let ironAge: IronAgeRules
+    public let sack: SackRules
+    public let siege: SiegeRules
     public let throneRoom: ThroneRoomRules
     public let veterans: VeteranRules
     public let supply: SupplyRules

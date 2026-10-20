@@ -53,7 +53,7 @@ extension Engine {
     /// How much of a resource reaches the civ from its own land, and how much from each partner.
     public func resourceIncome(_ resource: Resource, for civ: CivilizationID, in state: GameState)
         -> (own: Int, trade: [(partner: CivilizationID, amount: Int)]) {
-        if resource == .iron, level(.metallurgy, of: civ, in: state) < 2 { return (0, []) }
+        if resource == .iron, !ironWorked(civ, state) { return (0, []) }
         let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
         let trade = tradeRoutes(in: state).filter { $0.involves(civ) }.compactMap { route -> (CivilizationID, Int)? in
             let partner = route.partner(of: civ)

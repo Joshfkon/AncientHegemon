@@ -390,6 +390,7 @@ struct MapView: View {
             }
         }
 
+        drawSieges(&context, t)
         // Names in the board's hand lettering.
         for territory in map.territories {
             guard let shape = art.territories[territory.id] else { continue }
@@ -1078,6 +1079,42 @@ extension MapView {
             context.fill(UnitShape(type: type).path(in: box), with: .color(Self.cream.opacity(0.85)))
             context.draw(Text("\(units![type])").font(.system(size: 9 * k, weight: .heavy, design: .rounded)).foregroundStyle(Self.cream),
                          at: CGPoint(x: box.maxX + 2 * k, y: box.midY), anchor: .leading)
+        }
+    }
+
+    /// Sieges: a ring of tents round the town, a dashed line from the camp, and how long it has lasted.
+    fileprivate func drawSieges(_ context: inout GraphicsContext, _ t: BoardTransform) {
+        for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where seen(town) || seen(siege.camp) {
+            guard let c = token(town, t), let camp = token(siege.camp, t) else { continue }
+            let k = t.detail
+            let color = Palette.color(siege.civ, state)
+            var line = Path()
+            line.move(to: camp)
+            line.addLine(to: c)
+            context.stroke(line, with: .color(.black.opacity(0.5)), style: StrokeStyle(lineWidth: 4 * k, lineCap: .round, dash: [5 * k, 4 * k]))
+            context.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 2.4 * k, lineCap: .round, dash: [5 * k, 4 * k]))
+            // Tents round the walls.
+            let r = 21 * k
+            for i in 0..<8 {
+                let a = Double(i) / 8 * 2 * .pi
+                let p = CGPoint(x: c.x + cos(a) * r, y: c.y + sin(a) * r * 0.8)
+                var tent = Path()
+                tent.move(to: CGPoint(x: p.x - 3.5 * k, y: p.y + 2.5 * k))
+                tent.addLine(to: CGPoint(x: p.x, y: p.y - 3.5 * k))
+                tent.addLine(to: CGPoint(x: p.x + 3.5 * k, y: p.y + 2.5 * k))
+                tent.closeSubpath()
+                context.fill(tent, with: .color(color))
+                context.stroke(tent, with: .color(.black.opacity(0.7)), lineWidth: 0.7)
+            }
+            let label = context.resolve((Text(Image(systemName: "shield.lefthalf.filled.slash")) + Text(siege.rounds == 0 ? " Siege laid" : " Siege · round \(siege.rounds)"))
+                .font(.system(size: 8.5 * min(k, 1.45), weight: .heavy, design: .rounded)).foregroundStyle(Self.cream))
+            let size = label.measure(in: CGSize(width: 200, height: 40))
+            let at = CGPoint(x: c.x, y: c.y - r - 9 * k)
+            let plate = Path(roundedRect: CGRect(x: at.x - size.width / 2 - 5, y: at.y - size.height / 2 - 1,
+                                                 width: size.width + 10, height: size.height + 2), cornerRadius: (size.height + 2) / 2)
+            context.fill(plate, with: .color(Color(red: 0.5, green: 0.1, blue: 0.08)))
+            context.stroke(plate, with: .color(Self.bronze), lineWidth: 1)
+            context.draw(label, at: at)
         }
     }
 

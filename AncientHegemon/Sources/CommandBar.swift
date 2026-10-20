@@ -95,6 +95,18 @@ struct CommandBar: View {
             if session.sees(id), let army, army.units.total > 0, engine.rank(of: army) > .green {
                 VeteranBadge(rank: engine.rank(of: army))
             }
+            if let siege = state.sieges[id] {
+                let breach = engine.breach(at: id, state)
+                Label("\(siege.civ == session.human ? "Your siege" : "Besieged by \(Palette.name(siege.civ, state))"): round \(siege.rounds)"
+                      + (breach > 0 ? " · walls −\(breach)%" : "") + " · no harvest, no taxes",
+                      systemImage: "shield.lefthalf.filled.slash")
+                    .font(.caption2.bold()).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                if siege.civ == session.human, session.isHumanTurn {
+                    Button("Lift siege") { session.order(.liftSiege(territory: id)) }
+                        .font(.caption.bold()).buttonStyle(.bordered).controlSize(.small)
+                }
+            }
             Text(hint(id)).font(.caption2).foregroundStyle(.white.opacity(0.65))
                 .fixedSize(horizontal: false, vertical: true)
                 .lineLimit(3)
@@ -195,6 +207,24 @@ struct CommandBar: View {
                     if let site = land.construction {
                         Tile(symbol: "hammer.fill", title: projectName(site.kind), detail: "Under way",
                              cost: Text("\(site.turnsLeft) turn\(site.turnsLeft == 1 ? "" : "s") left"), enabled: false) {}
+                        // What starts next, in order; tap one to clear the line.
+                        ForEach(Array(land.queue.enumerated()), id: \.offset) { i, kind in
+                            Tile(symbol: Self.projectSymbol(kind), title: projectName(kind),
+                                 detail: i == 0 ? "Next, when this finishes" : "Then",
+                                 cost: Text("Queued · tap to clear"), enabled: true) {
+                                session.order(.clearQueue(territory: id))
+                            }
+                        }
+                        // Anything else can be lined up behind it, paid for when it starts.
+                        ForEach(ProjectKind.allCases.filter { engine.canQueue($0, in: id, state) }, id: \.self) { kind in
+                            let c = engine.projectCost(kind, for: human, state)
+                            Tile(symbol: Self.projectSymbol(kind), title: "Then " + projectName(kind).lowercased(),
+                                 detail: projectPurpose(kind),
+                                 cost: Text("Queue · ") + Self.cost(gold: c.gold, stone: c.stone, timber: c.timber, turns: c.turns),
+                                 enabled: true) {
+                                if session.order(.queueProject(territory: id, project: kind)) { Feedback.select() }
+                            }
+                        }
                     } else {
                         ForEach(buildable, id: \.self) { kind in
                             let c = engine.projectCost(kind, for: human, state)

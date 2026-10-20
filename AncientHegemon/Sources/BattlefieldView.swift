@@ -11,7 +11,11 @@ struct Muster: Identifiable, Equatable {
     /// A fleet attack: these ships sail in with this cargo.
     var ships = 0
     var cargo = UnitCounts.zero
+    /// Other armies and fleets joining the attack.
+    var joining: [AssaultGroup] = []
     var naval: Bool { ships > 0 }
+    /// Everyone who fights: the main army and those joining it.
+    var host: UnitCounts { joining.reduce(units) { $0 + $1.units } }
     var id: String { from + ">" + to }
 }
 
@@ -40,7 +44,7 @@ struct BattlefieldView: View {
         if muster.naval {
             return engine.fleetAttackSetup(human, ships: muster.ships, into: muster.to, plan: plan, in: state)
         }
-        return engine.attackSetup(human, units: muster.units, into: muster.to, from: muster.from, plan: plan,
+        return engine.attackSetup(human, units: muster.host, into: muster.to, from: muster.from, plan: plan,
                                   general: general, in: state)
     }
     private var place: String { engine.map.territory(muster.to)?.name ?? engine.map.sea(muster.to)?.name ?? muster.to }
@@ -115,7 +119,7 @@ struct BattlefieldView: View {
                         Divider()
                         Text("Battle plan").font(.headline)
                         BattlePlanEditor(engine: engine, civ: human, state: state,
-                                         units: muster.naval ? UnitCounts(infantry: muster.ships) : muster.units,
+                                         units: muster.naval ? UnitCounts(infantry: muster.ships) : muster.host,
                                          general: general, plan: $plan, odds: odds, naval: muster.naval)
                         if let message = session.message {
                             Label(message, systemImage: "exclamationmark.triangle.fill")
@@ -159,7 +163,7 @@ struct BattlefieldView: View {
                     .contentTransition(.numericText())
                     .animation(.default, value: outlook.word)
             }
-            ForEach(muster.naval ? navalScouting : Scouts.report(engine: engine, state: state, civ: human, units: muster.units, plan: plan,
+            ForEach(muster.naval ? navalScouting : Scouts.report(engine: engine, state: state, civ: human, units: muster.host, plan: plan,
                                   general: general, to: muster.to, from: muster.from), id: \.self) { line in
                 Text("• " + line).font(.caption).foregroundStyle(.secondary)
             }
@@ -190,7 +194,7 @@ struct BattlefieldView: View {
             return
         }
         for f in engine.rules.battle.formations where engine.formationAvailable(f.id, human, general: general, in: state) {
-            result[f.id] = engine.attackOdds(human, units: muster.units, into: muster.to, from: muster.from,
+            result[f.id] = engine.attackOdds(human, units: muster.host, into: muster.to, from: muster.from,
                                              formation: f.id, depth: plan.depth, stratagem: plan.stratagem,
                                              general: general, in: state) ?? 0
         }
@@ -215,7 +219,11 @@ struct BattlefieldView: View {
                 if state.armies[muster.from]?.plan != plan {
                     session.order(.setBattlePlan(territory: muster.from, plan: plan))
                 }
-                moved = session.order(.move(from: muster.from, to: muster.to, units: muster.units, general: muster.general))
+                moved = muster.joining.isEmpty
+                    ? session.order(.move(from: muster.from, to: muster.to, units: muster.units, general: muster.general))
+                    : session.order(.assault(territory: muster.to,
+                                             groups: [AssaultGroup(.land(muster.from), muster.units)] + muster.joining,
+                                             general: muster.general ? muster.from : nil))
             }
             charging = false
             if moved, let entry = session.replay {

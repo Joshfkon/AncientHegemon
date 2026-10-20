@@ -10,6 +10,8 @@ struct EndScreen: View {
     @State private var step = 0
     @State private var shown = false
     @State private var graphs = false
+    /// The replay plays itself; touching the slider takes over.
+    @State private var playing = true
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -20,10 +22,13 @@ struct EndScreen: View {
         ZStack {
             Color(red: 0.07, green: 0.06, blue: 0.05).ignoresSafeArea()
             HStack(spacing: 20) {
-                replay
-                    .aspectRatio(BoardArt.frame.width / BoardArt.frame.height, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Bronze.gradient, lineWidth: 2))
+                VStack(spacing: 8) {
+                    replay
+                        .aspectRatio(BoardArt.frame.width / BoardArt.frame.height, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Bronze.gradient, lineWidth: 2))
+                    replayControls
+                }
                 VStack(alignment: .leading, spacing: 12) {
                     Text(won ? "VICTORY" : "DEFEAT")
                         .font(.system(size: 38, weight: .black, design: .serif))
@@ -89,15 +94,55 @@ struct EndScreen: View {
             SoundBoard.shared.play(won ? .victory : .defeat)
             Feedback.outcome(won)
         }
-        .task {
-            // Play the borders round by round, then hold on the end.
+        .task(id: playing) {
+            // Play the age round by round, from wherever it stands, then hold on the end.
             let rounds = session.history.count
-            guard rounds > 1 else { return }
-            for i in 0..<rounds {
-                step = i
-                try? await Task.sleep(for: .milliseconds(max(60, 2400 / rounds)))
+            guard playing, rounds > 1 else { return }
+            if step >= rounds - 1 { step = 0 }
+            while playing, step < rounds - 1 {
+                try? await Task.sleep(for: .milliseconds(380))
+                if Task.isCancelled { return }
+                withAnimation(.easeInOut(duration: 0.25)) { step += 1 }
             }
+            playing = false
         }
+    }
+
+    /// The round shown at `step` (older saves begin part-way through).
+    private var shownRound: Int { max(1, victory.round - session.history.count + 1 + step) }
+
+    /// Play/pause, a slider through the rounds, and that round's great events.
+    private var replayControls: some View {
+        let rounds = session.history.count
+        let lines = highlights(shownRound)
+        return VStack(alignment: .leading, spacing: 4) {
+            if rounds > 1 {
+                HStack(spacing: 10) {
+                    Button { playing.toggle() } label: {
+                        Image(systemName: playing ? "pause.fill" : "play.fill")
+                            .font(.callout.bold()).foregroundStyle(Bronze.gradient)
+                            .frame(width: 30, height: 30).woodPanel(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(playing ? "Pause the replay" : "Play the replay")
+                    Slider(value: Binding(get: { Double(step) }, set: { playing = false; step = Int($0.rounded()) }),
+                           in: 0...Double(rounds - 1), step: 1)
+                        .tint(Color(red: 0.84, green: 0.63, blue: 0.27))
+                }
+            }
+            Text(lines.isEmpty ? " " : lines.joined(separator: " · "))
+                .font(.caption).foregroundStyle(.white.opacity(0.85))
+                .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                .animation(nil, value: step)
+        }
+    }
+
+    /// The round's turning points from the chronicle: conquests, sacks, wonders, wars and peace.
+    private func highlights(_ round: Int) -> [String] {
+        let marks = ["takes", "seize", "sack", "rises in", "destroyed", "declares war", "Peace between", "CIVIL WAR",
+                     "Iron Age", "splendour begins", "dominates"]
+        return session.log.filter { $0.round == round && marks.contains(where: $0.text.contains) }
+            .sorted { $0.id < $1.id }.prefix(2).map(\.text)
     }
 
     /// The map at `step`: everyone's land as it was that round.
@@ -112,7 +157,7 @@ struct EndScreen: View {
         return MapView(state: s, map: engine.map)
             .allowsHitTesting(false)
             .overlay(alignment: .bottomLeading) {
-                Text("Round \(min(step + 1, max(1, session.history.count)))")
+                Text("Round \(shownRound)")
                     .font(.caption.bold().monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(.black.opacity(0.6), in: Capsule())

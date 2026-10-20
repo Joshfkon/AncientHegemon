@@ -17,6 +17,7 @@ extension Engine {
             + (capital.map { state.owner(of: $0) == civ } == true ? p.capitalHeld : 0)
             + magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence
             + monumentPrestige(of: civ, in: state)
+            + cs.sacked * rules.sack.prestige
     }
 
     /// Where a civilization's prestige comes from, part by part (they sum to `prestige`).
@@ -33,6 +34,7 @@ extension Engine {
             ("Capital held", capital.map { state.owner(of: $0) == civ } == true ? p.capitalHeld : 0),
             ("Court's magnificence", magnificence(of: civ, in: state) * rules.throneRoom.prestigePerMagnificence),
             ("Great works", monumentPrestige(of: civ, in: state)),
+            ("Capitals sacked", cs.sacked * rules.sack.prestige),
         ].filter { $0.1 != 0 }
     }
 

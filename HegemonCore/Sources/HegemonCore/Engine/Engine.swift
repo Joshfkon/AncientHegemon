@@ -85,6 +85,16 @@ public struct Engine: Sendable {
             return try setTaxRate(rate, &state)
         case let .build(territory, project):
             return try build(project, in: territory, &state)
+        case let .queueProject(territory, project):
+            return try queueProject(project, in: territory, &state)
+        case let .clearQueue(territory):
+            return try clearQueue(territory, &state)
+        case let .besiege(territory, from):
+            return try besiege(territory, from: from, &state)
+        case let .liftSiege(territory):
+            return try liftSiege(territory, &state)
+        case let .assault(territory, groups, general):
+            return try assault(territory, groups, general: general, &state)
         case let .resolveCrisis(choice):
             return try resolveCrisis(choice, &state)
         case .endTurn:
@@ -273,14 +283,16 @@ public struct Engine: Sendable {
             if next == 0 { state.turn += 1 }
         } while state.civs[state.players[next]]!.eliminated
         state.activePlayerIndex = next
+        var age: [GameEvent] = []
         if state.turn > roundBefore {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return closing + ended }
+            age = dawnOfIron(&state)
         }
 
         let civ = state.activePlayer
-        var events: [GameEvent] = closing + [.turnStarted(civ: civ, turn: state.turn)]
+        var events: [GameEvent] = closing + [.turnStarted(civ: civ, turn: state.turn)] + age
         events += expireWarRequests(from: civ, &state)
         state.allianceOffers = state.allianceOffers.filter { $0.from != civ }
         // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
@@ -289,7 +301,9 @@ public struct Engine: Sendable {
             events += drawEvents(civ, &state)
             if !state.civs[civ]!.eliminated {
                 events += harvest(civ, &state)
+                events += pressSieges(civ, &state)
                 events += governmentPhase(civ, &state)
+                events += updateSplendour(civ, &state)
                 events += offerDecision(civ, after: events, &state)
             }
         }

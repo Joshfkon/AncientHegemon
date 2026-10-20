@@ -1,5 +1,5 @@
 {
-  "version": 18,
+  "version": 19,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -45,7 +45,8 @@
     "winePerGold": 1,
     "wineExportCap": 2,
     "luxuriesPerLegitimacy": 2,
-    "luxuryLegitimacyCap": 2
+    "luxuryLegitimacyCap": 2,
+    "queueLength": 3
   },
   "projects": {
     "road": {
@@ -670,6 +671,28 @@
       { "id": "statue", "name": "Statue of the ruler", "gold": 10, "stock": { "stone": 4 }, "magnificence": 3 },
       { "id": "throne", "name": "Gilded throne", "gold": 14, "stock": {}, "magnificence": 3 }
     ]
+  },
+  "splendour": {
+    "legitimacy": 75,
+    "topRanks": 2,
+    "minRound": 6,
+    "rounds": 5,
+    "rest": 12,
+    "goldPercent": 25,
+    "growthPercent": 50
+  },
+  "ironAge": {
+    "pressure": 60
+  },
+  "sack": {
+    "goldPercent": 50,
+    "prestige": 15
+  },
+  "siege": {
+    "wallDamagePercent": 10,
+    "ramsDamagePercent": 20,
+    "starvePercent": 25,
+    "granaryRounds": 3
   },
   "sight": {
     "rumouredArmy": 8,

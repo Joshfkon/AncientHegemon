@@ -29,7 +29,8 @@ extension Engine {
         for case let .event(r) in events where r.kind == .famine && r.civ == civ {
             if let t = r.territory {
                 let grain = max(1, territoryYield(.grain, t, state) / 2)
-                return put(civ, .famine(territory: t, grain: grain), &state)
+                // Only a realm with the grain to give faces the choice.
+                if state.civs[civ]!.granary >= grain { return put(civ, .famine(territory: t, grain: grain), &state) }
             }
         }
         // A proud, wavering general.

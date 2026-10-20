@@ -1517,3 +1517,48 @@ goals: everything here follows from how real Bronze Age empires held together or
   header names it with a "Stop funding" button. (The separate patronage strip is gone.)
 - Nudges while nothing is funded: a bronze dot on the toolbar's books button, the priest's advice
   in the council when the treasury can afford it, and the first-discovery tip.
+
+### From Civilization and Risk: queues, splendour, iron, sacks, rulers, the age replayed, combined attacks and sieges (Josh: "let's do 1-6 and 8… combine troops and attack from multiple territories, or territories and a fleet… we haven't really incorporated sieges")
+
+- **Build queues.** A territory can line up three projects behind the one under way; each starts
+  (and is paid for) when the site frees, if the treasury and stores allow, otherwise it waits. A
+  project that no longer fits drops out. Queueing on an idle site just starts it. The command
+  bar shows the queue ("Next, when this finishes"; tap to clear) and "Then …" tiles.
+- **Next turn.** A line by End turn names what the next turn brings: works finishing, great works
+  completing, discoveries close (within a turn's practice or patronage), sieges biting, the end of
+  splendour.
+- **Ages of splendour.** From round 6, a realm among the two most prestigious with legitimacy
+  75+ enters 5 rounds of splendour: building twice as fast, +25% gold, +50% growth. Then 12
+  rounds before another. Banner, status line and chronicle.
+- **The Iron Age.** When the collapse reaches 60% pressure, iron (which needs no tin) becomes
+  usable by everyone, ironworking or not. Banner and "Iron Age" by the round counter.
+- **Sacking a capital.** Taking a rival's capital carries off half its treasury and is worth 15
+  prestige for the rest of the game ("Capitals sacked" in the breakdown), on top of the capital
+  loss it already cost them.
+- **Rival rulers.** The Rivals tab shows each ruler's portrait (their emblem on their colour,
+  crowned or laurelled), a temperament (their AI personality in words: "hungry for land",
+  "a trader at heart"…) and a line in their voice for their court's mood. War, peace and
+  alliance banners, and refusals, quote them.
+- **The age replayed.** The end screen's border replay has play/pause, a slider through the
+  rounds, and that round's turning points from the chronicle (conquests, sacks, wonders, wars,
+  peace, the Iron Age).
+- **Combined attacks** (`Command.assault`). When you attack, every other army of yours next to the
+  target with troops ready, and every fleet of yours in its seas with troops aboard, is offered as
+  a "Join the attack" toggle. They fight as one host (the largest land group's plan and
+  approach; landings fight as amphibious only if no land group joins); beaten, each part falls
+  back where it came from in proportion. Enemy ships in a sea must be beaten first, by a normal
+  landing. The battlefield and quick attack both carry the joiners.
+- **Sieges** (`Command.besiege` / `liftSiege`). A walled town of a rival at war can be besieged from
+  a neighbouring army that hasn't moved: the whole army camps for the turn. Each round, at the
+  besieger's turn, while the camp's army stays and the war goes on: the town's fields give no
+  grain and its people no taxes; after its granary's 3 rounds (none without one) a quarter of
+  the garrison starves (at least one) and a person dies; and the walls lose 10 points of defence
+  (20 with rams, Construction level 2). The besieger storms whenever it likes; the defender can
+  sally against the camp; moving the army away, peace, or the walls falling lifts it. The map
+  shows tents round the town, a dashed line from the camp and the round; the territory panel
+  shows the siege and a Lift button; the order card offers "Lay siege" beside the attack. The AI
+  besieges walled towns it can't storm (under 55% odds) when it has at least 80% of the
+  defenders' strength, then storms once the odds turn.
+- Fixed: the famine dilemma no longer asks for grain the granary doesn't hold.
+- Balance (80 games, seed 501): Egypt 43%, Italia 23%, Mesopotamia 23%, Greece 8%; 3 dominations
+  and a trade win. Rules version 19; 251 tests. Debug launch argument `-demoSiege YES`.

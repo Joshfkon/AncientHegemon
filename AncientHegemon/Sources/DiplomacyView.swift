@@ -53,6 +53,17 @@ struct DiplomacyView: View {
         }
     }
 
+    /// Which of the ruler's voices fits their court's mood.
+    private func voiceMoment(_ mood: String) -> RulerVoice.Moment {
+        if mood.hasPrefix("They want peace") { return .peace }
+        if mood.hasPrefix("They think we are weak") { return .covets }
+        if mood.hasPrefix("They fear") { return .fears }
+        if mood.hasPrefix("Good friends") { return .friends }
+        if mood.hasPrefix("Awed") { return .awed }
+        if mood.hasPrefix("Hostile") { return .hostile }
+        return .cordial
+    }
+
     /// How their court regards us, read from what moves the AI: relative strength, a shared
     /// border, trade, offers on the table and our court's splendour.
     private func attitude(_ human: CivilizationID, _ other: CivilizationID, trading: Bool)
@@ -104,8 +115,17 @@ struct DiplomacyView: View {
             let mood = attitude(human, other, trading: route != nil)
             Label(mood.text, systemImage: mood.icon)
                 .font(.caption.bold()).foregroundStyle(mood.color)
-            Text("\(cs.ruler.name) rules, \(legitimacyWord(cs.legitimacy)) on the throne.")
-                .font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 10) {
+                RulerPortrait(civ: other, state: state, size: 38).padding(.top, 6)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(cs.ruler.name), \(RulerVoice.temperament(other))").font(.caption.bold())
+                    Text("“\(RulerVoice.line(voiceMoment(mood.text), other, state))”")
+                        .font(.system(.callout, design: .serif).italic())
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\(legitimacyWord(cs.legitimacy).capitalizedFirst) on the throne.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
             Text(neighborhood(human, other)).font(.caption).foregroundStyle(.secondary)
             alliance(human, other)
             if let answer = session.answers[other], answer.round == state.turn {

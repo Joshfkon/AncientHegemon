@@ -15,7 +15,8 @@ extension Engine {
         for (i, pocket) in pockets.enumerated() {
             let isHome = i == 0
             let production = pocket.reduce(0) { total, t in
-                total + territoryYield(.grain, t, state) * (state.harvestPercent[t] ?? 100) / 100
+                // Fields outside besieged walls go unharvested.
+                total + (state.sieges[t] != nil ? 0 : territoryYield(.grain, t, state) * (state.harvestPercent[t] ?? 100) / 100)
             }
             // Ships' crews and the troops they carry are fed from home.
             let atSea = isHome ? fleetUpkeep(of: civ, state) : 0
@@ -128,14 +129,16 @@ extension Engine {
         -> (taxes: Int, mines: Int, trade: Int, total: Int) {
         let e = rules.economy
         // Restless land pays nothing.
-        let population = homeNet.filter { !restless($0, of: civ, in: state) }.reduce(0) { $0 + state.population(of: $1) }
+        let population = homeNet.filter { !restless($0, of: civ, in: state) && state.sieges[$0] == nil }
+            .reduce(0) { $0 + state.population(of: $1) }
         let coinage = level(.administration, of: civ, in: state) >= 2 ? rules.knowledge.effects.coinagePercent : 0
         let taxes = population * state.civs[civ]!.taxRate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100)
         let mines = yield(of: .gold, in: homeNet, state) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
         let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
             + harborGold(civ, homeNet, routes, state)
-        return (taxes, mines, trade, (taxes + mines) * (100 + administration) / 100 + trade)
+        let splendour = state.civs[civ]!.splendour > 0 ? rules.splendour.goldPercent : 0
+        return (taxes, mines, trade, ((taxes + mines) * (100 + administration) / 100 + trade) * (100 + splendour) / 100)
     }
 
     /// Most grain a civilization can buy from its trade partners this turn.

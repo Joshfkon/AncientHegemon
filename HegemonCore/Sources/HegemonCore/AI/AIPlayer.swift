@@ -36,6 +36,7 @@ public struct AIPlayer: Sendable {
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         recruit(civ, &state, &turn)
         attack(civ, &state, &turn)
+        besiege(civ, &state, &turn)
         invest(civ, &state, &turn)
         if let campaign { sail(civ, toward: campaign, &state, &turn) }
         fortify(civ, &state, &turn)
@@ -322,6 +323,23 @@ public struct AIPlayer: Sendable {
                 return
             }
             cache = [:]
+        }
+    }
+
+    /// Walled towns too strong to storm are besieged instead, by an army at least nearly the
+    /// garrison's size; once hunger and rams have done their work, `attack` storms them.
+    func besiege(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        for (camp, _) in state.armies(of: civ).sorted(by: { $0.territory < $1.territory }) {
+            let ready = readyUnits(at: camp, state)
+            guard ready.total > 0, !state.sieges.values.contains(where: { $0.camp == camp && $0.civ == civ }) else { continue }
+            let towns = map.landNeighbors(of: camp).filter { engine.canBesiege($0, from: camp, by: civ, state) }
+            for town in towns.sorted() {
+                guard let d = engine.defenders(of: town, against: civ, state),
+                      Double(ready.total) >= Double(d.army.units.total + d.levy) * 0.8,
+                      value(of: town, for: civ, state) * personality.aggression > 1 else { continue }
+                let pWin = estimate(civ, from: camp, to: town, units: ready, plan: state.armies[camp]!.plan, state)
+                if pWin < 0.55, issue(.besiege(territory: town, from: camp), &state, &turn) { break }
+            }
         }
     }
 

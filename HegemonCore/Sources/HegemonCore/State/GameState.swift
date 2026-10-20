@@ -43,11 +43,18 @@ public struct TerritoryState: Codable, Sendable, Equatable {
     public var construction: Construction?
     /// The round it last changed hands by conquest or submission (it is restless for a while).
     public var takenOnRound: Int?
+    /// Projects to start, in order, as the one under way finishes (paid for when each starts).
+    public var queue: [ProjectKind] = []
 }
 
 public struct Construction: Codable, Sendable, Equatable {
     public let kind: ProjectKind
     public var turnsLeft: Int
+
+    public init(kind: ProjectKind, turnsLeft: Int) {
+        self.kind = kind
+        self.turnsLeft = turnsLeft
+    }
 }
 
 /// Per-civilization facts that change during a game.
@@ -95,6 +102,11 @@ public struct CivState: Codable, Sendable, Equatable {
     public var patronage: KnowledgeField?
     /// A dilemma waiting for a person's answer this turn.
     public var decision: DecisionKind?
+    /// Rounds left in an age of splendour, and rounds before another can begin.
+    public var splendour = 0
+    public var splendourRest = 0
+    /// Rivals' capitals this civ has sacked.
+    public var sacked = 0
 }
 
 /// Rival claimants to a contested throne, and what buying them off would cost.
@@ -253,6 +265,10 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Finished great works and where they stand; works under way, by territory.
     public var monuments: [MonumentID: TerritoryID] = [:]
     public var monumentSites: [TerritoryID: MonumentSite] = [:]
+    /// Walled towns under siege, by the town.
+    public var sieges: [TerritoryID: Siege] = [:]
+    /// The collapse has brought iron within everyone's reach.
+    public var ironAge = false
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

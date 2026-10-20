@@ -54,6 +54,16 @@ public enum Command: Codable, Sendable, Equatable {
     case setTaxRate(Int)
     /// Start a project in an owned home territory. Costs are paid up front.
     case build(territory: TerritoryID, project: ProjectKind)
+    /// Line up a project to start (and be paid for) when the one under way finishes.
+    case queueProject(territory: TerritoryID, project: ProjectKind)
+    case clearQueue(territory: TerritoryID)
+    /// Camp the army in `from` before the walls of `territory`: it is cut off, starves and its
+    /// walls are worn down each round the siege lasts. Moving the army away lifts it.
+    case besiege(territory: TerritoryID, from: TerritoryID)
+    case liftSiege(territory: TerritoryID)
+    /// One attack on `territory` by several armies at once, from neighbouring land and from
+    /// fleets in its seas, fighting as one host. `general` names the land group he leads.
+    case assault(territory: TerritoryID, groups: [AssaultGroup], general: TerritoryID?)
     /// Decide a contested succession (only offered to human rulers).
     case resolveCrisis(CrisisChoice)
     /// End the active player's turn.
@@ -123,6 +133,14 @@ public enum GameEvent: Codable, Sendable, Equatable {
     /// A civilization reached a new level in a field of knowledge.
     case discovery(civ: CivilizationID, field: KnowledgeField, level: Int)
     case projectStarted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
+    case projectQueued(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
+    case splendourBegan(civ: CivilizationID)
+    case splendourEnded(civ: CivilizationID)
+    case ironAgeBegan
+    case capitalSacked(by: CivilizationID, from: CivilizationID, territory: TerritoryID, gold: Int)
+    case siegeLaid(civ: CivilizationID, territory: TerritoryID, camp: TerritoryID)
+    case siegePressed(civ: CivilizationID, territory: TerritoryID, rounds: Int, starved: Int)
+    case siegeLifted(civ: CivilizationID, territory: TerritoryID)
     case projectCompleted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
     case projectDestroyed(territory: TerritoryID, project: ProjectKind)
     case generalHonored(GeneralID)
@@ -171,6 +189,9 @@ public struct EventReport: Codable, Sendable, Equatable {
 
 public enum GameError: Error, Equatable, Sendable {
     case gameOver
+    case notWalled(TerritoryID)
+    case noSiege(TerritoryID)
+    case alreadyQueued(TerritoryID)
     case unknownCivilization(CivilizationID)
     case alreadyAtPeace(CivilizationID)
     case notAtPeace(CivilizationID)

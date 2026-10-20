@@ -37,6 +37,8 @@ struct OrderComposer: View {
     @State private var plan = BattlePlan()
     /// Chance of victory with each formation, recomputed when the force or plan changes.
     @State private var oddsByFormation: [FormationID: Double] = [:]
+    /// Other armies and fleets sent to join this attack (all their ready troops).
+    @State private var joined: Set<AssaultGroup.Source> = []
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -76,6 +78,36 @@ struct OrderComposer: View {
         return nil
     }
 
+    /// Who could join a land attack: other armies of ours next to the target with troops ready,
+    /// and our fleets with troops aboard in its seas (where no enemy ships bar the way).
+    private var helpers: [AssaultGroup] {
+        guard case let .march(from, to) = order, isBattle, let t = engine.map.territory(to) else { return [] }
+        var result: [AssaultGroup] = []
+        for n in engine.map.landNeighbors(of: to).sorted() where n != from {
+            guard let army = state.armies[n], army.owner == human else { continue }
+            let ready = army.units - (state.moved[n] ?? .zero)
+            let free = UnitCounts(infantry: max(0, ready.infantry), archers: max(0, ready.archers), cavalry: max(0, ready.cavalry))
+            if !free.isEmpty { result.append(AssaultGroup(.land(n), free)) }
+        }
+        for sea in t.seas.sorted() {
+            guard let fleet = state.fleet(of: human, in: sea), !fleet.cargo.isEmpty,
+                  !state.fleets.contains(where: { $0.sea == sea && $0.ships > 0 && state.atWar(human, $0.owner) }) else { continue }
+            result.append(AssaultGroup(.sea(sea), fleet.cargo))
+        }
+        return result
+    }
+
+    private var joining: [AssaultGroup] { helpers.filter { joined.contains($0.source) } }
+
+    /// The whole host: this army and everyone joining it.
+    private var host: UnitCounts { joining.reduce(units) { $0 + $1.units } }
+
+    /// The camp a siege would be laid from, if the target is a walled town we could besiege.
+    private var siegeCamp: TerritoryID? {
+        guard case let .march(from, to) = order, engine.canBesiege(to, from: from, by: human, state) else { return nil }
+        return from
+    }
+
     private var isBattle: Bool {
         destination.map { engine.defenders(of: $0, against: human, state) != nil } ?? false
     }
@@ -83,7 +115,7 @@ struct OrderComposer: View {
     /// Three or more to one: no need for the battlefield (it's still a tap away).
     private var overwhelming: Bool {
         guard case let .march(_, to) = order, isBattle, let d = engine.defenders(of: to, against: human, state) else { return false }
-        return units.total >= 3 * max(1, d.army.units.total + d.levy)
+        return host.total >= 3 * max(1, d.army.units.total + d.levy)
     }
 
     private var general: General? {
@@ -125,6 +157,29 @@ struct OrderComposer: View {
                     if let general {
                         Toggle("\(general.name) leads (\(traitName(general.trait)))", isOn: $withGeneral).font(.callout)
                     }
+                    if !helpers.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Join the attack").font(.subheadline.bold())
+                            ForEach(helpers, id: \.source) { g in
+                                Toggle(isOn: Binding(get: { joined.contains(g.source) },
+                                                     set: { if $0 { joined.insert(g.source) } else { joined.remove(g.source) } })) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: { if case .sea = g.source { "sailboat.fill" } else { "figure.walk" } }())
+                                        Text(sourceName(g.source)).font(.callout)
+                                        UnitRow(units: g.units, size: 11).font(.caption)
+                                    }
+                                }
+                            }
+                            Text("They strike together as one host; if beaten, each falls back where it came from.")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                    if siegeCamp != nil {
+                        Label("Walled. You can lay siege instead: the town is cut off, starves, and its walls weaken every round you stay. Storm it when it's ready.",
+                              systemImage: "shield.lefthalf.filled.slash")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     if isBattle, destination != nil {
                         odds
                     }
@@ -152,6 +207,16 @@ struct OrderComposer: View {
             HStack {
                 Button("Cancel") { done(nil) }.buttonStyle(.bordered)
                 Spacer()
+                if let camp = siegeCamp {
+                    Button("Lay siege") {
+                        guard case let .march(_, to) = order else { return }
+                        if session.order(.besiege(territory: to, from: camp)) {
+                            SoundBoard.shared.play(.wardrums, volume: 0.5)
+                            done(.territory(to))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
                 if overwhelming {
                     Button("Battlefield") { send() }.buttonStyle(.bordered)
                     Button("Attack") { quickAttack() }
@@ -171,6 +236,7 @@ struct OrderComposer: View {
             updateOdds()
         }
         .onChange(of: units) { _, _ in updateOdds() }
+        .onChange(of: joined) { _, _ in updateOdds() }
         .onChange(of: withGeneral) { _, _ in
             // Options the general brought leave with them.
             let leader = withGeneral ? general : nil
@@ -197,7 +263,7 @@ struct OrderComposer: View {
         }
         var odds: [FormationID: Double] = [:]
         for id in ids {
-            odds[id] = engine.attackOdds(human, units: units, into: to, from: from, formation: id,
+            odds[id] = engine.attackOdds(human, units: host, into: to, from: from, formation: id,
                                          depth: from == nil ? .deep : plan.depth,
                                          stratagem: from == nil ? nil : plan.stratagem,
                                          general: leader, amphibious: amphibious, in: state) ?? 0
@@ -311,7 +377,18 @@ struct OrderComposer: View {
     private func quickAttack() {
         guard case let .march(from, to) = order else { return }
         SoundBoard.shared.play(.roar, volume: 0.6)
-        if session.order(.move(from: from, to: to, units: units, general: withGeneral)) { done(.territory(to)) }
+        let sent = joining.isEmpty
+            ? session.order(.move(from: from, to: to, units: units, general: withGeneral))
+            : session.order(.assault(territory: to, groups: [AssaultGroup(.land(from), units)] + joining,
+                                     general: withGeneral ? from : nil))
+        if sent { done(.territory(to)) }
+    }
+
+    private func sourceName(_ source: AssaultGroup.Source) -> String {
+        switch source {
+        case .land(let t): "From " + (engine.map.territory(t)?.name ?? t)
+        case .sea(let s): "Landing from the " + (engine.map.sea(s)?.name ?? s)
+        }
     }
 
     private func send() {
@@ -320,7 +397,7 @@ struct OrderComposer: View {
             if isBattle {
                 // The plan is made on the battlefield, with both armies in view.
                 Feedback.select()
-                session.muster = Muster(from: from, to: to, units: units, general: withGeneral)
+                session.muster = Muster(from: from, to: to, units: units, general: withGeneral, joining: joining)
                 done(.territory(to))
                 return
             }

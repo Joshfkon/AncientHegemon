@@ -27,6 +27,14 @@ struct Moment: Identifiable, Equatable {
         case monument(MonumentID, CivilizationID)
         /// A rival finished first: our site is abandoned.
         case monumentLost(MonumentID)
+        /// Our town is besieged, or we laid siege to one.
+        case besieged(TerritoryID, by: CivilizationID)
+        /// A capital sacked: ours by them, or theirs by us.
+        case sacked(TerritoryID, by: CivilizationID, gold: Int)
+        /// An age of splendour begins (or ends).
+        case splendour(began: Bool)
+        /// The Iron Age dawns.
+        case ironAge
         /// One of our generals rose in revolt and took land with him (and had he been paid off?).
         case rebellion(general: String, lands: [TerritoryID], rebel: CivilizationID, bribed: Bool)
     }
@@ -101,10 +109,12 @@ struct MomentBanner: View {
                          color: Color(red: 0.62, green: 0.45, blue: 0.12), stamp: false)
         case let .peace(other):
             return Style(icon: "dove.fill", title: "Peace with \(Palette.name(other, state))",
-                         subtitle: "Trade can flow", color: Color(red: 0.15, green: 0.5, blue: 0.3), stamp: true)
+                         subtitle: "\(state.civs[other]?.ruler.name ?? ""): “\(RulerVoice.line(.peace, other, state))”",
+                         color: Color(red: 0.15, green: 0.5, blue: 0.3), stamp: true)
         case let .war(other):
             return Style(icon: "flame.fill", title: "War with \(Palette.name(other, state))",
-                         subtitle: nil, color: Color(red: 0.6, green: 0.1, blue: 0.08), stamp: true)
+                         subtitle: "\(state.civs[other]?.ruler.name ?? ""): “\(RulerVoice.line(.war, other, state))”",
+                         color: Color(red: 0.6, green: 0.1, blue: 0.08), stamp: true)
         case let .seaBattle(sea, won, other):
             let water = engine.map.sea(sea)?.name ?? sea
             return Style(icon: "sailboat.fill",
@@ -115,7 +125,7 @@ struct MomentBanner: View {
         case let .ally(other, joined):
             return Style(icon: joined ? "shield.lefthalf.filled" : "shield.slash",
                          title: joined ? "Alliance with \(Palette.name(other, state))" : "\(Palette.name(other, state)) abandons us",
-                         subtitle: joined ? "Each fights whoever attacks the other" : "The alliance is broken",
+                         subtitle: joined ? "\(state.civs[other]?.ruler.name ?? ""): “\(RulerVoice.line(.ally, other, state))”" : "The alliance is broken",
                          color: joined ? Color(red: 0.15, green: 0.3, blue: 0.6) : Color(red: 0.4, green: 0.1, blue: 0.1), stamp: true)
         case let .allyJoins(civ, against):
             return Style(icon: "flag.2.crossed.fill", title: "\(Palette.name(civ, state)) joins the war",
@@ -139,6 +149,27 @@ struct MomentBanner: View {
             return Style(icon: "hammer.circle", title: "Our \(m?.name ?? id) is abandoned",
                          subtitle: "A rival finished first; half the cost is recovered",
                          color: Color(red: 0.35, green: 0.22, blue: 0.12), stamp: false)
+        case let .besieged(town, by):
+            let ours = by == session.human
+            return Style(icon: "shield.lefthalf.filled.slash", title: ours ? "Siege of \(place(town))" : "\(place(town)) besieged!",
+                         subtitle: ours ? "Hold the camp: each round they starve and the walls weaken"
+                                        : "\(Palette.name(by, state)) cuts it off. Drive them from the camp, or it starves",
+                         color: ours ? mine : Color(red: 0.5, green: 0.1, blue: 0.08), stamp: !ours)
+        case let .sacked(town, by, gold):
+            let ours = by == session.human
+            return Style(icon: "flame.fill", title: ours ? "\(place(town)) sacked!" : "\(place(town)) is sacked",
+                         subtitle: ours ? "+\(gold) gold carried off, +\(engine.rules.sack.prestige) prestige"
+                                        : "\(Palette.name(by, state)) carries off \(gold) gold",
+                         color: ours ? Color(red: 0.62, green: 0.45, blue: 0.12) : Color(red: 0.45, green: 0.08, blue: 0.08), stamp: true)
+        case let .splendour(began):
+            let r = engine.rules.splendour
+            return Style(icon: "sun.max.fill", title: began ? "An age of splendour" : "The age of splendour fades",
+                         subtitle: began ? "\(r.rounds) rounds: building twice as fast, +\(r.goldPercent)% gold, faster growth" : "Build it again: a secure throne and a leading name",
+                         color: Color(red: 0.62, green: 0.45, blue: 0.12), stamp: began)
+        case .ironAge:
+            return Style(icon: "hammer.fill", title: "The Iron Age dawns",
+                         subtitle: "Iron needs no tin: every realm can now arm with it",
+                         color: Color(red: 0.3, green: 0.28, blue: 0.3), stamp: true)
         case let .rebellion(general, lands, _, bribed):
             let names = lands.prefix(3).map(place).joined(separator: ", ") + (lands.count > 3 ? " and more" : "")
             return Style(icon: "flame.fill", title: "\(general) rebels!",

@@ -222,6 +222,7 @@ struct GameScreen: View {
             }
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
+            if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
@@ -390,6 +391,7 @@ struct GameScreen: View {
                     }
                 }
             }
+            if session.isHumanTurn, !session.busy { NextTurnLine(session: session) }
             turnButton
         }
     }
@@ -454,6 +456,10 @@ struct GameScreen: View {
             SoundBoard.shared.play(ours ? .victory : .horn, volume: 0.5); Feedback.outcome(ours)
         case .monumentLost: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
         case .rebellion: SoundBoard.shared.play(.wardrums, volume: 0.7); Feedback.impact(1)
+        case let .besieged(_, by): SoundBoard.shared.play(.wardrums, volume: 0.6); Feedback.impact(by == session.human ? 0.5 : 1)
+        case let .sacked(_, by, _): SoundBoard.shared.play(by == session.human ? .victory : .defeat, volume: 0.6); Feedback.outcome(by == session.human)
+        case let .splendour(began): SoundBoard.shared.play(began ? .horn : .click, volume: 0.5); Feedback.outcome(began)
+        case .ironAge: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(0.8)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -471,7 +477,7 @@ struct GameScreen: View {
         }
         // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
         // Discoveries stay up longer: there's something to read.
-        let linger = switch moment.kind { case .discovery, .monument, .rebellion: 4200; default: 1900 }
+        let linger = switch moment.kind { case .discovery, .monument, .rebellion, .splendour, .ironAge, .sacked: 4200; default: 1900 }
         do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }
@@ -582,8 +588,12 @@ struct GameScreen: View {
                 } else {
                     Text("Watching").font(.headline)
                 }
-                Text("Round \(state.turn)/\(engine.rules.victory.roundLimit)")
+                Text("Round \(state.turn)/\(engine.rules.victory.roundLimit)" + (state.ironAge ? " · Iron Age" : ""))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            if let human = session.human, let left = state.civs[human]?.splendour, left > 0 {
+                Label("Age of splendour · \(left) round\(left == 1 ? "" : "s") left", systemImage: "sun.max.fill")
+                    .font(.caption.bold()).foregroundStyle(Bronze.gradient)
             }
             if let human = session.human, let cs = state.civs[human], let econ = session.economy {
                 HStack(spacing: 12) {

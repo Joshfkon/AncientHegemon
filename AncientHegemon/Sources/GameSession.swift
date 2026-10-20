@@ -328,7 +328,7 @@ final class GameSession {
                 // A rival court's answer to the player's proposal.
                 case let .allianceRefused(by, _):
                     let why = Self.allianceRefusal(by, state: before, engine: engine)
-                    answers[by] = (state.turn, "They declined: \(why)", false)
+                    answers[by] = (state.turn, "“\(RulerVoice.line(.refuse, by, state))” They declined: \(why)", false)
                     toast = ("\(Palette.name(by, state)) declines your alliance", (toast?.id ?? 0) + 1, true)
                     SoundBoard.shared.play(.defeat, volume: 0.4)
                     Feedback.outcome(false)
@@ -516,6 +516,9 @@ final class GameSession {
         case .alreadyAsked: return "You already asked them this turn."
         case .noWarRequest: return "That call to arms has lapsed."
         case .unknownDecoration: return "No such decoration."
+        case .notWalled(let t): return "\(place(t)) has no walls to besiege: attack it instead."
+        case .noSiege(let t): return "There is no siege of yours at \(place(t))."
+        case .alreadyQueued(let t): return "That can't be lined up in \(place(t)): it's built, under way, queued, or the line is full."
         case .unknownMonument: return "No such great work."
         case .monumentUnavailable: return "That great work can't be raised there: it may stand already, or need other ground."
         case .noDecision: return "That matter is already settled."
@@ -588,6 +591,16 @@ final class GameSession {
                 for t in lands { flashes[t] = .now }
                 let name = after.generals[general]?.name ?? before.generals[general]?.name ?? "A general"
                 new.append(Moment(kind: .rebellion(general: name, lands: lands, rebel: rebel, bribed: bribed.contains(general))))
+            case let .siegeLaid(civ, town, _) where civ == me || before.owner(of: town) == me:
+                new.append(Moment(kind: .besieged(town, by: civ)))
+            case let .capitalSacked(by, from, town, gold) where by == me || from == me:
+                new.append(Moment(kind: .sacked(town, by: by, gold: gold)))
+            case let .splendourBegan(civ) where civ == me:
+                new.append(Moment(kind: .splendour(began: true)))
+            case let .splendourEnded(civ) where civ == me:
+                new.append(Moment(kind: .splendour(began: false)))
+            case .ironAgeBegan:
+                new.append(Moment(kind: .ironAge))
             case let .monumentCompleted(civ, _, id):
                 new.append(Moment(kind: .monument(id, civ)))
             case let .monumentLost(civ, _, id) where civ == me:
@@ -663,6 +676,11 @@ final class GameSession {
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
         case let .eliminated(civ): return civ == me
+        case let .siegeLaid(civ, t, _), let .siegePressed(civ, t, _, _), let .siegeLifted(civ, t):
+            return civ == me || before.owner(of: t) == me
+        case let .capitalSacked(by, from, _, _): return by == me || from == me
+        case let .splendourBegan(civ), let .splendourEnded(civ), let .projectQueued(civ, _, _): return civ == me
+        case .ironAgeBegan: return true
         case let .monumentStarted(civ, _, _), let .monumentCompleted(civ, _, _), let .monumentLost(civ, _, _),
              let .decided(civ, _, _), let .patronageSet(civ, _):
             return civ == me
@@ -796,6 +814,22 @@ final class GameSession {
                 add(civ, "\(projectName(kind)) finished in \(place(t))", at: t)
             case let .projectDestroyed(t, kind) where before.owner(of: t) == human:
                 add(human, "\(projectName(kind)) in \(place(t)) destroyed", at: t)
+            case let .siegeLaid(civ, t, camp):
+                add(civ, "\(name(civ)) lay\(civ == human ? "" : "s") siege to \(place(t)) from \(place(camp))", at: t)
+            case let .siegePressed(civ, t, rounds, starved) where civ == human || before.owner(of: t) == human:
+                add(civ, "Siege of \(place(t)), round \(rounds)" + (starved > 0 ? ": \(starved) of the garrison starve" : ": the granary holds"), at: t)
+            case let .siegeLifted(civ, t):
+                add(civ, "The siege of \(place(t)) is lifted", at: t)
+            case let .capitalSacked(by, from, t, gold):
+                add(by, "\(name(by)) sack\(by == human ? "" : "s") \(place(t)), the capital of \(name(from)), carrying off \(gold) gold", at: t)
+            case let .splendourBegan(civ):
+                add(civ, "An age of splendour begins in \(name(civ))")
+            case let .splendourEnded(civ) where civ == human:
+                add(civ, "The age of splendour fades")
+            case .ironAgeBegan:
+                add(nil, "The Iron Age dawns: iron needs no tin, and every realm can arm with it")
+            case let .projectQueued(civ, t, kind) where civ == human:
+                add(civ, "\(projectName(kind)) queued in \(place(t))", at: t)
             case let .monumentStarted(civ, t, id):
                 add(civ, "\(name(civ)) begin\(civ == human ? "" : "s") the \(monumentName(id)) in \(place(t))", at: t)
             case let .monumentCompleted(civ, t, id):
@@ -820,6 +854,22 @@ final class GameSession {
     }
 
     #if DEBUG
+    /// Launch with -demoSiege YES: a rival's walled town next to the capital, a strong army at
+    /// home, and work under way with a queue, for trying sieges, queues and combined attacks.
+    func demoSiege() {
+        guard let human, let seat = engine.seat(of: human, in: state),
+              let rival = state.players.first(where: { $0 != human }),
+              let town = engine.map.landNeighbors(of: seat).sorted().first else { return }
+        state.land[town]!.owner = rival
+        state.land[town]!.improvements.insert(.walls)
+        state.armies[town] = Army(owner: rival, units: UnitCounts(infantry: 9))
+        state.armies[seat] = Army(owner: human, units: UnitCounts(infantry: 10))
+        state.civs[human]!.gold = 80
+        state.civs[human]!.stock = [.stone: 10, .timber: 10]
+        state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
+        state.land[seat]!.queue = [.road]
+    }
+
     /// Launch with -demoHost YES: the capital's army swells to 14, for trying quick battles.
     func demoHost() {
         guard let human, let seat = engine.seat(of: human, in: state), state.armies[seat]?.owner == human else { return }
