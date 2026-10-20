@@ -531,6 +531,8 @@ struct CommandBar: View {
         case .mine: "hammer.fill"
         case .harbor: "ferry.fill"
         case .granary: "archivebox.fill"
+        case .levee: "water.waves"
+        case .drains: "drop.circle.fill"
         }
     }
 }

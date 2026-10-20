@@ -1691,3 +1691,16 @@ goals: everything here follows from how real Bronze Age empires held together or
   that dies out lifts the siege. Walls still wear down 10 points a round (20 with rams).
 - Balance (80 games): Egypt 35%, Italia 23%, Greece 8%, Mesopotamia ~34%. Rules version 23;
   261 tests. Debug launch argument `-demoBesieged YES`.
+
+### Levees and drains (Josh: "we need things to be able to limit the floods - dams?"; "sanitation for plague?")
+
+- **Levees** (river valleys only; 6 gold, 1 stone, 1 timber, 2 turns): earthen banks along the
+  river. A flood that strikes a leveed valley takes no one. (The Bronze Age built levees and
+  canals far more than dams, so levees it is.)
+- **Drains & wells** (anywhere; 6 gold, 2 stone, 2 turns): plague takes half as many in that
+  territory, and may take no one in a small town.
+- Both show on the map (🌊, ⛲) and in the town view (banks along the river; a well with a basin
+  and a drain). The AI builds levees on its richest valleys, and drains in crowded towns once
+  it trades.
+- Balance (80 games): Egypt 33%, Italia 26%, Mesopotamia ~33%, Greece 8%. Rules version 24; 264
+  tests.

@@ -106,6 +106,14 @@ extension AIPlayer {
         if !econ.tradePartners.isEmpty {
             plan.append((.harbor, cheapest(.harbor, home.filter { map.territory($0)!.isCoastal })))
         }
+        // Levees on the river valleys (the richest first), drains where people crowd.
+        let valleys = home.filter { map.territory($0)!.has(.riverValley) }
+            .sorted { (map.territory($0)!.grain, $1) > (map.territory($1)!.grain, $0) }
+        plan.append((.levee, cheapest(.levee, valleys)))
+        if !econ.tradePartners.isEmpty {
+            let crowded = home.filter { state.population(of: $0) >= 4 }.sorted { (state.population(of: $0), $1) > (state.population(of: $1), $0) }
+            plan.append((.drains, cheapest(.drains, crowded)))
+        }
         // A granary at the capital once the harvest outgrows what the store can hold.
         if econ.grainBalance > 0, econ.granary >= econ.granaryCap, let capital = engine.seat(of: civ, in: state) {
             plan.append((.granary, cheapest(.granary, [capital] + home)))

@@ -1251,6 +1251,8 @@ extension MapView {
         case .mine: "⛏"
         case .harbor: "⚓"
         case .granary: "🏺"
+        case .levee: "🌊"
+        case .drains: "⛲"
         }
     }
 }

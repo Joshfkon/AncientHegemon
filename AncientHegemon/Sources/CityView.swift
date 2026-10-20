@@ -197,7 +197,7 @@ extension TownScene {
         #if DEBUG
         if UserDefaults.standard.string(forKey: "demoTown") == "full" {
             var l = land
-            l.improvements.formUnion([.walls, .road, .farm, .granary, .harbor, .mine])
+            l.improvements.formUnion([.walls, .road, .farm, .granary, .harbor, .mine, .levee, .drains])
             l.construction = Construction(kind: .walls, turnsLeft: 2)
             return l
         }
@@ -255,6 +255,7 @@ private struct TownPainter {
         town(&ctx)
         if land.improvements.contains(.walls) { walls(&ctx) }
         if land.improvements.contains(.granary) { granary(&ctx) }
+        if land.improvements.contains(.drains) { well(&ctx) }
         if land.construction != nil { scaffold(&ctx) }
         camp(&ctx)
         trees(&ctx)
@@ -327,6 +328,16 @@ private struct TownPainter {
         water.addCurve(to: CGPoint(x: 560, y: 600), control1: CGPoint(x: 760, y: 360), control2: CGPoint(x: 420, y: 480))
         ctx.stroke(water, with: .color(Color(red: 0.45, green: 0.38, blue: 0.22).opacity(0.5)), style: StrokeStyle(lineWidth: 64, lineCap: .round))
         ctx.stroke(water, with: .color(Color(red: 0.26, green: 0.52, blue: 0.78)), style: StrokeStyle(lineWidth: 50, lineCap: .round))
+        if land.improvements.contains(.levee) {
+            // Earthen banks along both sides.
+            for offset in [-30.0, 30] {
+                var bank = Path()
+                bank.move(to: CGPoint(x: 600 + offset, y: 250))
+                bank.addCurve(to: CGPoint(x: 560 + offset, y: 600), control1: CGPoint(x: 760 + offset, y: 360), control2: CGPoint(x: 420 + offset, y: 480))
+                ctx.stroke(bank, with: .color(Color(red: 0.55, green: 0.42, blue: 0.26)), style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                ctx.stroke(bank, with: .color(Color(red: 0.45, green: 0.6, blue: 0.3)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            }
+        }
         // Glints drifting downstream.
         let shift = time * 30
         ctx.stroke(water, with: .color(.white.opacity(0.35)), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [8, 34], dashPhase: -shift))
@@ -727,6 +738,23 @@ private struct TownPainter {
             ctx.stroke(dome, with: .color(ink), lineWidth: 1)
             ctx.fill(Path(CGRect(x: x - 4, y: y - 10, width: 8, height: 10)), with: .color(Color(red: 0.35, green: 0.22, blue: 0.12)))
         }
+    }
+
+    /// A public well with a stone basin and a channel draining away.
+    private func well(_ ctx: inout GraphicsContext) {
+        let c = CGPoint(x: 560, y: 452)
+        var drain = Path()
+        drain.move(to: CGPoint(x: c.x + 14, y: c.y)); drain.addLine(to: CGPoint(x: c.x + 90, y: c.y + 20))
+        ctx.stroke(drain, with: .color(Color(red: 0.55, green: 0.5, blue: 0.44)), lineWidth: 7)
+        ctx.stroke(drain, with: .color(Color(red: 0.3, green: 0.55, blue: 0.82)), lineWidth: 3)
+        let basin = Path(ellipseIn: CGRect(x: c.x - 18, y: c.y - 8, width: 36, height: 16))
+        ctx.fill(basin, with: .color(Color(white: 0.75)))
+        ctx.fill(Path(ellipseIn: CGRect(x: c.x - 12, y: c.y - 5, width: 24, height: 9)), with: .color(Color(red: 0.3, green: 0.55, blue: 0.82)))
+        ctx.stroke(basin, with: .color(ink), lineWidth: 1)
+        var frame = Path()
+        frame.move(to: CGPoint(x: c.x - 14, y: c.y)); frame.addLine(to: CGPoint(x: c.x - 14, y: c.y - 30))
+        frame.addLine(to: CGPoint(x: c.x + 14, y: c.y - 30)); frame.addLine(to: CGPoint(x: c.x + 14, y: c.y))
+        ctx.stroke(frame, with: .color(Color(red: 0.4, green: 0.27, blue: 0.14)), lineWidth: 3)
     }
 
     private func scaffold(_ ctx: inout GraphicsContext) {

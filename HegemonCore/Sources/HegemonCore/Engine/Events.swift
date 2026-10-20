@@ -68,6 +68,11 @@ extension Engine {
 
     // MARK: Effects
 
+    /// One event striking a civ now (for tests).
+    func strikeEvent(_ kind: EventKind, _ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+        strike(kind, civ, &state)
+    }
+
     private func strike(_ kind: EventKind, _ civ: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         let e = rules.events
         let owned = state.territories(of: civ)
@@ -97,7 +102,9 @@ extension Engine {
 
         case .flood:
             guard let target = richest(riverValleys(civ, state)) else { return [] }
-            let lost = min(e.floodPopulation, state.population(of: target) - rules.economy.minPopulation)
+            // Levees hold the river back: the waters rise, but no one is lost.
+            let held = state.land[target]?.improvements.contains(.levee) == true
+            let lost = held ? 0 : min(e.floodPopulation, state.population(of: target) - rules.economy.minPopulation)
             state.land[target]!.population -= max(0, lost)
             return [report(target, max(0, lost))]
 
@@ -160,8 +167,10 @@ extension Engine {
             .prefix(e.plagueTerritories)
         var lost = 0
         for t in worst {
-            let n = min(max(1, state.population(of: t) * e.plaguePopulationPercent / 100),
-                        state.population(of: t) - rules.economy.minPopulation)
+            // Drains and clean wells halve the dying.
+            let drained = state.land[t]?.improvements.contains(.drains) == true
+            let toll = max(drained ? 0 : 1, state.population(of: t) * e.plaguePopulationPercent / (drained ? 200 : 100))
+            let n = min(toll, state.population(of: t) - rules.economy.minPopulation)
             state.land[t]!.population -= max(0, n)
             lost += max(0, n)
         }

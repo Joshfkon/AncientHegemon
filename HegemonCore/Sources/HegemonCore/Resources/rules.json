@@ -1,5 +1,5 @@
 {
-  "version": 23,
+  "version": 24,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -83,6 +83,18 @@
       "gold": 5,
       "stone": 1,
       "timber": 1,
+      "turns": 2
+    },
+    "levee": {
+      "gold": 6,
+      "stone": 1,
+      "timber": 1,
+      "turns": 2
+    },
+    "drains": {
+      "gold": 6,
+      "stone": 2,
+      "timber": 0,
       "turns": 2
     }
   },

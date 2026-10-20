@@ -166,3 +166,42 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
         #expect(traded > alone)
     }
 }
+
+@Suite struct LeveeAndDrainsTests {
+    let engine = try! Engine.calm()
+
+    @Test func leveesHoldBackTheFlood() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        s.land["egypt"]!.population = 6
+        let open = engine.strikeForTest(.flood, "egypt", s)
+        #expect(open.population(of: "egypt") < 6)
+        s.land["egypt"]!.improvements.insert(.levee)
+        let held = engine.strikeForTest(.flood, "egypt", s)
+        #expect(held.population(of: "egypt") == 6)
+    }
+
+    @Test func drainsHalveThePlague() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        s.land["egypt"]!.population = 8
+        var open = s
+        _ = engine.plague("egypt", spreads: false, &open)
+        s.land["egypt"]!.improvements.insert(.drains)
+        var drained = s
+        _ = engine.plague("egypt", spreads: false, &drained)
+        #expect(8 - drained.population(of: "egypt") < 8 - open.population(of: "egypt"))
+    }
+
+    @Test func leveesNeedARiver() throws {
+        let s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        #expect(engine.canBuild(.levee, in: "egypt", s))
+        #expect(!engine.canBuild(.levee, in: "greece", s))
+    }
+}
+
+extension Engine {
+    func strikeForTest(_ kind: EventKind, _ civ: CivilizationID, _ state: GameState) -> GameState {
+        var s = state
+        _ = strikeEvent(kind, civ, &s)
+        return s
+    }
+}

@@ -89,6 +89,10 @@ public enum ProjectKind: String, Codable, Sendable, CaseIterable, CodingKeyRepre
     case harbor
     /// Stores more grain against bad years.
     case granary
+    /// Earthen banks along a river valley's river: floods there take no one.
+    case levee
+    /// Drains and clean wells: plague takes half as many here.
+    case drains
 }
 
 public struct ProjectCost: Codable, Sendable, Equatable {
