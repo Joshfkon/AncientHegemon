@@ -78,6 +78,9 @@ public struct MatchRecord: Sendable {
     /// The civ holding the most territories at the start of each round (nil on a tie), from round 1.
     public let leaders: [CivilizationID?]
     public let finalState: GameState
+    /// Lands minor kingdoms took, and how many of those were empires'.
+    public var kingdomExpansions = 0
+    public var kingdomConquests = 0
 
     public func leader(atRound round: Int) -> CivilizationID? {
         round >= 1 && round <= leaders.count ? leaders[round - 1] : nil
@@ -119,6 +122,7 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
     var formations: [FormationID: FormationRecord] = [:]
     var civBattles = OddsTally()
     var leaders: [CivilizationID?] = []
+    var kingdomExpansions = 0, kingdomConquests = 0
 
     while state.winner == nil, state.turn <= maxTurns {
         let civ = state.activePlayer
@@ -174,6 +178,9 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 }
             case let .shipsBuilt(c, _, count):
                 civs[c]?.shipsBuilt += count
+            case let .kingdomExpanded(_, _, from):
+                kingdomExpansions += 1
+                if state.isPlayer(from) { kingdomConquests += 1 }
             case let .landed(c, _, _, _):
                 civs[c]?.landings += 1
             case let .storm(c, _, ships, _):
@@ -195,7 +202,7 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
             case let .battle(report):
                 let a = report.setup.attacker, d = report.setup.defender
                 let attackerWon = report.winner == .attacker
-                let byCiv = a.civ != nativesID && a.civ != barbariansID
+                let byCiv = state.isPlayer(a.civ)
                 if attackerWon {
                     civs[a.civ]?.attacksWon += 1
                     civs[d.civ]?.defencesLost += 1
@@ -205,7 +212,7 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                     civs[d.civ]?.defencesWon += 1
                     if byCiv { civs[d.civ]?.defencesVsCivsWon += 1 }
                 }
-                if byCiv, d.civ != nativesID, d.civ != barbariansID {
+                if byCiv, state.isPlayer(d.civ) {
                     civBattles.add(attackers: a.units.total, defenders: d.units.total, attackerWon: attackerWon)
                 }
                 formations[a.formation, default: FormationRecord()].attacks += 1
@@ -230,6 +237,9 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
         }
     }
     for c in state.players where civs[c] != nil { civs[c]!.finalTerritories = state.territories(of: c).count }
-    return MatchRecord(seed: seed, winner: state.winner, turns: min(state.turn, maxTurns), civs: civs,
+    var record = MatchRecord(seed: seed, winner: state.winner, turns: min(state.turn, maxTurns), civs: civs,
                        formations: formations, civBattles: civBattles, leaders: leaders, finalState: state)
+    record.kingdomExpansions = kingdomExpansions
+    record.kingdomConquests = kingdomConquests
+    return record
 }

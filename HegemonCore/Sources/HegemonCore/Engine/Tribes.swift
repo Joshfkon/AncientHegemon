@@ -26,10 +26,10 @@ public struct TribeRules: Codable, Sendable, Equatable {
 }
 
 extension Engine {
-    /// The tribe holding a territory, if it is native land the civ could talk to: unclaimed, held
-    /// by natives, next to the civ's land, and nobody's vassal.
+    /// The natives holding a territory, if it is native land the civ could talk to: unclaimed,
+    /// held by a tribe or a kingdom, next to the civ's land, and nobody's vassal.
     public func tribe(at territory: TerritoryID, for civ: CivilizationID, in state: GameState) -> Army? {
-        guard state.owner(of: territory) == nil, let army = state.armies[territory], army.owner == nativesID,
+        guard state.owner(of: territory) == nil, let army = state.armies[territory], isNative(army.owner),
               overlord(of: territory, in: state) == nil,
               map.landNeighbors(of: territory).contains(where: { state.owner(of: $0) == civ }) else { return nil }
         return army
@@ -43,27 +43,37 @@ extension Engine {
         }
     }
 
-    public func giftCost(at territory: TerritoryID, in state: GameState) -> Int {
-        let r = rules.tribes
-        return r.giftGoldBase + r.giftGoldPerWarrior * (state.armies[territory]?.units.total ?? 0)
+    /// Warriors a parley at `territory` must reckon with: the whole kingdom's, or the tribe's.
+    private func parleyWarriors(at territory: TerritoryID, _ state: GameState) -> Int {
+        kingdom(at: territory, in: state).map { warriors(of: $0, in: state) } ?? (state.armies[territory]?.units.total ?? 0)
     }
 
-    /// Percent chance that gifts win the tribe over.
+    /// Troops a parley at `territory` can point to: next to any of the kingdom's lands, or the tribe's.
+    private func parleyTroops(at territory: TerritoryID, for civ: CivilizationID, _ state: GameState) -> Int {
+        kingdom(at: territory, in: state).map { troopsNextTo(kingdom: $0, for: civ, in: state) }
+            ?? troopsNextTo(territory, for: civ, in: state)
+    }
+
+    public func giftCost(at territory: TerritoryID, in state: GameState) -> Int {
+        let r = rules.tribes
+        return r.giftGoldBase + r.giftGoldPerWarrior * parleyWarriors(at: territory, state)
+    }
+
+    /// Percent chance that gifts win the tribe or kingdom over.
     public func giftChance(at territory: TerritoryID, for civ: CivilizationID, in state: GameState) -> Int {
         let r = rules.tribes
-        let warriors = state.armies[territory]?.units.total ?? 0
+        let warriors = parleyWarriors(at: territory, state)
         let legitimacy = (state.civs[civ]?.legitimacy ?? 50) - 50
         let writing = level(.administration, of: civ, in: state) >= 1 ? 10 : 0
-        let p = r.giftChanceBase + r.giftChancePerTroop * (troopsNextTo(territory, for: civ, in: state) - warriors)
+        let p = r.giftChanceBase + r.giftChancePerTroop * (parleyTroops(at: territory, for: civ, state) - warriors)
             + legitimacy / 2 + writing
             + magnificence(of: civ, in: state) / max(1, rules.throneRoom.magnificencePerGiftPercent)
-            + (people(at: territory, in: state) != nil ? attitude(of: territory, toward: civ, in: state) / 2 : 0)
+            + attitude(at: territory, toward: civ, in: state) / 2
         return min(r.giftChanceMax, max(r.giftChanceMin, p))
     }
 
     public func demandWorks(at territory: TerritoryID, for civ: CivilizationID, in state: GameState) -> Bool {
-        let warriors = state.armies[territory]?.units.total ?? 0
-        return troopsNextTo(territory, for: civ, in: state) >= rules.tribes.demandRatio * max(1, warriors)
+        parleyTroops(at: territory, for: civ, state) >= rules.tribes.demandRatio * max(1, parleyWarriors(at: territory, state))
     }
 
     func parley(_ territory: TerritoryID, _ kind: Parley, _ state: inout GameState) throws -> [GameEvent] {
@@ -71,6 +81,7 @@ extension Engine {
         guard let tribe = tribe(at: territory, for: civ, in: state) else { throw GameError.noTribe(territory) }
         guard !state.parleyed.contains(territory) else { throw GameError.alreadyParleyed(territory) }
         let r = rules.tribes
+        let k = kingdom(at: territory, in: state)
         state.parleyed.insert(territory)
         let joins: Bool
         switch kind {
@@ -81,35 +92,34 @@ extension Engine {
             state.civs[civ]!.gold -= cost
             joins = Int(state.rng.next() % 100) < giftChance(at: territory, for: civ, in: state)
             // Refused gifts are still remembered kindly.
-            if !joins { changeAttitude(of: territory, toward: civ, by: rules.minors.giftAttitude, &state) }
+            if !joins, let k { changeAttitude(of: k, toward: civ, by: rules.minors.giftAttitude, &state) }
         case .demand:
             joins = demandWorks(at: territory, for: civ, in: state)
             if !joins {
                 adjustLegitimacy(civ, -r.demandRefusedLegitimacy, &state)
                 state.armies[territory]!.units.infantry += 1
-                changeAttitude(of: territory, toward: civ, by: rules.minors.demandRefusedAttitude, &state)
+                if let k { changeAttitude(of: k, toward: civ, by: rules.minors.demandRefusedAttitude, &state) }
             }
         case .vassalage:
             // Only a kingdom can swear fealty; a tribe without a name just joins or doesn't.
-            guard people(at: territory, in: state) != nil else { throw GameError.noTribe(territory) }
+            guard let k else { throw GameError.noTribe(territory) }
             guard wouldSwear(territory, to: civ, in: state) else {
-                changeAttitude(of: territory, toward: civ, by: rules.minors.vassalRefusedAttitude, &state)
+                changeAttitude(of: k, toward: civ, by: rules.minors.vassalRefusedAttitude, &state)
                 return [.tribeRefused(civ: civ, territory: territory, parley: kind)]
             }
             return swear(territory, to: civ, &state)
         }
         guard joins else { return [.tribeRefused(civ: civ, territory: territory, parley: kind)] }
-        state.minors[territory] = nil
-        // The land is theirs to give; some of the warriors take service.
-        let warriors = tribe.units.total * r.warriorsJoinPercent / 100
-        state.armies[territory] = warriors > 0 ? Army(owner: civ, units: UnitCounts(infantry: warriors)) : nil
-        state.land[territory]!.owner = civ
-        taken(territory, &state)
-        var events: [GameEvent] = [.tribeJoined(civ: civ, territory: territory, parley: kind, warriors: warriors)]
-        if state.winner == nil,
-           state.territories(of: civ).count * 100 >= map.territories.count * rules.victory.territoryPercent {
-            events += declareVictory(civ, .domination, &state)
+        // The land is theirs to give (a kingdom gives all its lands); some warriors take service.
+        let warriors: Int
+        if let k {
+            warriors = absorb(k, into: civ, joinPercent: r.warriorsJoinPercent, settled: false, &state)
+        } else {
+            warriors = tribe.units.total * r.warriorsJoinPercent / 100
+            state.armies[territory] = warriors > 0 ? Army(owner: civ, units: UnitCounts(infantry: warriors)) : nil
+            state.land[territory]!.owner = civ
+            taken(territory, &state)
         }
-        return events
+        return [.tribeJoined(civ: civ, territory: territory, parley: kind, warriors: warriors)] + checkDomination(civ, &state)
     }
 }

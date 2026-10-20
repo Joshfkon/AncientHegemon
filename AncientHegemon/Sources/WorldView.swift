@@ -320,14 +320,20 @@ struct MapView: View {
                         layer.stroke(path, with: .color(color), lineWidth: 8)
                     }
                 }
-            } else if let minor = state.minors[territory.id], let lord = minor.overlord,
-                      state.armies[territory.id]?.owner == nativesID || minor.stationed != nil {
-                // A vassal people: its own land, ringed in its overlord's colour.
-                let color = Palette.color(lord, state)
-                context.fill(path, with: .color(color.opacity(0.07)))
+            } else if let k = state.stationed[territory.id]?.kingdom ?? state.armies[territory.id].flatMap({ isKingdom($0.owner) ? $0.owner : nil }),
+                      let kingdom = state.kingdoms[k] {
+                // A kingdom's land: a light wash and thin border in its colour; a vassal's is
+                // ringed, dashed, in its overlord's.
+                let color = Palette.color(k, state)
+                context.fill(path, with: .color(color.opacity(0.16)))
                 context.drawLayer { layer in
                     layer.clip(to: path)
-                    layer.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 8 * t.detail, dash: [6 * t.detail, 4 * t.detail]))
+                    if let lord = kingdom.overlord {
+                        layer.stroke(path, with: .color(Palette.color(lord, state)),
+                                     style: StrokeStyle(lineWidth: 8 * t.detail, dash: [6 * t.detail, 4 * t.detail]))
+                    } else {
+                        layer.stroke(path, with: .color(color.opacity(0.8)), lineWidth: 4 * t.detail)
+                    }
                 }
             }
             context.stroke(path, with: .color(.black.opacity(0.85)), lineWidth: 1.1)

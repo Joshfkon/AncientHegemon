@@ -269,6 +269,15 @@ for civ in civs {
           + pad(String(format: "%.1f", Double(sum(\.bountyGold)) / Double(n)), 10))
 }
 
+// The minor kingdoms: how far they spread, and how much they took from the empires.
+let kingdomLands = records.map { r in
+    engine.map.territories.filter { engine.kingdom(at: $0.id, in: r.finalState) != nil }.count
+}
+print("")
+print("kingdoms: \(String(format: "%.1f", Double(kingdomLands.reduce(0, +)) / Double(max(1, records.count)))) lands held at the end; "
+      + "\(String(format: "%.1f", Double(records.map(\.kingdomExpansions).reduce(0, +)) / Double(max(1, records.count)))) lands taken a game, "
+      + "\(String(format: "%.1f", Double(records.map(\.kingdomConquests).reduce(0, +)) / Double(max(1, records.count)))) of them from empires")
+
 // Knowledge and investment: what each empire learned by round 20, and what it built.
 let fields = KnowledgeField.allCases
 print("")

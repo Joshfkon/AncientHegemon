@@ -290,8 +290,10 @@ public struct GameState: Codable, Sendable, Equatable {
     public var sieges: [TerritoryID: Siege] = [:]
     /// The collapse has brought iron within everyone's reach.
     public var ironAge = false
-    /// Minor kingdoms: the named peoples holding native land, and what they remember.
-    public var minors: [TerritoryID: MinorState] = [:]
+    /// Minor kingdoms, by banner: the named peoples, their rulers and what they remember.
+    public var kingdoms: [CivilizationID: Kingdom] = [:]
+    /// Kingdoms' warriors standing beside an overlord's garrison, by territory.
+    public var stationed: [TerritoryID: Stationed] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held
@@ -355,9 +357,13 @@ public struct GameState: Codable, Sendable, Equatable {
             let count = natives.tribe(in: t, island: map.landNeighbors(of: t.id).isEmpty)
             if count > 0 { armies[t.id] = Army(owner: nativesID, units: UnitCounts(infantry: count)) }
         }
-        var minors: [TerritoryID: MinorState] = [:]
-        for (t, _) in rules.minors.peoples {
-            if let army = armies[t], army.owner == nativesID { minors[t] = MinorState(startWarriors: army.units.total) }
+        // Each named people's warriors carry their own banner.
+        var kingdoms: [CivilizationID: Kingdom] = [:]
+        for (t, people) in rules.minors.peoples {
+            guard let army = armies[t], army.owner == nativesID else { continue }
+            let k = kingdomID(t)
+            kingdoms[k] = Kingdom(homeland: t, name: people.name, ruler: people.ruler)
+            armies[t]!.owner = k
         }
 
         self.mapVersion = map.version
@@ -375,7 +381,7 @@ public struct GameState: Codable, Sendable, Equatable {
         self.armies = armies
         self.moved = [:]
         self.generals = generals
-        self.minors = minors
+        self.kingdoms = kingdoms
         self.fleets = startingFleets
         self.generalsMoved = []
         self.peace = []

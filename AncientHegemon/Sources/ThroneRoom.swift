@@ -230,6 +230,9 @@ struct Hall: View {
     let state: GameState
     /// False when the ruler sits there in person (an audience): their own throne is drawn with them.
     var emptyThrone = true
+    /// Built as this empire builds, when not as `civ` does (a minor kingdom's hall).
+    var look: String? = nil
+    private var builder: String { look ?? civ }
     @State private var flicker = false
 
     private struct Style {
@@ -240,7 +243,7 @@ struct Hall: View {
     }
 
     private var style: Style {
-        switch civ {
+        switch builder {
         case "egypt": Style(wall: [Color(red: 0.86, green: 0.74, blue: 0.52), Color(red: 0.72, green: 0.58, blue: 0.38)],
                             floor: Color(red: 0.62, green: 0.5, blue: 0.34), column: Color(red: 0.9, green: 0.8, blue: 0.6),
                             frieze: Color(red: 0.15, green: 0.45, blue: 0.55))
@@ -277,7 +280,7 @@ struct Hall: View {
             ZStack(alignment: .topLeading) {
                 // Back wall, with a painted frieze, and glazed bricks in Mesopotamia.
                 LinearGradient(colors: s.wall, startPoint: .top, endPoint: .bottom)
-                if civ == "mesopotamia" {
+                if builder == "mesopotamia" {
                     Path { p in
                         for row in stride(from: 0, to: floorTop, by: 14) {
                             p.move(to: CGPoint(x: 0, y: row)); p.addLine(to: CGPoint(x: w, y: row))

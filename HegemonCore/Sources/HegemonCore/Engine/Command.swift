@@ -111,6 +111,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case annexed(civ: CivilizationID, territory: TerritoryID)
     /// A warlike people raided an empire's land; `won` if they got through to plunder.
     case peopleRaided(people: TerritoryID, territory: TerritoryID, civ: CivilizationID, gold: Int, won: Bool)
+    /// A kingdom took a land next door, from an empire, a tribe or another kingdom (or settled it).
+    case kingdomExpanded(kingdom: CivilizationID, territory: TerritoryID, from: CivilizationID?)
     /// A people came over to an empire of its own accord.
     case peopleJoined(civ: CivilizationID, territory: TerritoryID, warriors: Int)
     case decorated(civ: CivilizationID, decoration: DecorationID)

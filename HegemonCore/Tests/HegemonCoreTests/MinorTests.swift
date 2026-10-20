@@ -1,6 +1,8 @@
 import Testing
 @testable import HegemonCore
 
+private let thrace = kingdomID("thrace")
+
 @Suite struct MinorKingdomTests {
     let engine = try! Engine.calm()
 
@@ -8,29 +10,31 @@ import Testing
     func greeceBesideThrace(troops: Int = 6) throws -> GameState {
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         s.land["macedonia"]!.owner = "greece"
-        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: troops))
+        s.armies["macedonia"] = troops > 0 ? Army(owner: "greece", units: UnitCounts(infantry: troops)) : nil
+        s.armies["thrace"] = Army(owner: thrace, units: UnitCounts(infantry: 3))
         s.civs["greece"]!.gold = 100
         return s
     }
 
-    @Test func nativeLandsArePeoplesButHomelandsAreNot() throws {
+    @Test func nativeLandsAreKingdomsButHomelandsAreTribes() throws {
         let s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         #expect(engine.people(at: "anatolia", in: s)?.name == "Hatti")
+        #expect(s.armies["anatolia"]?.owner == kingdomID("anatolia"))
         #expect(engine.people(at: "thrace", in: s)?.temperament == .warlike)
         #expect(engine.people(at: "scythe", in: s) == nil)
+        #expect(s.armies["scythe"]?.owner == nativesID)
         #expect(engine.people(at: "greece", in: s) == nil)
     }
 
     @Test func aVassalPaysTributeAndIsShielded() throws {
         var s = try greeceBesideThrace()
-        let warriors = s.armies["thrace"]!.units.total
         let events = try engine.apply(.parley(territory: "thrace", .vassalage), to: &s)
         #expect(events == [.vassalSworn(civ: "greece", territory: "thrace")])
         #expect(engine.overlord(of: "thrace", in: s) == "greece")
         // They keep their land and warriors.
         #expect(s.owner(of: "thrace") == nil)
-        #expect(s.armies["thrace"]?.units.total == warriors)
-        #expect(engine.peoplesGold(of: "greece", in: s).tribute == engine.tribute(of: "thrace"))
+        #expect(s.armies["thrace"]?.units.total == 3)
+        #expect(engine.peoplesGold(of: "greece", in: s).tribute == engine.tribute(of: thrace, in: s))
         #expect(engine.prestigeBreakdown(of: "greece", in: s).contains { $0.source == "Vassals" })
         // Nobody at peace with Greece may touch them, nor Greece itself (its troops march in
         // only as a garrison).
@@ -48,10 +52,10 @@ import Testing
 
     @Test func tooFewTroopsAndTheyRefuseAndResentIt() throws {
         var s = try greeceBesideThrace(troops: 2)
-        let before = engine.attitude(of: "thrace", toward: "greece", in: s)
+        let before = engine.attitude(of: thrace, toward: "greece", in: s)
         let events = try engine.apply(.parley(territory: "thrace", .vassalage), to: &s)
         #expect(events == [.tribeRefused(civ: "greece", territory: "thrace", parley: .vassalage)])
-        #expect(engine.attitude(of: "thrace", toward: "greece", in: s) < before)
+        #expect(engine.attitude(of: thrace, toward: "greece", in: s) < before)
     }
 
     @Test func refusedGiftsAreRememberedKindly() throws {
@@ -63,7 +67,20 @@ import Testing
         }
         var s = try greeceBesideThrace(troops: 1)
         try stubborn.apply(.parley(territory: "thrace", .gifts), to: &s)
-        #expect(stubborn.attitude(of: "thrace", toward: "greece", in: s) == stubborn.rules.minors.giftAttitude)
+        #expect(stubborn.attitude(of: thrace, toward: "greece", in: s) == stubborn.rules.minors.giftAttitude)
+    }
+
+    @Test func aKingdomOfSeveralLandsSwearsAndJoinsAsAWhole() throws {
+        var s = try greeceBesideThrace(troops: 25)
+        // Thrace has taken Dacia: its terms reckon with all its warriors, and it comes over whole.
+        s.armies["dacia"] = Army(owner: thrace, units: UnitCounts(infantry: 4))
+        #expect(engine.lands(of: thrace, in: s) == ["dacia", "thrace"])
+        #expect(engine.warriors(of: thrace, in: s) == 7)
+        #expect(engine.giftCost(at: "thrace", in: s) > engine.giftCost(at: "anatolia", in: s))
+        try engine.apply(.parley(territory: "thrace", .demand), to: &s)
+        #expect(s.owner(of: "thrace") == "greece")
+        #expect(s.owner(of: "dacia") == "greece")
+        #expect(s.kingdoms[thrace] == nil)
     }
 
     @Test func leviesAndPeacefulAnnexation() throws {
@@ -78,32 +95,32 @@ import Testing
             try engine.apply(.levy(territory: "thrace", to: "macedonia"), to: &s)
         }
         #expect(throws: GameError.tooSoon("thrace")) { try engine.apply(.annex(territory: "thrace"), to: &s) }
-        s.minors["thrace"]!.vassalSince = s.turn - engine.rules.minors.annexRounds
+        s.kingdoms[thrace]!.vassalSince = s.turn - engine.rules.minors.annexRounds
         try engine.apply(.annex(territory: "thrace"), to: &s)
         #expect(s.owner(of: "thrace") == "greece")
         #expect(s.armies["thrace"]?.owner == "greece")
         // Annexed in peace: not newly taken, so no unrest from it.
         #expect(s.land["thrace"]!.takenOnRound == nil)
-        #expect(s.minors["thrace"] == nil)
+        #expect(s.kingdoms[thrace] == nil)
     }
 
     @Test func attacksAreHatedAndFeared() throws {
         var s = try greeceBesideThrace(troops: 1)
         try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 1)), to: &s)
-        #expect(engine.attitude(of: "thrace", toward: "greece", in: s) == engine.rules.minors.attackedAttitude)
-        #expect(engine.attitude(of: "dacia", toward: "greece", in: s) == engine.rules.minors.fearAttitude)
+        #expect(engine.attitude(of: thrace, toward: "greece", in: s) == engine.rules.minors.attackedAttitude)
+        #expect(engine.attitude(of: kingdomID("dacia"), toward: "greece", in: s) == engine.rules.minors.fearAttitude)
     }
 
-    @Test func warlikePeoplesRaidEmpiresTheyHate() throws {
+    @Test func warlikeKingdomsRaidEmpiresTheyHate() throws {
         let fierce = try engine.modified { json in
             var minors = json["minors"] as! [String: Any]
             minors["raidPercent"] = 100
+            minors["expandPercent"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
             json["minors"] = minors
         }
         var s = try greeceBesideThrace(troops: 0)
-        s.armies["macedonia"] = nil
         s.armies["thrace"]!.units = UnitCounts(infantry: 6)
-        s.minors["thrace"]!.attitude["greece"] = -60
+        s.kingdoms[thrace]!.attitude["greece"] = -60
         s.turn = 7
         let gold = s.civs["greece"]!.gold
         let events = fierce.minorsRound(&s)
@@ -112,17 +129,61 @@ import Testing
         #expect(s.civs["greece"]!.gold == gold - 4)
         // They go home; the land stays Greek.
         #expect(s.owner(of: "macedonia") == "greece")
-        #expect(s.armies["thrace"]?.owner == nativesID)
+        #expect(s.armies["thrace"]?.owner == thrace)
     }
 
-    @Test func belovedEmpiresWinPeoplesOver() throws {
+    @Test func warlikeKingdomsTakeWeakLandNextDoor() throws {
+        let hungry = try engine.modified { json in
+            var minors = json["minors"] as! [String: Any]
+            minors["expandPercent"] = ["warlike": 100, "proud": 0, "mercantile": 0, "peaceable": 0]
+            json["minors"] = minors
+        }
+        var s = try greeceBesideThrace(troops: 0)
+        s.armies["thrace"]!.units = UnitCounts(infantry: 9)
+        // Their neighbours are thin on the ground; Macedonia is Greek, and Thrace doesn't hate Greece.
+        for n in ["dacia", "anatolia"] { s.armies[n] = Army(owner: kingdomID(n), units: UnitCounts(infantry: 1)) }
+        let events = hungry.minorsRound(&s)
+        let took = events.compactMap { e -> TerritoryID? in
+            if case let .kingdomExpanded(k, t, _) = e, k == thrace { t } else { nil }
+        }
+        #expect(took.count == 1)
+        let won = try #require(took.first)
+        #expect(hungry.kingdom(at: won, in: s) == thrace)
+        #expect(hungry.lands(of: thrace, in: s).count == 2)
+        // One warrior stays home.
+        #expect(s.armies["thrace"]?.units.total == 1)
+        #expect(s.owner(of: "macedonia") == "greece")
+    }
+
+    @Test func gentleKingdomsOnlySettleEmptyLand() throws {
+        let settlers = try engine.modified { json in
+            var minors = json["minors"] as! [String: Any]
+            minors["expandPercent"] = ["warlike": 0, "proud": 0, "mercantile": 100, "peaceable": 100]
+            json["minors"] = minors
+        }
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        // The Sicels (peaceable) beside a weak Italian-born kingdom: they won't attack it…
+        let sicels = kingdomID("sicilia")
+        s.armies["sicilia"] = Army(owner: sicels, units: UnitCounts(infantry: 9))
+        for n in engine.map.landNeighbors(of: "sicilia") { s.armies[n] = Army(owner: nativesID, units: UnitCounts(infantry: 1)) }
+        let before = engine.lands(of: sicels, in: s).count
+        _ = settlers.minorsRound(&s)
+        #expect(settlers.lands(of: sicels, in: s).count == before)
+        // …but empty land next door they settle.
+        guard let empty = engine.map.landNeighbors(of: "sicilia").sorted().first else { return }
+        s.armies[empty] = nil
+        _ = settlers.minorsRound(&s)
+        #expect(settlers.kingdom(at: empty, in: s) == sicels)
+    }
+
+    @Test func belovedEmpiresWinKingdomsOver() throws {
         let fond = try engine.modified { json in
             var minors = json["minors"] as! [String: Any]
             minors["joinPercent"] = 100
             json["minors"] = minors
         }
         var s = try greeceBesideThrace()
-        s.minors["thrace"]!.attitude["greece"] = 100
+        s.kingdoms[thrace]!.attitude["greece"] = 100
         let events = fond.minorsRound(&s)
         #expect(events.contains { if case .peopleJoined("greece", "thrace", _) = $0 { true } else { false } })
         #expect(s.owner(of: "thrace") == "greece")
@@ -152,8 +213,8 @@ import Testing
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         s.land["macedonia"]!.owner = "greece"
         s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 12))
-        s.minors["thrace"]!.overlord = "greece"
-        s.minors["thrace"]!.vassalSince = s.turn
+        s.kingdoms[thrace]!.overlord = "greece"
+        s.kingdoms[thrace]!.vassalSince = s.turn
         return s
     }
 
@@ -165,9 +226,9 @@ import Testing
         #expect(s.owner(of: "anatolia") == "greece")
         // The vassal's warriors stand aside and stay home.
         #expect(s.armies["thrace"]?.units == warriors)
-        #expect(s.armies["thrace"]?.owner == nativesID)
+        #expect(s.armies["thrace"]?.owner == thrace)
         // No passage without a vassal on the way.
-        s.minors["thrace"]!.overlord = nil
+        s.kingdoms[thrace]!.overlord = nil
         s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 3))
         #expect(throws: GameError.notAdjacent("macedonia", "anatolia")) {
             try engine.apply(.move(from: "macedonia", to: "anatolia", units: UnitCounts(infantry: 1)), to: &s)
@@ -179,14 +240,12 @@ import Testing
         s.land["greece"]!.owner = "greece"
         s.land["anatolia"]!.owner = "greece"
         s.armies["anatolia"] = nil
-        // Anatolia is reached through Thrace, so it's in the home network...
         #expect(engine.homeNetwork(of: "greece", in: s).contains("anatolia"))
-        // ...but Thrace itself isn't Greek land.
         #expect(!engine.homeNetwork(of: "greece", in: s).contains("thrace"))
         // Egyptian ships close every sea: the only way is overland, through Thrace.
         s.fleets = engine.map.seas.map { Fleet(sea: $0.id, owner: "egypt", ships: 1) }
         #expect(engine.supplyRoute(of: "greece", to: "anatolia", in: s)?.contains(.land("thrace")) == true)
-        s.minors["thrace"]!.overlord = nil
+        s.kingdoms[thrace]!.overlord = nil
         #expect(!engine.homeNetwork(of: "greece", in: s).contains("anatolia"))
     }
 }
@@ -198,9 +257,9 @@ import Testing
         var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
         s.land["macedonia"]!.owner = "greece"
         s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 8))
-        s.armies["thrace"] = Army(owner: nativesID, units: UnitCounts(infantry: 3))
-        s.minors["thrace"]!.overlord = "greece"
-        s.minors["thrace"]!.vassalSince = s.turn
+        s.armies["thrace"] = Army(owner: thrace, units: UnitCounts(infantry: 3))
+        s.kingdoms[thrace]!.overlord = "greece"
+        s.kingdoms[thrace]!.vassalSince = s.turn
         return s
     }
 
@@ -212,7 +271,6 @@ import Testing
         #expect(s.armies["thrace"]?.units.infantry == 5)
         #expect(engine.warriors(at: "thrace", in: s) == 3)
         #expect(engine.garrisoned("thrace", in: s))
-        // Still their land, still a vassal.
         #expect(s.owner(of: "thrace") == nil)
         #expect(engine.overlord(of: "thrace", in: s) == "greece")
         // The warriors fight beside the garrison, as its levy.
@@ -225,9 +283,9 @@ import Testing
         try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
         s.moved = [:]
         try engine.apply(.move(from: "thrace", to: "macedonia", units: UnitCounts(infantry: 5)), to: &s)
-        #expect(s.armies["thrace"]?.owner == nativesID)
+        #expect(s.armies["thrace"]?.owner == thrace)
         #expect(s.armies["thrace"]?.units.infantry == 3)
-        #expect(s.minors["thrace"]?.stationed == nil)
+        #expect(s.stationed["thrace"] == nil)
         #expect(engine.overlord(of: "thrace", in: s) == "greece")
     }
 
@@ -241,7 +299,6 @@ import Testing
         try restless.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
         s.armies["macedonia"] = nil
         #expect(!restless.minorsRound(&s).contains(.vassalFreed(civ: "greece", territory: "thrace")))
-        // Through Greece's turns, the garrison loses nobody to hunger or cut-off supply.
         for _ in 0..<4 { try restless.apply(.endTurn, to: &s) }
         #expect(s.armies["thrace"]?.units.infantry == 5)
     }

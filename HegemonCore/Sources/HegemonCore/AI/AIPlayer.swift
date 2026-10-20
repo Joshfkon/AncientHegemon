@@ -69,9 +69,14 @@ public struct AIPlayer: Sendable {
 
     // MARK: Assessment
 
-    /// Whether another army's owner is a danger. Natives fight back but never attack.
+    /// Whether another army's owner is a danger. Tribes fight back but never attack; kingdoms
+    /// attack only empires they hate, and only the warlike.
     func hostile(_ civ: CivilizationID, _ other: CivilizationID?, _ state: GameState) -> Bool {
         guard let other, other != nativesID else { return false }
+        if isKingdom(other) {
+            return engine.people(of: other, in: state)?.temperament == .warlike
+                && engine.attitude(of: other, toward: civ, in: state) <= rules.minors.raidAttitude
+        }
         return state.atWar(civ, other)
     }
 
@@ -335,16 +340,19 @@ public struct AIPlayer: Sendable {
     /// in between, the gentler empires take vassals and the warlike conquer. A true conqueror
     /// takes no vassals at all.
     func courtPeoples(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
-        for t in state.minors.keys.sorted() {
-            let grain = map.territory(t)!.grain
-            // A true conqueror takes no oaths: it conquers.
-            let swear = personality.aggression < 1.3 && (grain <= 3 || (grain < 5 && personality.aggression < 1))
-            if swear, engine.tribe(at: t, for: civ, in: state) != nil, engine.people(at: t, in: state) != nil,
-               !state.parleyed.contains(t), engine.wouldSwear(t, to: civ, in: state) {
-                attempt(.parley(territory: t, .vassalage), &state, &turn)
-            } else if engine.overlord(of: t, in: state) == civ, engine.annexWait(t, in: state) == 0 {
-                attempt(.annex(territory: t), &state, &turn)
+        for k in state.kingdoms.keys.sorted() {
+            let lands = engine.lands(of: k, in: state)
+            guard let first = lands.first else { continue }
+            if state.kingdoms[k]?.overlord == civ {
+                if engine.annexWait(first, in: state) == 0 { attempt(.annex(territory: first), &state, &turn) }
+                continue
             }
+            // Judged by its richest land. A true conqueror takes no oaths: it conquers.
+            let grain = lands.map { map.territory($0)!.grain }.max() ?? 0
+            let swear = personality.aggression < 1.3 && (grain <= 3 || (grain < 5 && personality.aggression < 1))
+            guard swear, let t = lands.first(where: { engine.tribe(at: $0, for: civ, in: state) != nil && !state.parleyed.contains($0) }),
+                  engine.wouldSwear(t, to: civ, in: state) else { continue }
+            attempt(.parley(territory: t, .vassalage), &state, &turn)
         }
     }
 
@@ -368,7 +376,10 @@ public struct AIPlayer: Sendable {
         for (camp, _) in state.armies(of: civ).sorted(by: { $0.territory < $1.territory }) {
             let ready = readyUnits(at: camp, state)
             guard ready.total > 0, !state.sieges.values.contains(where: { $0.camp == camp && $0.civ == civ }) else { continue }
-            let towns = map.landNeighbors(of: camp).filter { engine.canBesiege($0, from: camp, by: civ, state) }
+            // No siege under a bad omen, as no attack.
+            let towns = map.landNeighbors(of: camp).filter {
+                engine.canBesiege($0, from: camp, by: civ, state) && (try? engine.checkOmen(civ, attacking: $0, state)) != nil
+            }
             for town in towns.sorted() {
                 guard let d = engine.defenders(of: town, against: civ, state),
                       Double(ready.total) >= Double(d.army.units.total + d.levy) * 0.8,

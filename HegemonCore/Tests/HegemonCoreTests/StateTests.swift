@@ -57,7 +57,8 @@ import Testing
         let state = try GameState(map: map, rules: rules, seed: 1)
         let n = rules.start.natives
         for t in map.territories where state.owner(of: t.id) == nil {
-            #expect(state.armies[t.id]?.owner == nativesID)
+            // A nameless tribe, or a named kingdom under its own banner.
+            #expect(isNative(state.armies[t.id]?.owner))
             let base = map.landNeighbors(of: t.id).isEmpty ? n.islandBase ?? n.base : n.base
             #expect(state.armies[t.id]?.units.infantry == base + t.grain / n.grainPerUnit)
         }

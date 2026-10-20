@@ -37,6 +37,8 @@ import Testing
         // Greece's heartland touches few coasts by land; the AI must build ships to reach more.
         let engine = try Engine.calm()
         var s = try engine.newGame(seed: 4, civilizations: ["greece"])
+        // Kingdoms are tough now: a weakly held island worth an expedition.
+        s.armies["crete"]!.units.infantry = 1
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         var built = 0
         var seaborneCaptures = 0
@@ -93,7 +95,7 @@ import Testing
         // A turn with no battles must use the game's RNG exactly as a bare end of turn does
         // (events at the next turn's start): the AI's estimates use their own seeds.
         var s = try engine.newGame(seed: 9, civilizations: ["mesopotamia"])
-        s.armies = s.armies.filter { $0.value.owner != nativesID }  // nothing to fight
+        s.armies = s.armies.filter { !isNative($0.value.owner) }  // nothing to fight
         var passive = s
         try engine.apply(.endTurn, to: &passive)
         let turn = AIPlayer(engine: engine, personality: .turtle).playTurn(&s)
@@ -128,7 +130,7 @@ import Testing
     @Test func nativesDefendButAreNotPlayers() throws {
         var s = try Engine.bundled().newGame(seed: 1, civilizations: ["mesopotamia"])
         let full = try Engine.bundled()
-        #expect(s.armies["media"]?.owner == nativesID)
+        #expect(s.armies["media"]?.owner == kingdomID("media"))
         s.armies["mesopotamia"]!.units.infantry = 15
         let events = try full.apply(.move(from: "mesopotamia", to: "media", units: UnitCounts(infantry: 15)), to: &s)
         #expect(events.contains { if case .battle = $0 { true } else { false } })

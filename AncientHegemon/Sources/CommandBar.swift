@@ -128,11 +128,21 @@ struct CommandBar: View {
                 Text("\(people.name.capitalizedFirst) · \(people.ruler) · \(t.terrain.rawValue)")
                     .font(.caption).foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1).minimumScaleFactor(0.7)
+                if session.human != nil {
+                    Button { session.kingdomAudience = KingdomAudience(territory: id) } label: {
+                        Label("Meet \(people.ruler)", systemImage: "person.crop.circle")
+                            .font(.caption.bold()).lineLimit(1)
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Bronze.gradient, in: Capsule())
+                            .foregroundStyle(.black)
+                    }
+                    .buttonStyle(.plain)
+                }
                 if let lord = engine.overlord(of: id, in: state) {
                     Label(lord == session.human ? "Your vassal" : "Vassal of \(Palette.name(lord, state))", systemImage: "crown")
                         .font(.caption2.bold()).foregroundStyle(Palette.color(lord, state))
                 } else if let human = session.human {
-                    let a = engine.attitude(of: id, toward: human, in: state)
+                    let a = engine.attitude(at: id, toward: human, in: state)
                     Text("\(PeopleText.temperament(people.temperament).capitalizedFirst) · \(PeopleText.mood(a))")
                         .font(.caption2.bold()).foregroundStyle(PeopleText.moodColor(a))
                         .lineLimit(1).minimumScaleFactor(0.7)
@@ -403,7 +413,7 @@ struct CommandBar: View {
     }
 
     @ViewBuilder private func tribeSection(_ id: TerritoryID, _ human: CivilizationID) -> some View {
-        let warriors = state.armies[id].flatMap { $0.owner == nativesID ? $0.units.total : nil } ?? 0
+        let warriors = state.armies[id].flatMap { isNative($0.owner) ? $0.units.total : nil } ?? 0
         if engine.overlord(of: id, in: state) == human {
             vassalSection(id, human, engine.warriors(at: id, in: state))
         } else {
@@ -435,7 +445,7 @@ struct CommandBar: View {
                     let swears = engine.wouldSwear(id, to: human, in: state)
                     Tile(symbol: "crown", title: "Make vassal",
                          detail: swears ? "They'll swear to you: tribute, levies, no unrest" : "They'd refuse: you need \(engine.rules.minors.vassalRatio)× their warriors nearby, or their friendship",
-                         cost: Text(swears ? "+\(engine.tribute(of: id)) gold a turn" : "Sours them if refused"), enabled: true) {
+                         cost: Text(swears ? "+\(engine.tribute(at: id, in: state)) gold a turn" : "Sours them if refused"), enabled: true) {
                         session.order(.parley(territory: id, .vassalage))
                     }
                 }
@@ -448,7 +458,7 @@ struct CommandBar: View {
     @ViewBuilder private func vassalSection(_ id: TerritoryID, _ human: CivilizationID, _ warriors: Int) -> some View {
         section("Vassal") {
             Tile(symbol: "dollarsign.circle.fill", title: "Tribute", detail: "Paid every turn; no garrison needed, no unrest",
-                 cost: Text("+\(engine.tribute(of: id)) gold a turn"), enabled: false) {}
+                 cost: Text("+\(engine.tribute(at: id, in: state)) gold a turn"), enabled: false) {}
             // Levies march to the neighbouring land of yours with the biggest army.
             let fronts = engine.map.landNeighbors(of: id).filter { t in
                 state.owner(of: t) == human && (state.armies[t].map { $0.owner == human } ?? true)

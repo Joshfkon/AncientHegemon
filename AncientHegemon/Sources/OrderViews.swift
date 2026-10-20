@@ -726,7 +726,7 @@ struct TribeTalks: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Diplomacy").font(.subheadline.bold())
-            let warriors = state.armies[territory].flatMap { $0.owner == nativesID ? $0.units.total : nil } ?? 0
+            let warriors = state.armies[territory].flatMap { isNative($0.owner) ? $0.units.total : nil } ?? 0
             if warriors == 0 {
                 note("Nobody lives here to treat with. March a single unit in to claim it.")
             } else if engine.tribe(at: territory, for: civ, in: state) == nil {

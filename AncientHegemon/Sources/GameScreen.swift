@@ -161,6 +161,9 @@ struct GameScreen: View {
         .fullScreenCover(item: $session.muster) { muster in
             BattlefieldView(session: session, muster: muster)
         }
+        .fullScreenCover(item: $session.kingdomAudience) { a in
+            KingdomAudienceView(session: session, territory: a.territory) { session.kingdomAudience = nil }
+        }
         .fullScreenCover(item: $session.audience) { a in
             AudienceView(session: session, audience: a) { session.audience = nil }
         }
@@ -267,6 +270,8 @@ struct GameScreen: View {
                let t = session.demoVassal(sworn: how != "look") {
                 selected = .territory(how == "march" ? (session.human.flatMap { engine.seat(of: $0, in: state) } ?? t) : t)
             }
+            // -demoKingdom anatolia: an audience with that land's kingdom's ruler.
+            if let t = UserDefaults.standard.string(forKey: "demoKingdom") { session.kingdomAudience = KingdomAudience(territory: t) }
             if UserDefaults.standard.string(forKey: "demoThrone") != nil {
                 session.demoDecorate()
                 showThrone = true

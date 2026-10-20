@@ -170,6 +170,8 @@ final class GameSession {
 
     /// The rival ruler the player stands before, and those waiting to be received.
     var audience: Audience?
+    /// An audience with a minor kingdom's ruler, opened from its land.
+    var kingdomAudience: KingdomAudience?
     private var waitingAudiences: [Audience] = []
 
     /// Shows the next ruler waiting for an audience, if any.
@@ -771,7 +773,10 @@ final class GameSession {
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name ?? engine.map.sea($0)?.name } ?? "?" }
-        func peopleName(_ t: TerritoryID) -> String { engine.rules.minors.peoples[t]?.name ?? "The people of \(place(t))" }
+        func peopleName(_ t: TerritoryID) -> String {
+            engine.people(at: t, in: after)?.name ?? engine.people(at: t, in: before)?.name
+                ?? engine.rules.minors.peoples[t]?.name ?? "The people of \(place(t))"
+        }
         /// Land next to the player's: news of it matters to them.
         func isNeighbour(_ t: TerritoryID) -> Bool {
             guard let human else { return false }
@@ -816,6 +821,17 @@ final class GameSession {
             case let .captured(civ, t, from) where before.isPlayer(from) || after.isPlayer(civ) && from != nil:
                 let verb = after.isPlayer(civ) ? "takes" : "seize"
                 add(civ, "\(name(civ)) \(verb) \(place(t)) from \(name(from))", at: t)
+            // A kingdom grows at a tribe's or another kingdom's expense, or settles empty land
+            // (taking an empire's land is told above).
+            case let .kingdomExpanded(k, t, from) where !before.isPlayer(from):
+                let taker = name(k)
+                if let from, isKingdom(from) {
+                    add(k, "\(taker) conquer \(place(t)) from \(name(from))", at: t)
+                } else if from != nil {
+                    add(k, "\(taker) subdue the tribes of \(place(t))", at: t)
+                } else {
+                    add(k, "\(taker) settle \(place(t))", at: t)
+                }
             case let .civilWar(civ, rebel, _, territories):
                 add(rebel, "CIVIL WAR in \(name(civ)): \(name(rebel)) seize \(territories.map { place($0) }.joined(separator: ", "))")
             case let .rulerDied(civ, ruler, age, cause):
@@ -995,8 +1011,9 @@ final class GameSession {
         guard let human, let seat = engine.seat(of: human, in: state),
               let t = engine.map.landNeighbors(of: seat).sorted().first(where: { engine.people(at: $0, in: state) != nil }) else { return nil }
         guard sworn else { return t }
-        state.minors[t]!.overlord = human
-        state.minors[t]!.vassalSince = state.turn
+        guard let k = engine.kingdom(at: t, in: state) else { return t }
+        state.kingdoms[k]!.overlord = human
+        state.kingdoms[k]!.vassalSince = state.turn
         return t
     }
 

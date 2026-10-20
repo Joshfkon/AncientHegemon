@@ -1919,3 +1919,43 @@ goals: everything here follows from how real Bronze Age empires held together or
   ended your turn (harvest, pay, starvation, discoveries, storms, plunder).
 - Debug launch argument `-demoAdvisor YES` shows the first advisor with something to say; a topic
   key such as `-demoAdvisor intro.besieged` (with `-demoBesieged YES`) shows that one.
+
+### Kingdoms: stronger, expanding, with leaders (Josh: "too easy to expand empires now. Lets make the independent regions stronger… leaders for them and let them be their own AIs and expand")
+
+- **Their own banner.** Each named people is now a kingdom with its own owner id
+  (`kingdomID(homeland)` = "k_" + homeland, `GameState.kingdoms`), colour and ruler; its
+  warriors are its own, not just "natives". A kingdom's lands are wherever its warriors stand on
+  unclaimed land (or stand beside its overlord's garrison: `GameState.stationed`). Nameless
+  tribes (the barbarian homelands) are still `nativesID`.
+- **Stronger.** Native strength is now 2 + 1 per 2 grain (was per 3): rich lands field more
+  (Gaul 5, Sicily 5, Anatolia 4), poor ones the same. Lost warriors grow back to one above that.
+  A kingdom's people also take up arms in defence, at half an empire's levy (small lands raise
+  none). Trying 3 + 1 per 3 left the empires stuck at 1–3 lands.
+- **Expanding.** Each round a kingdom may try to take one land next door (warlike 30%, proud
+  15%, mercantile and peaceable 8%), sending all but one warrior of a land with 3+, only where
+  they outnumber the defenders (garrison and levy) by half again. Peaceable and mercantile
+  kingdoms only settle empty land; tribes and other kingdoms are attacked only by the warlike
+  and proud; empires' land (or an empire's army on unclaimed land) only by the warlike, and only
+  empires they hate. Nobody's capital is taken. What they win joins the kingdom.
+- **Diplomacy with the whole kingdom.** Gifts, demands and offers of vassalage reckon with all
+  its warriors and all your troops next to any of its lands; a kingdom that comes over (gifts,
+  demand, its own love for you) brings all its lands; vassalage, tribute (from all its grain),
+  levies and annexation are the whole kingdom's.
+- **AI.** Empires treat a kingdom as a threat only if it is warlike and hates them (treating
+  every warlike or proud kingdom as one made them hoard garrisons and stop expanding). They
+  weigh a kingdom by its richest land when choosing between vassalage and conquest. The AI's
+  levy estimate counts a kingdom's people.
+- **Leaders.** "Meet <ruler>" on any kingdom's land opens an audience: the ruler on their throne
+  in a hall like their neighbours', dressed as their people dress (new looks: the Hittites' tall
+  pointed cap; Libyan feathers and sidelock; northern braids and gold torc; or a Mycenaean or
+  Levantine style), their face and words showing how they feel about you, with gifts,
+  protection and demands offered from there.
+- **Map and news.** Kingdom land carries a light wash and border in its colour (a vassal's is
+  dashed in its overlord's). The chronicle tells of kingdoms conquering each other, subduing
+  tribes, settling empty land, and seizing empires' land.
+- The sim now reports kingdoms' lands at the end, lands taken a game, and how many from empires.
+- Balance (80 games): Greece 27%, Egypt 27%, Italia 22%, Mesopotamia 22%; empires average
+  1.7–5.1 lands at the end (they were 2–9); kingdoms hold ~12 lands at the end and take ~4.5 a
+  game. Every game now ends in a legacy win: with kingdoms in between, the empires meet
+  later and fight each other less. Rules version 29.
+- Debug launch argument: `-demoKingdom <territory>` opens an audience with that land's ruler.

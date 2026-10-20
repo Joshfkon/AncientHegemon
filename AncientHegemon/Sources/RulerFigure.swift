@@ -13,6 +13,11 @@ struct RulerFigure: View {
     var mood: Mood = .neutral
     /// Changes whenever they begin to speak (the mouth moves for a couple of seconds).
     var speaking: Int = 0
+    /// How they dress, when not as their empire does: the minor kingdoms' rulers ("hatti",
+    /// "libyan", "north", "chief", or an empire's style).
+    var look: String? = nil
+
+    private var style: String { look ?? civ }
 
     @State private var spokeAt = Date.distantPast
 
@@ -34,16 +39,21 @@ struct RulerFigure: View {
 
     private var robe: Color { Palette.color(civ, state) }
     private var skin: Color {
-        switch civ {
+        switch style {
         case "egypt": Color(red: 0.62, green: 0.42, blue: 0.27)
         case "mesopotamia": Color(red: 0.66, green: 0.47, blue: 0.32)
+        case "hatti": Color(red: 0.74, green: 0.53, blue: 0.37)
+        case "libyan": Color(red: 0.52, green: 0.34, blue: 0.21)
+        case "north": Color(red: 0.92, green: 0.76, blue: 0.64)
         default: Color(red: 0.86, green: 0.67, blue: 0.5)
         }
     }
     private var hair: Color {
-        switch civ {
+        switch style {
         case "greece": Color(red: 0.32, green: 0.22, blue: 0.14)
         case "italia": Color(red: 0.25, green: 0.17, blue: 0.11)
+        case "north": Color(red: 0.55, green: 0.3, blue: 0.13)
+        case "chief": Color(red: 0.2, green: 0.14, blue: 0.1)
         default: Color(red: 0.1, green: 0.08, blue: 0.07)
         }
     }
@@ -132,8 +142,9 @@ struct RulerFigure: View {
         let rest = Path(roundedRect: CGRect(x: 30, y: 216, width: 18, height: 13), cornerRadius: 6)
         ctx.fill(rest, with: .color(skin))
         ctx.stroke(rest, with: .color(ink), lineWidth: 1)
-        // Collar: a broad gold collar in Egypt, a gold-edged neckline elsewhere; a toga's band in Italy.
-        switch civ {
+        // Collar: a broad gold collar in Egypt, a gold-edged neckline elsewhere; a toga's band in
+        // Italy; a gold torc in the north.
+        switch style {
         case "egypt":
             for (i, r) in [36.0, 30, 24].enumerated() {
                 var collar = Path()
@@ -146,6 +157,11 @@ struct RulerFigure: View {
             band.addQuadCurve(to: CGPoint(x: 150, y: 250), control: CGPoint(x: 120, y: 180))
             ctx.stroke(band, with: .color(Color(red: 0.45, green: 0.12, blue: 0.4)), lineWidth: 9)
             ctx.stroke(band, with: .color(.white.opacity(0.85)), style: StrokeStyle(lineWidth: 2, dash: [1, 0]))
+        case "north":
+            var torc = Path()
+            torc.addArc(center: CGPoint(x: 100, y: 150), radius: 22, startAngle: .degrees(25), endAngle: .degrees(155), clockwise: false)
+            ctx.stroke(torc, with: .color(gold), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            for x in [78.0, 122] { ctx.fill(Path(ellipseIn: CGRect(x: x - 5, y: 156, width: 10, height: 10)), with: .color(gold)) }
         default:
             var neck = Path()
             neck.move(to: CGPoint(x: 78, y: 166))
@@ -170,9 +186,13 @@ struct RulerFigure: View {
 
     private func drawHead(_ ctx: inout GraphicsContext, t: Double, talk: Double) {
         // Behind the head: the nemes' lappets, the Mesopotamian's hair.
-        if civ == "egypt" { nemes(&ctx, back: true) }
-        if civ == "mesopotamia" {
+        if style == "egypt" { nemes(&ctx, back: true) }
+        if style == "mesopotamia" {
             ctx.fill(Path(roundedRect: CGRect(x: 64, y: 96, width: 72, height: 66), cornerRadius: 14), with: .color(hair))
+        }
+        // Long hair to the shoulders: the Hittites' and the northerners'.
+        if style == "hatti" || style == "north" {
+            ctx.fill(Path(roundedRect: CGRect(x: 60, y: 90, width: 80, height: style == "north" ? 86 : 70), cornerRadius: 18), with: .color(hair))
         }
         // Ears and face.
         for x in [62.0, 128] {
@@ -186,7 +206,7 @@ struct RulerFigure: View {
         ctx.stroke(face, with: .color(ink), lineWidth: 1.5)
 
         // Hair on top (Greece and Italy).
-        if civ == "greece" || civ == "italia" {
+        if ["greece", "italia", "north", "libyan", "chief"].contains(style) {
             var crown = Path()
             crown.move(to: CGPoint(x: 68, y: 104))
             crown.addQuadCurve(to: CGPoint(x: 132, y: 104), control: CGPoint(x: 100, y: 52))
@@ -208,7 +228,7 @@ struct RulerFigure: View {
                 ctx.fill(Path(ellipseIn: CGRect(x: x - 3 + look, y: 107, width: 6, height: 6)), with: .color(Color(red: 0.2, green: 0.13, blue: 0.08)))
             }
             ctx.stroke(Path(ellipseIn: eye), with: .color(ink), lineWidth: 1.2)
-            if civ == "egypt" {
+            if style == "egypt" {
                 var kohl = Path()
                 kohl.move(to: CGPoint(x: x + 7 * side, y: 109))
                 kohl.addLine(to: CGPoint(x: x + 14 * side, y: 106))
@@ -250,11 +270,14 @@ struct RulerFigure: View {
         ctx.stroke(mouth, with: .color(Color(red: 0.4, green: 0.15, blue: 0.12)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
 
         // Headdress.
-        switch civ {
+        switch style {
         case "egypt": nemes(&ctx, back: false)
         case "mesopotamia": polos(&ctx)
         case "greece": helmet(&ctx)
         case "italia": laurel(&ctx)
+        case "hatti": conicalCap(&ctx)
+        case "libyan": feathers(&ctx)
+        case "north": braids(&ctx)
         default: crownBand(&ctx)
         }
     }
@@ -362,12 +385,59 @@ struct RulerFigure: View {
         }
     }
 
+    /// The Hittite kings' tall pointed cap, banded in gold.
+    private func conicalCap(_ ctx: inout GraphicsContext) {
+        var cap = Path()
+        cap.move(to: CGPoint(x: 70, y: 94))
+        cap.addQuadCurve(to: CGPoint(x: 104, y: 6), control: CGPoint(x: 76, y: 40))
+        cap.addQuadCurve(to: CGPoint(x: 130, y: 94), control: CGPoint(x: 126, y: 46))
+        cap.addQuadCurve(to: CGPoint(x: 70, y: 94), control: CGPoint(x: 100, y: 84))
+        ctx.fill(cap, with: .linearGradient(Gradient(colors: [robe.opacity(0.95), robe.opacity(0.7)]),
+                                            startPoint: CGPoint(x: 80, y: 20), endPoint: CGPoint(x: 126, y: 94)))
+        ctx.stroke(cap, with: .color(ink), lineWidth: 1.4)
+        for y in [86.0, 62] {
+            var band = Path()
+            band.move(to: CGPoint(x: 72 + (94 - y) * 0.12, y: y))
+            band.addQuadCurve(to: CGPoint(x: 128 - (94 - y) * 0.1, y: y), control: CGPoint(x: 100, y: y + 6))
+            ctx.stroke(band, with: .color(gold), lineWidth: 4)
+        }
+    }
+
+    /// Two tall feathers in a headband, and a sidelock: the Libyan chiefs, as the Egyptians drew them.
+    private func feathers(_ ctx: inout GraphicsContext) {
+        ctx.fill(Path(roundedRect: CGRect(x: 68, y: 82, width: 64, height: 8), cornerRadius: 3), with: .color(Color(red: 0.8, green: 0.25, blue: 0.15)))
+        for (x, lean) in [(92.0, -0.18), (108.0, 0.12)] {
+            var f = Path(ellipseIn: CGRect(x: -7, y: -38, width: 14, height: 46))
+            f = f.applying(CGAffineTransform(rotationAngle: CGFloat(lean))).applying(CGAffineTransform(translationX: x, y: 64))
+            ctx.fill(f, with: .color(Color(white: 0.95)))
+            ctx.stroke(f, with: .color(ink), lineWidth: 1)
+            var spine = Path()
+            spine.move(to: CGPoint(x: x, y: 82)); spine.addLine(to: CGPoint(x: x + CGFloat(lean) * 60, y: 30))
+            ctx.stroke(spine, with: .color(.black.opacity(0.35)), lineWidth: 1)
+        }
+        var lock = Path()
+        lock.move(to: CGPoint(x: 66, y: 98))
+        lock.addQuadCurve(to: CGPoint(x: 62, y: 150), control: CGPoint(x: 56, y: 124))
+        ctx.stroke(lock, with: .color(hair), style: StrokeStyle(lineWidth: 7, lineCap: .round))
+    }
+
+    /// Braids falling either side of the face, and a plain gold band.
+    private func braids(_ ctx: inout GraphicsContext) {
+        for x in [64.0, 136] {
+            for k in 0..<6 {
+                ctx.fill(Path(ellipseIn: CGRect(x: x - 6, y: 112 + Double(k) * 10, width: 12, height: 12)), with: .color(hair))
+                ctx.stroke(Path(ellipseIn: CGRect(x: x - 6, y: 112 + Double(k) * 10, width: 12, height: 12)), with: .color(.black.opacity(0.3)), lineWidth: 0.8)
+            }
+        }
+        crownBand(&ctx)
+    }
+
     private func crownBand(_ ctx: inout GraphicsContext) {
         ctx.fill(Path(roundedRect: CGRect(x: 68, y: 80, width: 64, height: 10), cornerRadius: 3), with: .color(gold))
     }
 
     private func beard(_ ctx: inout GraphicsContext) {
-        switch civ {
+        switch style == "north" || style == "libyan" || style == "chief" ? "greece" : style {
         case "egypt":
             // The pharaoh's plaited false beard.
             let b = Path(roundedRect: CGRect(x: 94, y: 146, width: 12, height: 26), cornerRadius: 4)

@@ -85,9 +85,22 @@ enum Palette {
         "mesopotamia": Color(red: 0.18, green: 0.62, blue: 0.35),
     ]
 
+    /// Each kingdom its own earthy colour, the same every game: ochres, madders, olives, slates.
+    static func kingdomColor(_ id: CivilizationID) -> Color {
+        let hues: [(Double, Double, Double)] = [
+            (0.72, 0.52, 0.22), (0.58, 0.32, 0.22), (0.45, 0.5, 0.25), (0.38, 0.45, 0.52),
+            (0.62, 0.42, 0.5), (0.5, 0.38, 0.2), (0.3, 0.5, 0.42), (0.66, 0.6, 0.35),
+            (0.55, 0.25, 0.3), (0.42, 0.36, 0.55), (0.7, 0.45, 0.3), (0.35, 0.42, 0.3),
+        ]
+        let h = id.unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value }
+        let (r, g, b) = hues[Int(h % UInt32(hues.count))]
+        return Color(red: r, green: g, blue: b)
+    }
+
     static func color(_ civ: CivilizationID?, _ state: GameState) -> Color {
         guard let civ else { return Color(white: 0.92) }
         if civ == nativesID { return Color(white: 0.72) }
+        if isKingdom(civ) { return kingdomColor(civ) }
         if civ == barbariansID { return Color(red: 0.45, green: 0.30, blue: 0.20) }
         if civ == piratesID { return Color(white: 0.12) }
         if let parent = state.civs[civ]?.rebelledFrom {
@@ -99,6 +112,7 @@ enum Palette {
     static func name(_ civ: CivilizationID, _ state: GameState) -> String {
         if let display = state.civs[civ]?.displayName { return display }
         if civ == nativesID { return "Natives" }
+        if let k = state.kingdoms[civ] { return k.name.capitalizedFirst }
         if civ == barbariansID { return "Barbarians" }
         if civ == piratesID { return "Pirates" }
         return civ.prefix(1).uppercased() + civ.dropFirst()

@@ -7,7 +7,18 @@ enum Origin {
 extension Engine {
     /// Militia that would rise to defend `territory` for its owner: a share of the people, if
     /// enough live there. Only empires raise levies; native land has its garrisons.
+    /// The levy a kingdom's people raise in defence of their land, like an empire's.
+    func peoplesLevy(at territory: TerritoryID, _ state: GameState) -> Int {
+        let l = rules.battle.levy
+        let people = state.population(of: territory)
+        guard people >= l.minPopulation else { return 0 }
+        return min(l.maxUnits, people / max(1, l.populationPerUnit)) * rules.minors.levyPercent / 100
+    }
+
+    /// The levy a territory's people raise against an attacker: an empire's land's, or (less) a
+    /// kingdom's.
     public func levy(at territory: TerritoryID, _ state: GameState) -> Int {
+        if state.owner(of: territory) == nil, isKingdom(state.armies[territory]?.owner) { return peoplesLevy(at: territory, state) }
         guard let owner = state.owner(of: territory), state.isPlayer(owner) else { return 0 }
         let l = rules.battle.levy
         let people = state.population(of: territory)
@@ -26,9 +37,11 @@ extension Engine {
         guard let owner, owner != civ else { return nil }
         // Nobody fights their own vassal's warriors.
         if overlord(of: territory, in: state) == civ { return nil }
-        // Beside a garrison in vassal land, the people's warriors fight as its levy.
+        // Beside a garrison in vassal land, the kingdom's warriors fight as its levy; in a
+        // kingdom's own land, its people take up arms as an empire's do.
         let levy = landOwner == owner ? self.levy(at: territory, state)
-            : garrisoned(territory, in: state) ? warriors(at: territory, in: state) : 0
+            : garrisoned(territory, in: state) ? warriors(at: territory, in: state)
+            : landOwner == nil && isKingdom(owner) && garrison?.owner == owner ? peoplesLevy(at: territory, state) : 0
         if garrison == nil && levy == 0 { return nil }
         return (owner, garrison ?? Army(owner: owner, units: .zero), levy)
     }
@@ -149,8 +162,8 @@ extension Engine {
 
         // The levy's dead are the land's people.
         let fallen = d.levy - report.defenderLevySurvivors
-        if fallen > 0, state.minors[to]?.stationed != nil, state.owner(of: to) == nil {
-            state.minors[to]!.stationed = max(0, state.minors[to]!.stationed! - fallen)
+        if fallen > 0, state.stationed[to] != nil, state.owner(of: to) == nil {
+            state.stationed[to]!.warriors = max(0, state.stationed[to]!.warriors - fallen)
         } else if fallen > 0 {
             state.land[to]!.population = max(rules.economy.minPopulation, state.population(of: to) - fallen)
         }

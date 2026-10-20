@@ -31,6 +31,7 @@ extension Engine {
             var minors = json["minors"] as! [String: Any]
             minors["baseAttitude"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
             for key in ["growthCap", "raidPercent", "joinPercent", "breakFreePercent"] { minors[key] = 0 }
+            minors["expandPercent"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
             json["minors"] = minors
             let traits = json["rulerTraits"] as! [String: Any]
             json["rulerTraits"] = traits.mapValues { _ in [String: Any]() }
