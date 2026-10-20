@@ -119,6 +119,8 @@ final class GameSession {
     /// The chronicle lines since the player last ended a turn, shown as a summary card.
     private(set) var report: [LogLine] = []
     var showReport = false
+    /// Every event since the player last ended their turn, for the advisors.
+    private(set) var sinceLastTurn: [GameEvent] = []
     /// Skip the step-by-step reveal of the rivals' moves.
     var skipping = false
     /// The odds of the attack being planned, for the arrow on the map.
@@ -289,6 +291,7 @@ final class GameSession {
         playing = false
         started = false
         human = nil
+        sinceLastTurn = []
     }
 
     var isOver: Bool { state.winner != nil }
@@ -315,6 +318,7 @@ final class GameSession {
                 showReport = false
                 skipping = false
                 reportFrom = nextID
+                sinceLastTurn = []
             }
             record(events, round: before.turn, before: before, after: s)
             state = s
@@ -762,6 +766,7 @@ final class GameSession {
     }
 
     private func record(_ events: [GameEvent], round: Int, before: GameState, after: GameState) {
+        sinceLastTurn += events
         var lines: [LogLine] = []
         var target: TerritoryID?
         func name(_ civ: CivilizationID?) -> String { civ.map { Palette.name($0, after) } ?? "nobody" }

@@ -40,6 +40,9 @@ struct GameScreen: View {
     @State private var showCodex = false
     @State private var showWalkthrough = false
     @AppStorage(MusicDirector.enabledKey) private var musicOn = true
+    @AppStorage(AdvisorMemory.enabledKey) private var advisorsOn = true
+    /// An advisor stepping forward with a word.
+    @State private var advisor: AdvisorCall?
     @State private var showThrone = false
     @State private var showStandings = false
     @State private var showTrade = false
@@ -124,6 +127,27 @@ struct GameScreen: View {
                 }
                 .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
+            if let call = advisor, let human = session.human, advisorClear {
+                VStack {
+                    Spacer()
+                    HStack {
+                        AdvisorCard(call: call, civ: human, state: state, go: {
+                            withAnimation { advisor = nil }
+                            if let go = call.go { follow(go) }
+                        }, dismiss: {
+                            withAnimation { advisor = nil }
+                            Task {
+                                try? await Task.sleep(for: .milliseconds(700))
+                                callAdvisor()
+                            }
+                        })
+                        Spacer()
+                    }
+                }
+                // Clear of the zoom button in the corner.
+                .padding(.horizontal, 10).padding(.bottom, 58)
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
             if panelOpen {
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -133,6 +157,7 @@ struct GameScreen: View {
             }
         }
         .animation(.spring(duration: 0.3), value: panelOpen)
+        .animation(.spring(duration: 0.35), value: advisorClear)
         .fullScreenCover(item: $session.muster) { muster in
             BattlefieldView(session: session, muster: muster)
         }
@@ -265,6 +290,11 @@ struct GameScreen: View {
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
             }
+            // Launch with -demoAdvisor YES (or a topic such as intro.taxes) to have an advisor speak.
+            if let key = UserDefaults.standard.string(forKey: "demoAdvisor") {
+                Tip.map.markSeen()
+                advisor = Advisors.demo(session, key: key)
+            }
             if UserDefaults.standard.bool(forKey: "demoSeaBattle") { session.muster = session.demoSeaBattle() }
             // Launch with -demoBattle YES to draw the capital's army up against a neighbouring tribe.
             if UserDefaults.standard.bool(forKey: "demoBattle"), let human = session.human,
@@ -278,6 +308,11 @@ struct GameScreen: View {
                 mapCenter = MapCenter(territory: seat, minZoom: 1.7, onlyIfHidden: false, id: 1)
             }
             offer(.map)
+            // A game picked back up mid-turn: the council may have something to say.
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                callAdvisor()
+            }
         }
     }
 
@@ -306,6 +341,8 @@ struct GameScreen: View {
         .onChange(of: session.showReport) { _, shown in if shown { offer(.rivals) } }
         .onChange(of: !session.showReport && courtSettled) { _, clear in if clear { session.releaseGains() } }
         .onChange(of: readyForAudience) { _, ready in if ready { session.nextAudience() } }
+        .onChange(of: advisorClear) { _, clear in if clear { callAdvisor() } }
+        .onChange(of: session.isHumanTurn) { _, mine in if !mine { advisor = nil } }
         .onChange(of: session.audience == nil) { _, gone in if gone, readyForAudience { session.nextAudience() } }
         .onChange(of: session.gainsAt?.id) { _, _ in lookAtGains() }
         .onChange(of: pending) { _, p in
@@ -571,6 +608,37 @@ struct GameScreen: View {
 
     // MARK: Guidance
 
+    /// Nothing else on screen: an advisor may step forward.
+    private var advisorClear: Bool {
+        guard let human = session.human else { return false }
+        return readyForAudience && session.audience == nil && tip == nil && selected == nil && pending == nil
+            && quickLook == nil && !panelOpen && state.civs[human]?.decision == nil
+    }
+
+    /// The next advisor with something to say, if advisors are on and none is speaking.
+    private func callAdvisor() {
+        guard advisorsOn, advisor == nil, advisorClear else { return }
+        var memory = AdvisorMemory.load(game: Advisors.gameKey(session))
+        guard let call = Advisors.next(session, memory: memory) else { return }
+        memory.note(call, round: state.turn)
+        withAnimation(.spring(duration: 0.35)) { advisor = call }
+        SoundBoard.shared.play(call.mood == .alarm ? .horn : .click, volume: 0.35)
+    }
+
+    /// Where an advisor's button leads.
+    private func follow(_ go: AdvisorCall.Go) {
+        switch go {
+        case .realm: open(.empire)
+        case .knowledge: showKnowledge = true
+        case .diplomacy: open(.diplomacy)
+        case let .city(t): cityShown = CityPick(id: t)
+        case let .sea(sea): selected = .sea(sea)
+        case let .territory(t):
+            selected = .territory(t)
+            mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
+        }
+    }
+
     private func offer(_ t: Tip) {
         guard session.human != nil, t.isNew, tip != t, !tipQueue.contains(t) else { return }
         tipQueue.append(t)
@@ -736,6 +804,7 @@ struct GameScreen: View {
                 Button("Rules reference", systemImage: "text.book.closed") { showCodex = true }
                 Button("Show tips again", systemImage: "lightbulb") { Tip.seen = [] }
                 Toggle(isOn: $musicOn) { Label("Music", systemImage: "music.note") }
+                Toggle(isOn: $advisorsOn) { Label("Advisors", systemImage: "person.bust") }
                 Button("New game", role: .destructive) { session.quit() }
             } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Bronze.gradient).frame(width: 34, height: 34)

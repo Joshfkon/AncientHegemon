@@ -45,6 +45,7 @@
 		B234E652CC62E857DB359A86 /* click.wav in Resources */ = {isa = PBXBuildFile; fileRef = BD6DDA213A9E31B4C7C20FF7 /* click.wav */; };
 		BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */; };
 		BB9DF159D4A9A1FA8E35A6BD /* title.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 32EED3E86C6950F1C6B7AFA7 /* title.m4a */; };
+		C7B2349C02C3DDA155CE3F7B /* Advisors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95FDAA491E83A7BB267F5FA1 /* Advisors.swift */; };
 		C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8264F7FC3FCC73EAA576137C /* SaveStore.swift */; };
 		CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5ACD1C217BD355BA7B28AFB5 /* HegemonCore */; };
 		D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */; };
@@ -95,6 +96,7 @@
 		90545C84FE5971D4416409AA /* OrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderViews.swift; sourceTree = "<group>"; };
 		90FA72590070862E642AFFAE /* Moments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Moments.swift; sourceTree = "<group>"; };
 		94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeView.swift; sourceTree = "<group>"; };
+		95FDAA491E83A7BB267F5FA1 /* Advisors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Advisors.swift; sourceTree = "<group>"; };
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
 		99446154A61CAABED13A5D65 /* roar.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = roar.wav; sourceTree = "<group>"; };
 		9B6EFEC6B7A04539C9215408 /* Standings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Standings.swift; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 		BFA8AFED8A6372F6F5B96C27 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				95FDAA491E83A7BB267F5FA1 /* Advisors.swift */,
 				9D757836BEC95C0399096193 /* AgeFeatures.swift */,
 				E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */,
 				AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */,
@@ -339,6 +342,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C7B2349C02C3DDA155CE3F7B /* Advisors.swift in Sources */,
 				A41087CA8A624B7E29CB90B2 /* AgeFeatures.swift in Sources */,
 				D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */,
 				811367309C8774DE014E4391 /* BattlePlan.swift in Sources */,

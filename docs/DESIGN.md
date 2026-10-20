@@ -1876,3 +1876,46 @@ goals: everything here follows from how real Bronze Age empires held together or
   in turn while watching. Four seconds of silence between pieces. It stays silent while other
   audio is playing (podcasts, your own music), respects the silent switch, and has an on/off
   switch in the ⋯ menu ("Music").
+
+### Advisors who speak up (Josh: "advisors should pop up and introduce / remind you about things like taxes and research etc.")
+
+- The throne room's council now steps forward unasked. At the start of your turn, once the news,
+  audiences, dilemmas and tips are out of the way and nothing is selected, one advisor appears
+  in a small card at the bottom left. The card shows a drawn portrait dressed for the office: the
+  general in a crested bronze helmet, the steward with his clay tablet, the envoy with a fillet and
+  herald's staff, the high priest in a tall cap with a sun disc. Each portrait blinks and speaks.
+  The card gives the advisor's name and role and one line in character. Its buttons go where the
+  line points (the Realm, the books, Rivals, a town, a territory, a sea) or say "Got it".
+- **Introductions** come once a game, the first time each system matters:
+  - taxes, after the first harvest;
+  - patronage of knowledge, from round 2 if no field is funded;
+  - peace offers;
+  - a building you can afford;
+  - laying siege to a town;
+  - a town of ours under siege;
+  - restless land;
+  - ships at sea and storms;
+  - pirates off our coasts;
+  - vassals.
+- **Reminders** come back when needed, each with a cooldown of 2–10 rounds:
+  - famine close (2 turns of grain or fewer) or people starving;
+  - soldiers unpaid, or about to be;
+  - a town of ours besieged;
+  - an army cut off from supply;
+  - the treasury thin while taxes are low, or taxes too heavy while legitimacy sags;
+  - a discovery with no patron funded;
+  - idle gold that could build something;
+  - a siege of ours dragging on;
+  - storms or pirate raids that hit us;
+  - a vassal ready to be levied or annexed;
+  - a peace offer still unanswered;
+  - restless land.
+- Alarms come first, then introductions, then reminders. At most two advisors speak a turn, and
+  the second only for an alarm or an introduction. An introduction also starts its topic's
+  reminder cooldown, so the same advice doesn't come twice in a row.
+- Memory is kept per game (seed and civ) in UserDefaults, so a resumed game doesn't repeat
+  itself. "Advisors" in the ⋯ menu turns them off.
+- App layer only (`Advisors.swift`). `GameSession.sinceLastTurn` keeps the events since you
+  ended your turn (harvest, pay, starvation, discoveries, storms, plunder).
+- Debug launch argument `-demoAdvisor YES` shows the first advisor with something to say; a topic
+  key such as `-demoAdvisor intro.besieged` (with `-demoBesieged YES`) shows that one.
