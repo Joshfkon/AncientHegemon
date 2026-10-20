@@ -16,6 +16,9 @@ public enum Command: Codable, Sendable, Equatable {
     case leaveAlliance(with: CivilizationID)
     case callToWar(ally: CivilizationID, against: CivilizationID)
     case answerCallToWar(from: CivilizationID, against: CivilizationID, join: Bool)
+    /// Demand that a rival at war submit as a vassal empire; a person answers the demand.
+    case demandSubmission(of: CivilizationID)
+    case answerSubmission(from: CivilizationID, accept: Bool)
     /// Answers the court's dilemma.
     case decide(accept: Bool)
     /// Pays patrons of one field of learning each turn (nil stops).
@@ -109,6 +112,13 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case vassalFreed(civ: CivilizationID, territory: TerritoryID)
     case levied(civ: CivilizationID, territory: TerritoryID, to: TerritoryID, warriors: Int)
     case annexed(civ: CivilizationID, territory: TerritoryID)
+    /// Vassal empires: a demand waiting for a person's answer, a submission, a refusal, the
+    /// turn's tribute, and a vassal going free (outgrown its overlord, or the overlord fell).
+    case submissionDemanded(from: CivilizationID, to: CivilizationID)
+    case submitted(vassal: CivilizationID, overlord: CivilizationID)
+    case submissionRefused(by: CivilizationID, to: CivilizationID)
+    case tributePaid(vassal: CivilizationID, overlord: CivilizationID, gold: Int)
+    case vassalEmpireFreed(vassal: CivilizationID, overlord: CivilizationID, overlordFell: Bool)
     /// A warlike people raided an empire's land; `won` if they got through to plunder.
     case peopleRaided(people: TerritoryID, territory: TerritoryID, civ: CivilizationID, gold: Int, won: Bool)
     /// A people came over to an empire of its own accord.
@@ -240,6 +250,10 @@ public enum GameError: Error, Equatable, Sendable {
     case notAtWar(CivilizationID)
     case alreadyAsked(CivilizationID)
     case noWarRequest(CivilizationID)
+    /// Vassalage binds them: no war between overlord and vassal (or the overlord's allies), and
+    /// a vassal keeps no alliances and demands no one's submission.
+    case vassalBound(CivilizationID)
+    case noSubmissionDemand(CivilizationID)
     /// Recruiting needs a territory in the home supply network.
     case outOfSupply(TerritoryID)
     /// Armies can't enter a peace partner's territory; declare war first.

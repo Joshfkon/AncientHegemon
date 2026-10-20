@@ -225,6 +225,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let ships: ShipRules
     public let pirates: PirateRules
     public let minors: MinorRules
+    public let submission: SubmissionRules
     public let battle: BattleRules
     public let naval: NavalRules
     public let generals: GeneralRules

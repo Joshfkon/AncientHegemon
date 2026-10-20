@@ -124,6 +124,10 @@ public struct AIPlayer: Sendable {
     // MARK: Diplomacy
 
     func diplomacy(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        // A demand left waiting (a seat a person handed to the AI) gets the court's usual answer.
+        for demand in state.submissionDemands.filter({ $0.to == civ }).sorted(by: { $0.from < $1.from }) {
+            _ = attempt(.answerSubmission(from: demand.from, accept: engine.wouldSubmit(civ, to: demand.from, in: state)), &state, &turn)
+        }
         alliances(civ, &state, &turn)
         let sight = engine.sight(of: civ, in: state)
         let mine = strength(of: civ, seenBy: civ, sight: sight, state)
@@ -152,11 +156,24 @@ public struct AIPlayer: Sendable {
             if state.atPeace(civ, other) {
                 // Allies keep faith.
                 if engine.allied(civ, other, in: state) { continue }
+                // Vassalage binds both sides, and a vassal its overlord's allies.
+                if !engine.mayDeclareWar(civ, on: other, in: state) { continue }
                 if prey, personality.trade < 0.9 || edge >= 2 {
                     issue(.declareWar(on: other), &state, &turn)
                 }
                 continue
             }
+            // A beaten rival that would bow is made a vassal: tribute and prestige without the
+            // cost of conquering the rest. A person is asked once, and not again for a while after
+            // turning it down.
+            let demand = PeaceOffer(from: civ, to: other)
+            if engine.wouldSubmit(other, to: civ, in: state), !state.submissionDemands.contains(demand),
+               (state.submissionRebuffed[demand] ?? 0) < state.turn,
+               attempt(.demandSubmission(of: other), &state, &turn),
+               state.atPeace(civ, other) || state.submissionDemands.contains(demand) {
+                continue
+            }
+            if state.submissionDemands.contains(demand) { continue }
             var wantsPeace = losing || (!prey && (!neighbor || personality.trade >= 0.8))
             if let menace, menace != civ {
                 // Make common cause with the menace's other enemies; never a separate peace with it.

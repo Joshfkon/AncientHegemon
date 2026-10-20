@@ -175,6 +175,9 @@ struct StatExplainer: View {
                     row("Taxes (\(e.taxRate)%)", e.taxes)
                     row("Mines", e.mines)
                     row("Trade", e.trade)
+                    if e.peoples != 0 { row("Vassals & peoples", e.peoples) }
+                    if e.tributeReceived != 0 { row("Tribute from vassal empires", e.tributeReceived) }
+                    if e.tributePaid != 0 { row("Tribute to your overlord", -e.tributePaid) }
                     row("Army pay", -e.pay)
                     Divider()
                     row("Each turn", e.netIncome, bold: true)

@@ -25,7 +25,11 @@ public struct EconomyReport: Sendable, Equatable {
     public let income: Int
     /// Gold owed to the soldiers each turn.
     public let pay: Int
-    public var netIncome: Int { income - pay }
+    /// Vassal empires: tribute this realm pays its overlord from next harvest's income, and
+    /// tribute its own vassal empires paid at their last harvest.
+    public let tributePaid: Int
+    public let tributeReceived: Int
+    public var netIncome: Int { income - tributePaid + tributeReceived - pay }
     public let bronze: Int
     /// Bronze cast next harvest (after Bronze casting), and bronze worn out.
     public let bronzePerTurn: Int
@@ -87,6 +91,8 @@ extension Engine {
             grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, peoples: gold.peoples, income: gold.total,
             pay: armyPay(of: civ, in: state),
+            tributePaid: state.vassalage[civ] != nil ? tribute(fromIncome: gold.total) : 0,
+            tributeReceived: vassalEmpires(of: civ, in: state).reduce(0) { $0 + (state.vassalage[$1]?.lastTribute ?? 0) },
             bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,
             equipmentPercent: bronzePercent(civ, state), taxRate: cs.taxRate,
             taxLegitimacy: taxAndLuxuryLegitimacy(civ, state), growthPercent: growthPercent(civ, state),

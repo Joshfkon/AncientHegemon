@@ -46,6 +46,22 @@ struct DiplomacyView: View {
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color.red.opacity(0.12)))
                 }
+                ForEach(Array(state.submissionDemands.filter { $0.to == human }).sorted { $0.from < $1.from }, id: \.self) { d in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("\(Palette.name(d.from, state)) demands that you submit", systemImage: "link")
+                            .font(.callout.bold())
+                        Text("As their vassal: a peace neither may break, \(engine.rules.submission.tributePercent)% of your gold income to them each turn, no alliances and no war on their allies. You go free once your army outgrows theirs. Unanswered by their next turn, it lapses.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                        HStack {
+                            Button("Submit") { session.order(.answerSubmission(from: d.from, accept: true)) }
+                                .buttonStyle(.borderedProminent).tint(.orange).controlSize(.small)
+                            Button("Refuse") { session.order(.answerSubmission(from: d.from, accept: false)) }
+                                .buttonStyle(.bordered).controlSize(.small)
+                        }
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
+                }
                 if rivals.isEmpty {
                     Text("No rivals remain.").font(.caption).foregroundStyle(.secondary)
                 }
@@ -118,6 +134,14 @@ struct DiplomacyView: View {
                     .background((peace ? Color.green : Color.red).opacity(0.2), in: Capsule())
                     .foregroundStyle(peace ? .green : .red)
                     .fixedSize()
+                if let tie = tie(human, other) {
+                    Label(tie, systemImage: "link")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2), in: Capsule())
+                        .foregroundStyle(.orange)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                }
                 Spacer()
             }
             action(human, other).frame(maxWidth: .infinity, alignment: .trailing)
@@ -175,10 +199,25 @@ struct DiplomacyView: View {
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
     }
 
+    /// How vassalage ties them: to you, or to someone else.
+    private func tie(_ human: CivilizationID, _ other: CivilizationID) -> String? {
+        if let lord = engine.liege(of: other, in: state) { return lord == human ? "Your vassal" : "Vassal of \(Palette.name(lord, state))" }
+        if engine.liege(of: human, in: state) == other { return "Your overlord" }
+        let vassals = engine.vassalEmpires(of: other, in: state)
+        return vassals.isEmpty ? nil : "Overlord of \(vassals.map { Palette.name($0, state) }.joined(separator: ", "))"
+    }
+
     /// The alliance row: offer, answer an offer, call the ally to a war, or leave.
     @ViewBuilder private func alliance(_ human: CivilizationID, _ other: CivilizationID) -> some View {
         let allied = engine.allied(human, other, in: state)
-        if allied {
+        let s = engine.rules.submission
+        if engine.liege(of: other, in: state) == human {
+            Text("They pay you \(s.tributePercent)% of their gold income (\(state.vassalage[other]?.lastTribute ?? 0) last turn), keep the peace with you and your allies, and add \(s.prestige) to your prestige. They go free if their army outgrows yours.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        } else if engine.liege(of: human, in: state) == other {
+            Text("You pay them \(s.tributePercent)% of your gold income, may not war on them or their allies, and keep no alliances. You go free once your army outgrows theirs.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        } else if allied {
             VStack(alignment: .leading, spacing: 6) {
                 Label("Allies: each fights whoever attacks the other", systemImage: "shield.lefthalf.filled")
                     .font(.caption.bold()).foregroundStyle(.blue)
@@ -210,6 +249,8 @@ struct DiplomacyView: View {
                 Button("Ally") { session.order(.acceptAlliance(from: other)) }
                     .buttonStyle(.borderedProminent).tint(.blue).controlSize(.small)
             }
+        } else if engine.liege(of: human, in: state) != nil || engine.liege(of: other, in: state) != nil {
+            EmptyView()
         } else if state.atPeace(human, other) {
             let likely = engine.wouldAlly(other, with: human, in: state)
             HStack {
@@ -224,7 +265,10 @@ struct DiplomacyView: View {
 
     @ViewBuilder private func action(_ human: CivilizationID, _ other: CivilizationID) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
-            if state.atPeace(human, other) {
+            if state.atPeace(human, other), !engine.mayDeclareWar(human, on: other, in: state) {
+                Text(engine.bound(human, other, in: state) ? "Bound by vassalage" : "Your overlord's ally")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else if state.atPeace(human, other) {
                 Button("Declare war") { warOn = other }
                     .buttonStyle(.bordered).tint(.red).controlSize(.small).fixedSize()
                 Text("−\(-engine.rules.government.legitimacy.brokePeace) legitimacy, ends trade").font(.caption2).foregroundStyle(.secondary)
@@ -244,6 +288,15 @@ struct DiplomacyView: View {
                 Button("Offer peace") { session.order(.offerPeace(to: other)) }
                     .buttonStyle(.bordered).controlSize(.small).fixedSize()
                 Text("Free · if they accept, trade opens").font(.caption2).foregroundStyle(.secondary)
+            }
+            if !state.atPeace(human, other), engine.liege(of: human, in: state) == nil, engine.liege(of: other, in: state) == nil {
+                let likely = engine.wouldSubmit(other, to: human, in: state)
+                Button("Demand submission") { session.order(.demandSubmission(of: other)) }
+                    .buttonStyle(.bordered).tint(.orange).controlSize(.small).fixedSize()
+                Text(likely ? "They're beaten: they'd likely bow"
+                            : "Only if you hold their capital or they're under \(engine.rules.submission.acceptStrengthPercent)% of your strength")
+                    .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

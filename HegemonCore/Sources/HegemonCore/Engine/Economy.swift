@@ -70,6 +70,7 @@ extension Engine {
         let tradeIncome = gold.trade
         let income = gold.total
         state.civs[civ]!.gold += income
+        events += payTribute(civ, income: income, &state)
         events += payArmy(civ, &state)
 
         wearBronze(civ, &state)

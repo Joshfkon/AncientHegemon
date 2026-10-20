@@ -239,6 +239,18 @@ for civ in civs {
 let rebelFactions = records.map { r in r.finalState.players.filter { r.finalState.civs[$0]?.rebelledFrom != nil }.count }
 print("rebel factions per game: \(String(format: "%.1f", Double(rebelFactions.reduce(0, +)) / Double(max(1, records.count))))")
 
+// Vassal empires, per game.
+print("")
+print("vassal empires per game: took a vassal  submitted  went free  tribute received   ended as a vassal")
+for civ in civs {
+    let rs = records.compactMap { $0.civs[civ] }
+    let per = { (f: (CivRecord) -> Int) in String(format: "%.2f", Double(rs.map(f).reduce(0, +)) / Double(max(1, records.count))) }
+    let ended = records.filter { $0.finalState.vassalage[civ] != nil }.count
+    print(civ.padding(toLength: 24, withPad: " ", startingAt: 0)
+          + pad(per(\.vassalsTaken), 13) + pad(per(\.submissions), 11) + pad(per(\.freedFromVassalage), 11)
+          + pad(per(\.tributeReceived), 18) + pad(pct(ended, records.count), 20))
+}
+
 print("")
 print("median over civs holding land then")
 print("civ          gold in hand at round 10   20   30    units at 10   20   30")

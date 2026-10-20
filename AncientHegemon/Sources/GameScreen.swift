@@ -257,6 +257,14 @@ struct GameScreen: View {
                 let war = who.hasPrefix("war:")
                 session.audience = Audience(civ: war ? String(who.dropFirst(4)) : who, reason: war ? .war : .visit)
             }
+            // Launch with -demoSubmission egypt to hear Egypt demand your submission, or
+            // vassal:egypt to have Egypt already your vassal.
+            if let who = UserDefaults.standard.string(forKey: "demoSubmission") {
+                let vassal = who.hasPrefix("vassal:")
+                let civ = vassal ? String(who.dropFirst(7)) : who
+                session.demoSubmission(civ, vassal: vassal)
+                if !vassal { session.audience = Audience(civ: civ, reason: .submission) }
+            }
             if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]

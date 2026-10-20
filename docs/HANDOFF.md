@@ -149,6 +149,11 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     the court's dilemmas** (rules version 16). New engine files: `Unrest.swift`,
     `Monuments.swift`, `Patronage.swift`, `Decisions.swift`; their UI is in
     `AncientHegemon/Sources/AgeFeatures.swift`.
+  - **Vassal empires** (DESIGN.md, "Vassal empires"; rules version 29): an empire at war can
+    demand a beaten neighbour's submission (`Command.demandSubmission`, `Engine/Submission.swift`):
+    forced peace, 20% of its gold income as tribute, 25 prestige to the overlord, no war on the
+    overlord's allies; free again once it outgrows its overlord or the overlord falls. AI demands
+    and answers; people answer in an audience. 301 tests.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

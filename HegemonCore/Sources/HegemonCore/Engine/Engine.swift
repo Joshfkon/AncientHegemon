@@ -56,6 +56,10 @@ public struct Engine: Sendable {
             return try callToWar(ally, against: against, &state)
         case let .answerCallToWar(from, against, join):
             return try answerCallToWar(from, against: against, join: join, &state)
+        case let .demandSubmission(target):
+            return try demandSubmission(target, &state)
+        case let .answerSubmission(from, accept):
+            return try answerSubmission(from, accept: accept, &state)
         case let .decide(accept):
             return try decide(accept, &state)
         case let .setPatronage(field):
@@ -261,7 +265,7 @@ public struct Engine: Sendable {
               state.armies(of: civ).isEmpty, state.fleets(of: civ).isEmpty else { return [] }
         state.civs[civ]!.eliminated = true
         state.civs[civ]!.eliminatedOnRound = state.turn
-        var events: [GameEvent] = [.eliminated(civ: civ)]
+        var events: [GameEvent] = [.eliminated(civ: civ)] + vassalageAfterElimination(of: civ, &state)
         let alive = state.players.filter { !state.civs[$0]!.eliminated }
         if alive.count <= 1 {
             // If raiders destroyed everyone, the barbarians have the last word.
@@ -317,6 +321,7 @@ public struct Engine: Sendable {
         var events: [GameEvent] = [.turnStarted(civ: civ, turn: state.turn)] + age
         events += expireWarRequests(from: civ, &state)
         state.allianceOffers = state.allianceOffers.filter { $0.from != civ }
+        events += vassalageChecks(civ, &state)
         // The start of a turn: events, then harvest, then government (DESIGN §3). Nothing happens
         // on turn 1, so every civ starts on equal terms whatever its seat.
         if state.turn > 1 {
@@ -381,6 +386,8 @@ public struct Engine: Sendable {
         state.peaceOffers.remove(PeaceOffer(from: from, to: civ))
         state.peaceOffers.remove(PeaceOffer(from: civ, to: from))
         state.peace.insert(CivPair(civ, from))
+        state.submissionDemands.remove(PeaceOffer(from: from, to: civ))
+        state.submissionDemands.remove(PeaceOffer(from: civ, to: from))
         return [.peaceMade(CivPair(civ, from))]
     }
 
@@ -398,6 +405,7 @@ public struct Engine: Sendable {
         let civ = state.activePlayer
         _ = try rival(on, state)
         guard state.atPeace(civ, on) else { throw GameError.notAtPeace(on) }
+        guard mayDeclareWar(civ, on: on, in: state) else { throw GameError.vassalBound(on) }
         adjustLegitimacy(civ, rules.government.legitimacy.brokePeace, &state)
         state.peace.remove(CivPair(civ, on))
         state.peaceOffers.remove(PeaceOffer(from: civ, to: on))

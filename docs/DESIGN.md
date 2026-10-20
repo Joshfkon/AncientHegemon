@@ -1820,10 +1820,59 @@ goals: everything here follows from how real Bronze Age empires held together or
   shielded vassal.
 - Balance (80 games): Italia 36%, Mesopotamia 26%, Egypt 20%, Greece 17%; wars between the
   empires as common as before. Rules version 27.
-- Vassalage between the four empires themselves (a beaten Egypt submitting to you) is not in
-  yet: it needs submission terms in diplomacy and changes to peace and alliances.
+- Vassalage between the four empires themselves came next: see "Vassal empires" below.
 - Debug launch arguments: `-demoAs <civ>` starts a game as that civ; `-demoVassal YES` makes
   the first people next to your capital your vassal and selects it (`look` only selects it).
+
+### Vassal empires (Josh: "an option to have a conquered country be a vassal state. lots of advantages")
+
+The minor-kingdom vassals above, extended to the four empires themselves: a beaten Egypt can
+bow to Mesopotamia instead of fighting to the last town. `Engine/Submission.swift`.
+
+- **Demanding submission** (`Command.demandSubmission(of:)`): only against a rival you're at war
+  with, and only if neither of you already serves someone. Only a conqueror at the gates is
+  feared: your land must border theirs (or you hold their capital). An AI court bows when the demander
+  holds its capital, or its strength (soldiers and ships) is under 40% of the demander's as far as
+  it can see, and in either case only if it is still the weaker (otherwise it would be free again
+  at once). A person is asked: the demander's ruler comes in an audience with Submit and Refuse,
+  and the demand also shows on the Rivals tab. Unanswered, it lapses when the demander next
+  moves; refused, the demander waits 5 rounds before asking again (`submissionRebuffed`).
+- **Submission** (`state.vassalage`): peace between them that neither side may break
+  (`GameError.vassalBound`). The vassal also makes peace with the overlord's allies and may not
+  war on them; it gives up its own alliances and can't make new ones (its friends abroad are now
+  its overlord's business; this keeps calls to arms from ever setting a vassal against its
+  overlord). Any empire that served the vassal goes free. If the overlord later takes a new ally,
+  its vassals make peace with that ally too.
+- **Tribute**: at each harvest the vassal pays 20% of its gold income (before army pay) straight
+  to the overlord. The vassal's treasury shows "Tribute to your overlord"; the overlord's shows
+  "Tribute from vassal empires" (what was paid last turn), and both count in "Each turn".
+- **Prestige**: 25 per vassal empire ("Vassal empires" in the breakdown): more than a capital held
+  (20) or a minor vassal (8), since a whole empire bows.
+- **Going free**: at the start of its turn, a vassal whose army has outgrown its overlord's throws
+  off the yoke; the peace stays, but can now be broken. When an overlord falls, its vassals go
+  free at once. There is no way to renounce vassalage by choice, and the overlord can't release a
+  vassal (not needed yet).
+- What vassalage doesn't do: the overlord isn't called to defend its vassal, and a vassal's land
+  doesn't count toward the overlord's domination victory.
+- **AI**: an AI at war demands submission whenever the target would bow (a person: once, then
+  not again for 5 rounds after a refusal), before thinking about peace. A vassal never declares
+  war on its overlord or the overlord's allies.
+- **App**: the Rivals tab shows "Your vassal", "Your overlord", "Vassal of X" or "Overlord of X"
+  on each card, a Demand submission button (with whether they'd likely bow) for rivals at war, and
+  a demand waiting for your answer. Audiences have the same, in the ruler's voice. Standings mark
+  vassals with a chain and say who serves whom. Chronicle lines for demands, submissions,
+  refusals and vassals going free. `hegemon-sim` reports, per civ and game, vassals taken,
+  submissions, times freed, tribute received and how often it ends the game as a vassal.
+- Debug launch argument `-demoSubmission egypt` has Egypt demand your submission (the audience
+  opens); `-demoSubmission vassal:egypt` makes Egypt your vassal.
+- Balance (80 games, `hegemon-sim --games 80 --seed 501`): Mesopotamia 32%, Italia 28%, Greece
+  21%, Egypt 17% (before: 28 / 32 / 21 / 17); all decided by round 50, as before. About 0.9
+  submissions a game, mostly to Mesopotamia (0.6 a game, 36 gold of tribute); Greece ends a game
+  as someone's vassal in 27% of games, Egypt 18%. The first try had no border rule: early in the
+  game armies are small and a rival's strength is only guessed at, so empires bowed to rivals
+  across the sea on round 1 (seen in the Simulator), there were 1.8 submissions a game, and
+  Italia won 45%. Halving the prestige (25 → 12) changed almost nothing, so it stays at 25.
+  Raw runs are in the session notes (`empire-vassals/`). Rules version 29; 301 tests.
 
 ### Wall levels (Josh: "walls should have levels. Higher walls, more defense, can last for a siege longer")
 
