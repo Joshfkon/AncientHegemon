@@ -1639,3 +1639,19 @@ goals: everything here follows from how real Bronze Age empires held together or
   starts"): an army stores its standing plan field by field, and placements and orders weren't
   among them, so setting the plan at the charge dropped them. `Army` now keeps `placements` and
   `orders`. In a combined attack, the army that called the others sets the plan.
+
+### Rulers in person (Josh: "Could we add civ like leader animations? I like their throne rooms - but it's not a person")
+
+- Audiences now show the ruler as a drawn, animated figure seated on a throne in their own hall
+  (`RulerFigure`): breathing, blinking every few seconds, glancing about, the head tilting, and
+  the mouth moving for a couple of seconds as they speak.
+- Each realm's own dress: Egypt's pharaoh in the striped nemes with the cobra, kohl-lined eyes,
+  the plaited false beard and a broad collar; Mesopotamia's king in the tall horned cap with a
+  long, square, curled beard; the Greek with a crested bronze helmet pushed back and a full
+  beard; the Italian clean-shaven, laurel-crowned, a purple band across the toga. Robes in the
+  realm's colour; a sceptre in the right hand.
+- The face shows the court's mood: angry when declaring war (knitted brows, mouth turned down,
+  leaning in, sceptre raised), stern at war, pleased when offering peace or allied, wary when
+  you outnumber them, neutral otherwise.
+- The hall's empty throne makes way for theirs; the realm's emblem hangs above. Debug launch
+  argument `-demoAudience egypt` (or `war:greece`).

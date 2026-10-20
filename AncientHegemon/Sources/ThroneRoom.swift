@@ -228,6 +228,8 @@ struct Hall: View {
     let trophies: [Trophy]
     let ruler: String
     let state: GameState
+    /// False when the ruler sits there in person (an audience): their own throne is drawn with them.
+    var emptyThrone = true
     @State private var flicker = false
 
     private struct Style {
@@ -352,6 +354,7 @@ struct Hall: View {
                     .position(x: w * 0.82, y: floorTop - h * 0.12)
                 }
                 // The throne, the realm's emblem above it.
+                if emptyThrone {
                 VStack(spacing: 6) {
                     CivBanner.emblem(civ)
                         .foregroundStyle(decorations.contains("throne") ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color.white.opacity(0.85)))
@@ -362,6 +365,13 @@ struct Hall: View {
                         .background(Capsule().fill(.black.opacity(0.45)))
                 }
                 .position(x: w * 0.5, y: floorTop - h * 0.12)
+                } else {
+                    // The realm's emblem high on the wall above the ruler.
+                    CivBanner.emblem(civ)
+                        .foregroundStyle(decorations.contains("throne") ? AnyShapeStyle(Bronze.gradient) : AnyShapeStyle(Color.white.opacity(0.85)))
+                        .frame(width: 40, height: 40)
+                        .position(x: w * 0.5, y: h * 0.07)
+                }
             }
             .frame(width: w, height: h)
             .clipped()

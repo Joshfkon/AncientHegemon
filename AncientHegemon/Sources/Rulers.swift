@@ -88,6 +88,8 @@ struct AudienceView: View {
     let audience: Audience
     let close: () -> Void
     @State private var confirmWar = false
+    /// Bumped when they speak, to move their lips.
+    @State private var spoken = 0
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -97,10 +99,16 @@ struct AudienceView: View {
         if let human = session.human, let cs = state.civs[civ] {
             HStack(spacing: 0) {
                 ZStack(alignment: .bottom) {
-                    Hall(civ: civ, decorations: cs.decorations, trophies: cs.trophies, ruler: cs.ruler.name, state: state)
-                    // The ruler, seated on the throne.
-                    RulerPortrait(civ: civ, state: state, size: 104)
-                        .padding(.bottom, 118)
+                    Hall(civ: civ, decorations: cs.decorations, trophies: cs.trophies, ruler: cs.ruler.name, state: state,
+                         emptyThrone: false)
+                    // The ruler in person, before the throne.
+                    GeometryReader { g in
+                        // Seated on the throne, feet on the hall's floor.
+                        let h = g.size.height * 0.66
+                        RulerFigure(civ: civ, state: state, mood: mood(human), speaking: spoken)
+                            .frame(height: h)
+                            .position(x: g.size.width / 2, y: g.size.height * 0.74 - h / 2)
+                    }
                 }
                 .ignoresSafeArea()
                 speech(human, cs)
@@ -114,6 +122,17 @@ struct AudienceView: View {
                 SoundBoard.shared.play(audience.reason == .war ? .wardrums : .horn, volume: 0.5)
             }
         }
+    }
+
+    /// The ruler's face: how their court regards you right now.
+    private func mood(_ human: CivilizationID) -> RulerFigure.Mood {
+        if audience.reason == .war { return .angry }
+        if audience.reason == .peaceOffer || state.peaceOffers.contains(PeaceOffer(from: civ, to: human)) { return .pleased }
+        if engine.allied(human, civ, in: state) { return .pleased }
+        if !state.atPeace(human, civ) { return .stern }
+        let theirs = state.totalUnits(of: civ).total, ours = state.totalUnits(of: human).total
+        if theirs * 4 < ours * 3 { return .wary }
+        return .neutral
     }
 
     private func speech(_ human: CivilizationID, _ cs: CivState) -> some View {

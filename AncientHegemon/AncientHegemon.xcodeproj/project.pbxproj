@@ -21,6 +21,7 @@
 		45672360191504BA6F4B6C43 /* map_shapes.json in Resources */ = {isa = PBXBuildFile; fileRef = 7E7B5FD5E53683B4C70351A3 /* map_shapes.json */; };
 		4C25A4426F0DB3BAF746EDA7 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2584B9F51B8A47BAAE5A9A /* GameSession.swift */; };
 		50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */; };
+		5158F762F9D19A3A396078D5 /* RulerFigure.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68161D07A290C13CFFD63F8 /* RulerFigure.swift */; };
 		54C9133A6A5FA07E5DBC30D9 /* arrows.wav in Resources */ = {isa = PBXBuildFile; fileRef = 81666E7D20EECA8701512537 /* arrows.wav */; };
 		58AA774DC005708C95E2CDA5 /* Moments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90FA72590070862E642AFFAE /* Moments.swift */; };
 		5A8C3BEE15D78A51658DDEC1 /* Standings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B6EFEC6B7A04539C9215408 /* Standings.swift */; };
@@ -89,6 +90,7 @@
 		C2E4AD6639ED1329E331B67C /* Rulers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rulers.swift; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C531F5931E1FB610194769C0 /* CommandBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBar.swift; sourceTree = "<group>"; };
+		C68161D07A290C13CFFD63F8 /* RulerFigure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulerFigure.swift; sourceTree = "<group>"; };
 		C7087D3414E9471A080F99F9 /* horn.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = horn.wav; sourceTree = "<group>"; };
 		C815DC03A75A0FBDC73B4D9D /* CityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView.swift; sourceTree = "<group>"; };
 		CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireView.swift; sourceTree = "<group>"; };
@@ -182,6 +184,7 @@
 				90FA72590070862E642AFFAE /* Moments.swift */,
 				90545C84FE5971D4416409AA /* OrderViews.swift */,
 				6FA988893EB7B67616AC6394 /* ResourcesView.swift */,
+				C68161D07A290C13CFFD63F8 /* RulerFigure.swift */,
 				C2E4AD6639ED1329E331B67C /* Rulers.swift */,
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
@@ -315,6 +318,7 @@
 				58AA774DC005708C95E2CDA5 /* Moments.swift in Sources */,
 				D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */,
 				E1DBC00849377F7EFEFCCFA8 /* ResourcesView.swift in Sources */,
+				5158F762F9D19A3A396078D5 /* RulerFigure.swift in Sources */,
 				AA8F9A2A1C98DCA5E03738AB /* Rulers.swift in Sources */,
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,

@@ -234,6 +234,11 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
+            // Launch with -demoAudience greece (or war:greece) to stand before that ruler.
+            if let who = UserDefaults.standard.string(forKey: "demoAudience") {
+                let war = who.hasPrefix("war:")
+                session.audience = Audience(civ: war ? String(who.dropFirst(4)) : who, reason: war ? .war : .visit)
+            }
             if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
