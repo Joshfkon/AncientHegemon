@@ -23,6 +23,8 @@ public struct AllianceRules: Codable, Sendable, Equatable {
     public let betrayalLegitimacy: Int
     /// Most allies one realm can keep.
     public let maxAllies: Int
+    /// Rounds a court waits before offering peace again to someone who turned it down.
+    public let rebuffedRounds: Int
 }
 
 extension Engine {

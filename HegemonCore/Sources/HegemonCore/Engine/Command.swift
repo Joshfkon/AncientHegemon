@@ -44,6 +44,8 @@ public enum Command: Codable, Sendable, Equatable {
     case offerPeace(to: CivilizationID)
     /// Accept an outstanding peace offer.
     case acceptPeace(from: CivilizationID)
+    /// Turn an offer down: they won't offer again for a while.
+    case declinePeace(from: CivilizationID)
     /// End a peace. Withdraws any offers between the two.
     case declareWar(on: CivilizationID)
     /// Appoint a new general to lead the army in a home territory. Costs gold.
@@ -134,6 +136,7 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case discovery(civ: CivilizationID, field: KnowledgeField, level: Int)
     case projectStarted(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
     case projectQueued(civ: CivilizationID, territory: TerritoryID, project: ProjectKind)
+    case peaceDeclined(by: CivilizationID, offerer: CivilizationID)
     case splendourBegan(civ: CivilizationID)
     case splendourEnded(civ: CivilizationID)
     case ironAgeBegan

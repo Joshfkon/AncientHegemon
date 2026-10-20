@@ -130,6 +130,9 @@ struct GameScreen: View {
         .fullScreenCover(item: $session.muster) { muster in
             BattlefieldView(session: session, muster: muster)
         }
+        .fullScreenCover(item: $session.audience) { a in
+            AudienceView(session: session, audience: a) { session.audience = nil }
+        }
         // Battles fought from the battlefield play there; this is for the rest (landings, defences).
         .sheet(item: Binding(get: { session.muster == nil ? session.replay : nil },
                              set: { session.replay = $0 })) { entry in
@@ -267,6 +270,8 @@ struct GameScreen: View {
         }
         .onChange(of: session.showReport) { _, shown in if shown { offer(.rivals) } }
         .onChange(of: !session.showReport && courtSettled) { _, clear in if clear { session.releaseGains() } }
+        .onChange(of: readyForAudience) { _, ready in if ready { session.nextAudience() } }
+        .onChange(of: session.audience == nil) { _, gone in if gone, readyForAudience { session.nextAudience() } }
         .onChange(of: session.gainsAt?.id) { _, _ in lookAtGains() }
         .onChange(of: pending) { _, p in
             if case let .march(_, to)? = p, state.armies[to].map({ $0.owner != session.human }) ?? false { offer(.battle) }
@@ -328,8 +333,11 @@ struct GameScreen: View {
                     if let human = session.human, let offer = state.allianceOffers.first(where: { $0.to == human }) {
                         notice("🛡️ \(Palette.name(offer.from, state)) proposes an alliance", "View") { open(.diplomacy) }
                     }
-                    if offerCount > 0 {
-                        notice("🕊️ \(offerCount) peace offer\(offerCount == 1 ? "" : "s")", "View") { open(.diplomacy) }
+                    if let human = session.human {
+                        // Each offer answered right here; more than two wait on the Rivals tab.
+                        let offers = state.peaceOffers.filter { $0.to == human }.map(\.from).sorted()
+                        ForEach(offers.prefix(2), id: \.self) { from in peaceNotice(from) }
+                        if offers.count > 2 { notice("🕊️ +\(offers.count - 2) more", "View") { open(.diplomacy) } }
                     }
                     if !session.report.isEmpty, !session.report.contains(where: { $0.mine == true }) {
                         notice("📜 \(session.report.count) events elsewhere", "Read") { session.showReport = true }
@@ -422,6 +430,24 @@ struct GameScreen: View {
         .buttonStyle(.plain)
     }
 
+    /// "Greece offers peace": accept or decline without leaving the map.
+    private func peaceNotice(_ from: CivilizationID) -> some View {
+        HStack(spacing: 8) {
+            Text("🕊️ \(Palette.name(from, state)) offers peace").font(.callout).foregroundStyle(.white)
+            Button("Decline") {
+                if session.order(.declinePeace(from: from)) { Feedback.select() }
+            }
+            .font(.callout.bold()).foregroundStyle(.white.opacity(0.8))
+            Button("Accept") {
+                if session.order(.acceptPeace(from: from)) { SoundBoard.shared.play(.horn, volume: 0.4) }
+            }
+            .font(.callout.bold()).foregroundStyle(Bronze.gradient)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 7)
+        .woodPanel(Capsule())
+        .shadow(radius: 3)
+    }
+
     private var offerCount: Int {
         guard let human = session.human else { return 0 }
         return state.peaceOffers.filter { $0.to == human }.count
@@ -485,6 +511,12 @@ struct GameScreen: View {
 
     private func lookAtGains() {
         if let t = session.gainsAt?.territory { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
+    }
+
+    /// The player's turn, with nothing else on screen: rulers may be received.
+    private var readyForAudience: Bool {
+        session.isHumanTurn && !session.busy && !session.showReport && session.moments.isEmpty && courtSettled
+            && session.replay == nil && session.muster == nil
     }
 
     /// No dilemma or succession crisis waits for an answer.

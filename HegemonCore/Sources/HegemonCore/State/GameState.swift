@@ -265,6 +265,8 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Finished great works and where they stand; works under way, by territory.
     public var monuments: [MonumentID: TerritoryID] = [:]
     public var monumentSites: [TerritoryID: MonumentSite] = [:]
+    /// Peace offers turned down, with the last round the offerer stays silent.
+    public var peaceRebuffed: [PeaceOffer: Int] = [:]
     /// Walled towns under siege, by the town.
     public var sieges: [TerritoryID: Siege] = [:]
     /// The collapse has brought iron within everyone's reach.

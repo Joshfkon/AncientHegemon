@@ -16,6 +16,20 @@ struct DiplomacyView: View {
             let rivals = engine.standings(in: state).filter { $0 != human && !(state.civs[$0]?.eliminated ?? true) }
             VStack(alignment: .leading, spacing: 10) {
                 Text("Diplomacy").font(.subheadline.bold())
+                // The courts of the age: tap a ruler to visit.
+                HStack(spacing: 14) {
+                    ForEach(rivals, id: \.self) { other in
+                        Button { session.audience = Audience(civ: other, reason: .visit) } label: {
+                            VStack(spacing: 3) {
+                                RulerPortrait(civ: other, state: state, size: 46)
+                                Text(state.civs[other]?.ruler.name ?? "").font(.caption2.bold()).lineLimit(1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 8)
+                Text("Tap a ruler to visit their court.").font(.caption2).foregroundStyle(.secondary)
                 ForEach(Array(state.warRequests.filter { $0.to == human }).sorted { $0.from < $1.from }, id: \.self) { r in
                     VStack(alignment: .leading, spacing: 6) {
                         Label("\(Palette.name(r.from, state)) calls you to war against \(Palette.name(r.against, state))",
@@ -103,9 +117,10 @@ struct DiplomacyView: View {
                     .padding(.horizontal, 7).padding(.vertical, 2)
                     .background((peace ? Color.green : Color.red).opacity(0.2), in: Capsule())
                     .foregroundStyle(peace ? .green : .red)
+                    .fixedSize()
                 Spacer()
-                action(human, other)
             }
+            action(human, other).frame(maxWidth: .infinity, alignment: .trailing)
             HStack(spacing: 12) {
                 let lands = state.territories(of: other).count, troops = state.totalUnits(of: other).total
                 fact("map", "\(lands) land\(lands == 1 ? "" : "s")")
@@ -116,7 +131,11 @@ struct DiplomacyView: View {
             Label(mood.text, systemImage: mood.icon)
                 .font(.caption.bold()).foregroundStyle(mood.color)
             HStack(alignment: .top, spacing: 10) {
-                RulerPortrait(civ: other, state: state, size: 38).padding(.top, 6)
+                Button { session.audience = Audience(civ: other, reason: .visit) } label: {
+                    RulerPortrait(civ: other, state: state, size: 38).padding(.top, 6)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Visit \(cs.ruler.name)")
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(cs.ruler.name), \(RulerVoice.temperament(other))").font(.caption.bold())
                     Text("“\(RulerVoice.line(voiceMoment(mood.text), other, state))”")
@@ -210,9 +229,15 @@ struct DiplomacyView: View {
                     .buttonStyle(.bordered).tint(.red).controlSize(.small).fixedSize()
                 Text("−\(-engine.rules.government.legitimacy.brokePeace) legitimacy, ends trade").font(.caption2).foregroundStyle(.secondary)
             } else if state.peaceOffers.contains(PeaceOffer(from: other, to: human)) {
-                Button("Accept peace") { session.order(.acceptPeace(from: other)) }
-                    .buttonStyle(.borderedProminent).tint(.green).controlSize(.small).fixedSize()
-                Text("Free · trade opens, merchants see their capital").font(.caption2).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Button("Decline") { session.order(.declinePeace(from: other)) }
+                        .buttonStyle(.bordered).controlSize(.small).fixedSize()
+                    Button("Accept peace") { session.order(.acceptPeace(from: other)) }
+                        .buttonStyle(.borderedProminent).tint(.green).controlSize(.small).fixedSize()
+                }
+                Text("If declined, they won't ask for \(engine.rules.alliances.rebuffedRounds) rounds")
+                    .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if state.peaceOffers.contains(PeaceOffer(from: human, to: other)) {
                 Text("Peace offered").font(.caption).foregroundStyle(.secondary)
             } else {

@@ -67,3 +67,18 @@ import Testing
         #expect(s.civs["egypt"]!.legitimacy == before - engine.rules.alliances.betrayalLegitimacy)
     }
 }
+
+@Suite struct DeclinePeaceTests {
+    let engine = try! Engine.bare()
+
+    @Test func decliningRemovesTheOfferAndSilencesThemForAWhile() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        s.peaceOffers.insert(PeaceOffer(from: "greece", to: "egypt"))
+        s.activePlayerIndex = s.players.firstIndex(of: "egypt")!
+        let events = try engine.apply(.declinePeace(from: "greece"), to: &s)
+        #expect(events == [.peaceDeclined(by: "egypt", offerer: "greece")])
+        #expect(s.peaceOffers.isEmpty)
+        #expect(s.peaceRebuffed[PeaceOffer(from: "greece", to: "egypt")] == s.turn + engine.rules.alliances.rebuffedRounds)
+        #expect(throws: GameError.noPeaceOffer("greece")) { try engine.apply(.declinePeace(from: "greece"), to: &s) }
+    }
+}

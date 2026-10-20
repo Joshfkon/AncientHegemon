@@ -72,3 +72,116 @@ enum RulerVoice {
         }
     }
 }
+
+/// Why the player stands before a rival ruler.
+struct Audience: Identifiable, Equatable {
+    enum Reason: Equatable { case visit, peaceOffer, war }
+    let civ: CivilizationID
+    let reason: Reason
+    var id: String { "\(civ)-\(reason)" }
+}
+
+/// An audience with a rival ruler, Civilization-style: their own hall, the ruler on the throne,
+/// what they say, and what you can do about it.
+struct AudienceView: View {
+    let session: GameSession
+    let audience: Audience
+    let close: () -> Void
+    @State private var confirmWar = false
+
+    private var engine: Engine { session.engine }
+    private var state: GameState { session.state }
+    private var civ: CivilizationID { audience.civ }
+
+    var body: some View {
+        if let human = session.human, let cs = state.civs[civ] {
+            HStack(spacing: 0) {
+                ZStack(alignment: .bottom) {
+                    Hall(civ: civ, decorations: cs.decorations, trophies: cs.trophies, ruler: cs.ruler.name, state: state)
+                    // The ruler, seated on the throne.
+                    RulerPortrait(civ: civ, state: state, size: 104)
+                        .padding(.bottom, 118)
+                }
+                .ignoresSafeArea()
+                speech(human, cs)
+                    .frame(width: 340)
+                    .background(Wood.gradient.ignoresSafeArea())
+                    .overlay(alignment: .leading) { Rectangle().fill(Bronze.gradient).frame(width: 2).ignoresSafeArea() }
+                    .environment(\.colorScheme, .dark)
+            }
+            .background(Color.black)
+            .onAppear {
+                SoundBoard.shared.play(audience.reason == .war ? .wardrums : .horn, volume: 0.5)
+            }
+        }
+    }
+
+    private func speech(_ human: CivilizationID, _ cs: CivState) -> some View {
+        let peace = state.atPeace(human, civ)
+        let offered = state.peaceOffers.contains(PeaceOffer(from: civ, to: human))
+        let moment: RulerVoice.Moment = switch audience.reason {
+        case .war: .war
+        case .peaceOffer: .peace
+        case .visit: offered ? .peace : peace ? (engine.allied(human, civ, in: state) ? .ally : .cordial) : .hostile
+        }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                CardTitle(text: Palette.name(civ, state))
+                Spacer()
+                Button(action: close) { Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.white.opacity(0.6)) }
+                    .accessibilityLabel("Leave")
+            }
+            Text("\(cs.ruler.name), \(cs.government == .republic ? "first of the republic" : "king"), \(RulerVoice.temperament(civ))")
+                .font(.caption).foregroundStyle(.white.opacity(0.7))
+            Text("“\(RulerVoice.line(moment, civ, state))”")
+                .font(.system(.title3, design: .serif).italic()).foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(standing(human, peace: peace)).font(.caption).foregroundStyle(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            actions(human, peace: peace, offered: offered)
+        }
+        .padding(18)
+    }
+
+    /// Where things stand between the two realms, in a line.
+    private func standing(_ human: CivilizationID, peace: Bool) -> String {
+        let theirs = state.territories(of: civ).count, troops = state.totalUnits(of: civ).total
+        let rel = engine.allied(human, civ, in: state) ? "Allies" : peace ? "At peace" : "At war"
+        return "\(rel) · \(theirs) land\(theirs == 1 ? "" : "s") · \(troops) troops · \(engine.prestige(of: civ, in: state)) prestige"
+    }
+
+    @ViewBuilder private func actions(_ human: CivilizationID, peace: Bool, offered: Bool) -> some View {
+        let isTurn = session.isHumanTurn
+        VStack(alignment: .leading, spacing: 8) {
+            if offered {
+                Button("Accept peace") { act(.acceptPeace(from: civ)) }.buttonStyle(BronzeButtonStyle())
+                Button("Decline") { act(.declinePeace(from: civ)) }
+                    .font(.callout.bold()).foregroundStyle(.white.opacity(0.85))
+                Text("Declining: they won't ask again for \(engine.rules.alliances.rebuffedRounds) rounds.")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.6))
+            } else if !peace {
+                if state.peaceOffers.contains(PeaceOffer(from: human, to: civ)) {
+                    Text("Your envoys await their answer.").font(.callout).foregroundStyle(.white.opacity(0.8))
+                } else {
+                    Button("Offer peace") { act(.offerPeace(to: civ)) }.buttonStyle(BronzeButtonStyle())
+                }
+            } else {
+                if !engine.allied(human, civ, in: state), !state.allianceOffers.contains(PeaceOffer(from: human, to: civ)) {
+                    Button("Propose an alliance") { act(.offerAlliance(to: civ)) }.buttonStyle(BronzeButtonStyle())
+                }
+                Button(confirmWar ? "Break the peace (−\(-engine.rules.government.legitimacy.brokePeace) legitimacy)" : "Declare war") {
+                    if confirmWar { act(.declareWar(on: civ)) } else { confirmWar = true }
+                }
+                .font(.callout.bold()).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.45))
+            }
+            Button("Take your leave", action: close)
+                .font(.callout.bold()).foregroundStyle(.white.opacity(0.7))
+        }
+        .disabled(!isTurn)
+    }
+
+    private func act(_ command: Command) {
+        if session.order(command) { close() }
+    }
+}

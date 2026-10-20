@@ -1562,3 +1562,18 @@ goals: everything here follows from how real Bronze Age empires held together or
 - Fixed: the famine dilemma no longer asks for grain the granary doesn't hold.
 - Balance (80 games, seed 501): Egypt 43%, Italia 23%, Mesopotamia 23%, Greece 8%; 3 dominations
   and a trade win. Rules version 19; 251 tests. Debug launch argument `-demoSiege YES`.
+
+### Declining peace, and audiences with rival rulers (Josh: "there doesn't seem to be an easy way to decline an offer of peace"; "we could see the rival rulers like in Civ? … they should appear when they ask for peace or declare war. and I should be able to tap to visit them")
+
+- `Command.declinePeace(from:)`: the offer is withdrawn and the offerer won't offer peace again
+  for 5 rounds (`alliances.rebuffedRounds`). Each peace offer now shows on the map as its own
+  notice with Decline and Accept (more than two collapse to "+N more"); the Rivals tab has
+  Decline beside Accept peace.
+- **Audiences.** A rival ruler who offers you peace or declares war on you comes to you in
+  person once the news, dilemmas and banners are dealt with: a full screen with their own hall
+  (their throne room as decorated), the ruler's portrait on the throne, their name, government
+  and temperament, a line in their voice, where the two realms stand, and what you can do
+  (accept or decline peace; offer peace; propose an alliance; declare war, tapped twice to
+  confirm; take your leave). Several wait their turn. The Rivals tab opens with a row of the
+  age's rulers — tap one (or the portrait on their card) to visit their court any time.
+- Rules version 20; 252 tests.

@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -734,7 +734,8 @@
   "alliances": {
     "enemyTooStrongPercent": 200,
     "betrayalLegitimacy": 8,
-    "maxAllies": 2
+    "maxAllies": 2,
+    "rebuffedRounds": 5
   },
   "tribes": {
     "giftGoldBase": 3,

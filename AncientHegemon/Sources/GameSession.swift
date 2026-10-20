@@ -165,6 +165,16 @@ final class GameSession {
         }
     }
 
+    /// The rival ruler the player stands before, and those waiting to be received.
+    var audience: Audience?
+    private var waitingAudiences: [Audience] = []
+
+    /// Shows the next ruler waiting for an audience, if any.
+    func nextAudience() {
+        guard audience == nil, !waitingAudiences.isEmpty else { return }
+        audience = waitingAudiences.removeFirst()
+    }
+
     /// Generals the player bought off in a succession crisis, so a later revolt can say so.
     var bribed: Set<GeneralID> = []
     /// A rival's answer to the player's latest proposal, shown on its diplomacy card for the turn.
@@ -397,6 +407,18 @@ final class GameSession {
         }.value
         record(events, round: start.turn, before: start, after: after)
         state = after
+        // Rulers who come to the player in person: to offer peace, or to declare war.
+        if let human {
+            for event in events {
+                switch event {
+                case let .peaceOffered(from, to) where to == human:
+                    waitingAudiences.append(Audience(civ: from, reason: .peaceOffer))
+                case let .warDeclared(by, on) where on == human:
+                    waitingAudiences.append(Audience(civ: by, reason: .war))
+                default: break
+                }
+            }
+        }
 
         // Reveal this rival's moves one at a time, so they can be followed on the map.
         for mark in MapMark.from(events, before: start, after: after) where visible(mark) {
@@ -516,6 +538,7 @@ final class GameSession {
         case .alreadyAsked: return "You already asked them this turn."
         case .noWarRequest: return "That call to arms has lapsed."
         case .unknownDecoration: return "No such decoration."
+        case .noPeaceOffer: return "That offer of peace has lapsed."
         case .notWalled(let t): return "\(place(t)) has no walls to besiege: attack it instead."
         case .noSiege(let t): return "There is no siege of yours at \(place(t))."
         case .alreadyQueued(let t): return "That can't be lined up in \(place(t)): it's built, under way, queued, or the line is full."
@@ -681,6 +704,7 @@ final class GameSession {
         case let .capitalSacked(by, from, _, _): return by == me || from == me
         case let .splendourBegan(civ), let .splendourEnded(civ), let .projectQueued(civ, _, _): return civ == me
         case .ironAgeBegan: return true
+        case let .peaceDeclined(by, offerer): return by == me || offerer == me
         case let .monumentStarted(civ, _, _), let .monumentCompleted(civ, _, _), let .monumentLost(civ, _, _),
              let .decided(civ, _, _), let .patronageSet(civ, _):
             return civ == me
@@ -828,6 +852,8 @@ final class GameSession {
                 add(civ, "The age of splendour fades")
             case .ironAgeBegan:
                 add(nil, "The Iron Age dawns: iron needs no tin, and every realm can arm with it")
+            case let .peaceDeclined(by, offerer):
+                add(by, "\(name(by)) turn\(by == human ? "" : "s") down \(name(offerer))'s offer of peace")
             case let .projectQueued(civ, t, kind) where civ == human:
                 add(civ, "\(projectName(kind)) queued in \(place(t))", at: t)
             case let .monumentStarted(civ, t, id):

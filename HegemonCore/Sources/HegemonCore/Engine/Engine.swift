@@ -75,6 +75,8 @@ public struct Engine: Sendable {
             return try offerPeace(to, &state)
         case let .acceptPeace(from):
             return try acceptPeace(from, &state)
+        case let .declinePeace(from):
+            return try declinePeace(from, &state)
         case let .declareWar(on):
             return try declareWar(on, &state)
         case let .appointGeneral(territory):
@@ -340,6 +342,16 @@ public struct Engine: Sendable {
         state.peaceOffers.remove(PeaceOffer(from: civ, to: from))
         state.peace.insert(CivPair(civ, from))
         return [.peaceMade(CivPair(civ, from))]
+    }
+
+    private func declinePeace(_ from: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
+        let civ = state.activePlayer
+        _ = try rival(from, state)
+        let offer = PeaceOffer(from: from, to: civ)
+        guard state.peaceOffers.contains(offer) else { throw GameError.noPeaceOffer(from) }
+        state.peaceOffers.remove(offer)
+        state.peaceRebuffed[offer] = state.turn + rules.alliances.rebuffedRounds
+        return [.peaceDeclined(by: civ, offerer: from)]
     }
 
     private func declareWar(_ on: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
