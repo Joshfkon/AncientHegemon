@@ -92,6 +92,12 @@ struct CivPickerView: View {
             }
             .padding(.vertical)
         }
+        .alert("Your first reign?", isPresented: Binding(get: { askingFor != nil }, set: { if !$0 { askingFor = nil } })) {
+            Button("Guide me through the first turns") { answerGuide(true) }
+            Button("Jump right in") { answerGuide(false) }
+        } message: {
+            Text("Your council can walk you through the first few turns, while the world leaves you in peace until round \(Engine.quietRounds). You can change this later with the Guided switch.")
+        }
         .sheet(isPresented: $showScenarios) {
             ScenarioPicker(engine: engine, state: session.state) { picked in
                 scenario = picked
@@ -150,8 +156,11 @@ struct CivPickerView: View {
     /// The difficulty chosen for new games (remembered), and the scenario, if one is picked.
     @AppStorage("difficulty") private var difficultyRaw = Difficulty.medium.rawValue
     @State private var scenario: Scenario?
-    /// A guided start: on until the player turns it off.
+    /// A guided start: asked of new players once, then a switch on the title screen.
     @AppStorage("guidedStart") private var guided = true
+    @AppStorage("guideAsked") private var guideAsked = false
+    /// The realm a new player picked, while they're asked whether they'd like the tour.
+    @State private var askingFor: CivilizationID?
     @State private var showScenarios = false
     private var difficulty: Difficulty { Difficulty(rawValue: difficultyRaw) ?? .medium }
 
@@ -198,8 +207,22 @@ struct CivPickerView: View {
         }
     }
 
+    private func answerGuide(_ yes: Bool) {
+        guided = yes
+        guideAsked = true
+        if let civ = askingFor {
+            askingFor = nil
+            choose(civ)
+        }
+    }
+
     private func choose(_ civ: CivilizationID) {
         guard chosen == nil else { return }
+        // A new player is asked, once, whether they'd like to be shown the ropes.
+        if !guideAsked, scenario == nil {
+            askingFor = civ
+            return
+        }
         Feedback.impact(0.7)
         SoundBoard.shared.play(.horn, volume: 0.6)
         withAnimation(.spring(duration: 0.4)) { chosen = civ }

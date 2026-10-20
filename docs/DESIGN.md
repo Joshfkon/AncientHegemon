@@ -1985,5 +1985,7 @@ goals: everything here follows from how real Bronze Age empires held together or
   the tour. "Skip the tour" ends it. Progress is remembered per game.
 - While touring, the advisors and tips wait. The first turn's "Since your last turn" flood is
   held back, and rivals' peace envoys don't burst in (their offers wait in Rivals).
-- Title screen: a **Guided** switch beside difficulty and scenarios, on by default (not for
-  scenarios). Debug: `-demoAs <civ> -demoGuided YES`.
+- **Optional** (Josh: "let's make it optional for new players"). The first time a player picks a
+  realm, they're asked: "Guide me through the first turns" or "Jump right in". The answer sets
+  the **Guided** switch on the title screen (beside difficulty and scenarios), which they can
+  flip for later games. Scenarios are never guided. Debug: `-demoAs <civ> -demoGuided YES`.
