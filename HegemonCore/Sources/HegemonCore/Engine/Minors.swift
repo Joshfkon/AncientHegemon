@@ -79,6 +79,11 @@ public struct MinorRules: Codable, Sendable, Equatable {
     /// Rounds between levies, and loyal rounds before a vassal can be annexed.
     public let levyRounds: Int
     public let annexRounds: Int
+    /// Annexing then costs gold (buying off their nobles: per land and per warrior), and the
+    /// overlord's troops with them or next door must outnumber their warriors this many times.
+    public let annexGoldPerLand: Int
+    public let annexGoldPerWarrior: Int
+    public let annexRatio: Int
     /// Chance a round that a vassal with none of its overlord's troops nearby breaks free.
     public let breakFreePercent: Int
     public let vassalPrestige: Int
@@ -373,12 +378,37 @@ extension Engine {
 
     /// After loyal years, the vassal's lands become the overlord's, quietly: no unrest, and its
     /// warriors take service.
+    /// What annexing the vassal holding a territory would take: gold, and troops with them or
+    /// next door (and how many `civ` has there now).
+    public func annexTerms(_ territory: TerritoryID, for civ: CivilizationID, in state: GameState)
+        -> (gold: Int, troopsNeeded: Int, troops: Int) {
+        guard let k = kingdom(at: territory, in: state) else { return (0, 0, 0) }
+        let m = rules.minors
+        let lands = lands(of: k, in: state)
+        let warriors = warriors(of: k, in: state)
+        let garrisons = lands.reduce(0) { $0 + (garrisoned($1, in: state) ? state.armies[$1]!.units.total : 0) }
+        return (lands.count * m.annexGoldPerLand + warriors * m.annexGoldPerWarrior,
+                warriors * m.annexRatio, garrisons + troopsNextTo(kingdom: k, for: civ, in: state))
+    }
+
+    /// Whether `civ` could annex the vassal holding a territory now.
+    public func canAnnex(_ territory: TerritoryID, for civ: CivilizationID, in state: GameState) -> Bool {
+        guard overlord(of: territory, in: state) == civ, annexWait(territory, in: state) == 0 else { return false }
+        let terms = annexTerms(territory, for: civ, in: state)
+        return (state.civs[civ]?.gold ?? 0) >= terms.gold && terms.troops >= terms.troopsNeeded
+    }
+
     func annex(_ territory: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer
         guard overlord(of: territory, in: state) == civ, let k = kingdom(at: territory, in: state) else {
             throw GameError.notVassal(territory)
         }
         guard annexWait(territory, in: state) == 0 else { throw GameError.tooSoon(territory) }
+        let terms = annexTerms(territory, for: civ, in: state)
+        guard terms.troops >= terms.troopsNeeded else { throw GameError.insufficientUnits(territory) }
+        let gold = state.civs[civ]!.gold
+        guard gold >= terms.gold else { throw GameError.insufficientGold(needed: terms.gold, available: gold) }
+        state.civs[civ]!.gold -= terms.gold
         _ = absorb(k, into: civ, joinPercent: 100, settled: true, &state)
         var events: [GameEvent] = [.annexed(civ: civ, territory: territory)]
         events += checkDomination(civ, &state)

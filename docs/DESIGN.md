@@ -2147,3 +2147,15 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   along it. Roads stay with the land.
 - App: a "Lay a road" tile on vassal land (the vassal kingdom's panel; a "Vassal land" section
   on a vassal empire's).
+
+### Annexing a vassal takes longer (Josh: "it's too easy to annex a vassal. happens too quickly")
+
+- Annexing a vassal kingdom now takes 15 loyal rounds (was 8), and then costs gold to buy off
+  their nobles: 10 per land and 2 per warrior. Your troops, stationed with them or next to their
+  lands, must outnumber their warriors two to one; otherwise they refuse. The AI annexes only
+  when it meets the terms. `annexTerms`, `canAnnex`; rules `annexGoldPerLand`,
+  `annexGoldPerWarrior`, `annexRatio`. Rules version 33.
+- The vassal's Annex tile shows what's still missing: rounds, troops or gold. The advisor's
+  reminder comes only when annexing is possible.
+- Balance (80 games): Greece 31%, Egypt 31%, Mesopotamia 23%, Italia 13% (low end of its range:
+  the others keep their vassals as buffers longer). Kingdoms hold ~13 lands at the end.

@@ -267,7 +267,7 @@ enum Advisors {
                 "Pirates plundered \(place(t))\(gold > 0 ? " and took \(gold) gold" : ""). Walls, or our own ships in that sea, would keep them off.",
                 go: .territory(t), cooldown: 4))
         }
-        if let (name, v) = vassals.first(where: { engine.annexWait($0.land, in: state) == 0 }) {
+        if let (name, v) = vassals.first(where: { engine.canAnnex($0.land, for: civ, in: state) }) {
             reminders.append(say("annex", .envoy, .calm,
                 "\(name) have served us loyally for years. They could be annexed now, in peace: their land would be ours outright.",
                 go: .territory(v), cooldown: 8))

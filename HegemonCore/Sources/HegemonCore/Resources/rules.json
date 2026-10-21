@@ -1,5 +1,5 @@
 {
-  "version": 32,
+  "version": 33,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -285,7 +285,10 @@
     "tributeBase": 1,
     "tributeGrainPerGold": 3,
     "levyRounds": 5,
-    "annexRounds": 8,
+    "annexRounds": 15,
+    "annexGoldPerLand": 10,
+    "annexGoldPerWarrior": 2,
+    "annexRatio": 2,
     "breakFreePercent": 8,
     "vassalPrestige": 8,
     "peoples": {

@@ -104,6 +104,31 @@ private let thrace = kingdomID("thrace")
         #expect(s.kingdoms[thrace] == nil)
     }
 
+    @Test func annexingTakesLoyaltyGoldAndForce() throws {
+        var s = try greeceBesideThrace(troops: 8)
+        s.armies["thrace"]!.units = UnitCounts(infantry: 4)
+        try engine.apply(.parley(territory: "thrace", .vassalage), to: &s)
+        let m = engine.rules.minors
+        #expect(throws: GameError.tooSoon("thrace")) { try engine.apply(.annex(territory: "thrace"), to: &s) }
+        s.kingdoms[thrace]!.vassalSince = s.turn - m.annexRounds
+        // Too few troops at hand: 4 warriors need 8 of ours with them or next door.
+        s.armies["macedonia"]!.units.infantry = 5
+        #expect(!engine.canAnnex("thrace", for: "greece", in: s))
+        #expect(throws: GameError.insufficientUnits("thrace")) { try engine.apply(.annex(territory: "thrace"), to: &s) }
+        // Enough troops, too little gold.
+        s.armies["macedonia"]!.units.infantry = 8
+        let terms = engine.annexTerms("thrace", for: "greece", in: s)
+        #expect(terms.gold == m.annexGoldPerLand + 4 * m.annexGoldPerWarrior)
+        s.civs["greece"]!.gold = terms.gold - 1
+        #expect(throws: GameError.insufficientGold(needed: terms.gold, available: terms.gold - 1)) {
+            try engine.apply(.annex(territory: "thrace"), to: &s)
+        }
+        s.civs["greece"]!.gold = terms.gold
+        try engine.apply(.annex(territory: "thrace"), to: &s)
+        #expect(s.owner(of: "thrace") == "greece")
+        #expect(s.civs["greece"]!.gold == 0)
+    }
+
     @Test func attacksAreHatedAndFeared() throws {
         var s = try greeceBesideThrace(troops: 1)
         try engine.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 1)), to: &s)

@@ -365,7 +365,7 @@ public struct AIPlayer: Sendable {
             let lands = engine.lands(of: k, in: state)
             guard let first = lands.first else { continue }
             if state.kingdoms[k]?.overlord == civ {
-                if engine.annexWait(first, in: state) == 0 { attempt(.annex(territory: first), &state, &turn) }
+                if engine.canAnnex(first, for: civ, in: state) { attempt(.annex(territory: first), &state, &turn) }
                 continue
             }
             // Judged by its richest land. A true conqueror takes no oaths: it conquers.

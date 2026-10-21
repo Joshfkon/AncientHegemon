@@ -495,9 +495,14 @@ struct CommandBar: View {
             }
             vassalRoadTile(id, human)
             let annex = engine.annexWait(id, in: state)
-            Tile(symbol: "flag.fill", title: "Annex", detail: "Their land becomes yours, peacefully: no unrest",
-                 cost: Text(annex > 0 ? "After \(annex) more loyal round\(annex == 1 ? "" : "s")" : "Their warriors join you"),
-                 enabled: annex == 0) {
+            let terms = engine.annexTerms(id, for: human, in: state)
+            let short = terms.troops < terms.troopsNeeded
+            Tile(symbol: "flag.fill", title: "Annex",
+                 detail: annex > 0 ? "Their land becomes yours, peacefully, once they've served long enough"
+                     : short ? "Needs \(terms.troopsNeeded) of our troops with them or next door (we have \(terms.troops))"
+                     : "Their land becomes yours, peacefully: no unrest",
+                 cost: Text(annex > 0 ? "After \(annex) more loyal round\(annex == 1 ? "" : "s")" : "\(terms.gold) gold to buy off their nobles"),
+                 enabled: annex == 0 && !short && (state.civs[human]?.gold ?? 0) >= terms.gold) {
                 session.order(.annex(territory: id))
             }
         }
