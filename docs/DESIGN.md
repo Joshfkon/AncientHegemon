@@ -2159,3 +2159,18 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   reminder comes only when annexing is possible.
 - Balance (80 games): Greece 31%, Egypt 31%, Mesopotamia 23%, Italia 13% (low end of its range:
   the others keep their vassals as buffers longer). Kingdoms hold ~13 lands at the end.
+
+### Proposals at court (Josh: "can all of these proposals be moved to the throne room scene with the rivals")
+- All diplomacy with a rival now happens in an audience in their throne room, not in menus.
+  The audience panel shows how they regard you, any proposals they've made to you (answer
+  Accept/Decline or Pay/Refuse in place), and everything you can put to them: gifts, bonds
+  (marriage, pact, passage), a trade, embargoes and demands. Each option says whether they'd
+  likely agree.
+- The trade builder lets you choose any goods for any goods: an amount and kind for each side,
+  kept every turn for the bargain's rounds. It says why an offer can't be made (same goods,
+  you can't spare it, they don't have it).
+- The ruler answers to your face with a line that fits the deal and whether they accepted, and
+  their expression follows the answer.
+- A proposal from an AI court arrives as a summons to that court, like a war or peace audience.
+  The Rivals inbox and the map notice both lead into the audience ("Answer at court",
+  "Visit court"). The old deals menu is gone.

@@ -459,7 +459,9 @@ struct GameScreen: View {
                         ForEach(offers.prefix(2), id: \.self) { from in peaceNotice(from) }
                         // Other courts' proposals: answered in Rivals.
                         if let p = state.proposals.first(where: { $0.to == session.human }) {
-                            notice("📜 \(DealText.describe(p.deal, from: p.from, state, engine))", "Answer") { open(.diplomacy) }
+                            notice("📜 \(DealText.describe(p.deal, from: p.from, state, engine))", "Answer") {
+                                session.audience = Audience(civ: p.from, reason: .proposal)
+                            }
                         }
                         if offers.count > 2 { notice("🕊️ +\(offers.count - 2) more", "View") { open(.diplomacy) } }
                     }

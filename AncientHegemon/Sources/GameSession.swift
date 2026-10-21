@@ -464,6 +464,10 @@ final class GameSession {
                     waitingAudiences.append(Audience(civ: from, reason: .peaceOffer))
                 case let .warDeclared(by, on) where on == human:
                     waitingAudiences.append(Audience(civ: by, reason: .war))
+                // Their envoy comes in person with a proposal, to be answered in their hall.
+                case let .dealProposed(from, to, _) where to == human:
+                    let a = Audience(civ: from, reason: .proposal)
+                    if !waitingAudiences.contains(a) { waitingAudiences.append(a) }
                 case let .submissionDemanded(from, to) where to == human:
                     waitingAudiences.append(Audience(civ: from, reason: .submission))
                 default: break

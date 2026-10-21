@@ -80,7 +80,7 @@ enum RulerVoice {
 
 /// Why the player stands before a rival ruler.
 struct Audience: Identifiable, Equatable {
-    enum Reason: Equatable { case visit, peaceOffer, war, submission }
+    enum Reason: Equatable { case visit, peaceOffer, war, submission, proposal }
     let civ: CivilizationID
     let reason: Reason
     var id: String { "\(civ)-\(reason)" }
@@ -95,6 +95,8 @@ struct AudienceView: View {
     @State private var confirmWar = false
     /// Bumped when they speak, to move their lips.
     @State private var spoken = 0
+    /// Their answer to what you just put to them.
+    @State private var reply: (text: String, good: Bool)?
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
@@ -131,12 +133,17 @@ struct AudienceView: View {
 
     /// The ruler's face: how their court regards you right now.
     private func mood(_ human: CivilizationID) -> RulerFigure.Mood {
+        if let reply { return reply.good ? .pleased : .stern }
         if audience.reason == .war { return .angry }
         if audience.reason == .submission || state.submissionDemands.contains(PeaceOffer(from: civ, to: human)) { return .stern }
         if engine.liege(of: civ, in: state) == human { return .wary }
         if audience.reason == .peaceOffer || state.peaceOffers.contains(PeaceOffer(from: civ, to: human)) { return .pleased }
         if engine.allied(human, civ, in: state) { return .pleased }
         if !state.atPeace(human, civ) { return .stern }
+        // How their court regards ours shows on the face.
+        let regard = engine.regard(of: civ, toward: human, in: state)
+        if regard >= 30 { return .pleased }
+        if regard <= -30 { return .stern }
         let theirs = state.totalUnits(of: civ).total, ours = state.totalUnits(of: human).total
         if theirs * 4 < ours * 3 { return .wary }
         return .neutral
@@ -150,7 +157,7 @@ struct AudienceView: View {
         case .war: .war
         case .peaceOffer: .peace
         case .submission: .demand
-        case .visit: demanding ? .demand : offered ? .peace
+        case .visit, .proposal: demanding ? .demand : offered ? .peace
             : engine.liege(of: civ, in: state) == human ? .overlord
             : engine.liege(of: human, in: state) == civ ? .vassal
             : peace ? (engine.allied(human, civ, in: state) ? .ally : .cordial) : .hostile
@@ -164,13 +171,37 @@ struct AudienceView: View {
             }
             Text("\(cs.ruler.name), \(cs.government == .republic ? "first of the republic" : "king"), \(RulerVoice.temperament(civ))")
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
-            Text("“\(RulerVoice.line(moment, civ, state))”")
+            Text("“\(reply?.text ?? RulerVoice.line(moment, civ, state))”")
                 .font(.system(.title3, design: .serif).italic()).foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
+                .id(reply?.text ?? "")
+                .transition(.opacity)
             Text(standing(human, peace: peace)).font(.caption).foregroundStyle(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            actions(human, peace: peace, offered: offered)
+            let regard = engine.regard(of: civ, toward: human, in: state)
+            let word = DealText.regard(regard)
+            Text("They regard you: \(word.text) (\(regard > 0 ? "+" : "")\(regard))")
+                .font(.caption.bold()).foregroundStyle(word.color)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    // What they've put to us, to answer here.
+                    ForEach(state.proposals.filter { $0.from == civ && $0.to == human }, id: \.self) { p in
+                        ProposalCard(session: session, proposal: p) { accepted in
+                            withAnimation { reply = (accepted ? "Then we are agreed." : "As you wish. We will remember it.", accepted) }
+                            spoken += 1
+                        }
+                    }
+                    actions(human, peace: peace, offered: offered)
+                    if session.isHumanTurn, !engine.bound(human, civ, in: state) || engine.liege(of: civ, in: state) == human {
+                        AudienceDeals(session: session, human: human, civ: civ) { deal, accepted in
+                            withAnimation { reply = (DealReply.line(deal, accepted: accepted, turn: state.turn + spoken), accepted) }
+                            spoken += 1
+                        }
+                    }
+                    Button("Take your leave", action: close)
+                        .font(.callout.bold()).foregroundStyle(.white.opacity(0.7))
+                }
+            }
         }
         .padding(18)
     }
@@ -233,8 +264,6 @@ struct AudienceView: View {
                 }
                 .font(.callout.bold()).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.45))
             }
-            Button("Take your leave", action: close)
-                .font(.callout.bold()).foregroundStyle(.white.opacity(0.7))
         }
         .disabled(!isTurn)
     }

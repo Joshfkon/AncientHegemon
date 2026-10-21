@@ -63,6 +63,8 @@ enum DealText {
 struct ProposalCard: View {
     let session: GameSession
     let proposal: Proposal
+    /// Told how the player answered (in an audience, the ruler reacts).
+    var answered: ((Bool) -> Void)? = nil
 
     var body: some View {
         let engine = session.engine
@@ -89,80 +91,156 @@ struct ProposalCard: View {
     private func answer(_ yes: Bool) {
         if session.order(.answer(from: proposal.from, proposal.deal, accept: yes)) {
             yes ? SoundBoard.shared.play(.coins, volume: 0.5) : Feedback.select()
+            answered?(yes)
         }
     }
 }
 
-/// What the player can propose to a rival court, each with how they'd likely answer.
-struct DealsMenu: View {
+/// How a rival ruler answers a deal to your face.
+enum DealReply {
+    static func line(_ deal: Deal, accepted: Bool, turn: Int) -> String {
+        func pick(_ lines: [String]) -> String { lines[abs(turn) % lines.count] }
+        guard accepted else {
+            switch deal {
+            case .tribute: return pick(["You will have nothing from us but iron.", "Come and take it, if you can."])
+            case .marriage: return pick(["My house will not join yours. Not yet.", "No daughter of mine goes to your court."])
+            case .bargain: return pick(["Not for that price.", "You ask too much and offer too little."])
+            case .pact: return pick(["I will not tie my hands.", "Swear oaths to someone else."])
+            case .access: return pick(["Keep your soldiers on your own roads.", "No foreign army camps in my land."])
+            case .embargo: return pick(["Our merchants trade where they please.", "Your quarrels are not ours."])
+            case .gift: return "We accept your gift."
+            }
+        }
+        switch deal {
+        case .gift: return pick(["Your generosity is noted, and will be remembered.", "A fine gift. Our friendship grows."])
+        case .marriage: return pick(["So be it: our houses are one.", "Let the wedding feast begin."])
+        case .bargain: return pick(["Agreed. Let the wagons roll.", "A fair bargain. Our scribes will record it."])
+        case .tribute: return pick(["Take it, then. We will remember this.", "Here is your gold. Enjoy it while you can."])
+        case .pact: return pick(["Let no spear cross our border while this oath stands.", "Sworn, before the gods."])
+        case .access: return pick(["Your armies may pass. See that they keep to the roads.", "Pass, friend."])
+        case .embargo: return pick(["Their ships will find our harbours closed.", "Done. They will feel it."])
+        }
+    }
+}
+
+/// Everything a player can put to a rival court, in the audience: gifts, bonds, demands,
+/// embargoes and a trade of any goods for any goods. Each shows how they'd likely answer.
+struct AudienceDeals: View {
     let session: GameSession
     let human: CivilizationID
-    let other: CivilizationID
+    let civ: CivilizationID
+    /// Their answer, to show and speak.
+    let reply: (Deal, Bool) -> Void
+
+    @State private var giveKind: Resource? = nil
+    @State private var giveAmount = 3
+    @State private var getKind: Resource? = .tin
+    @State private var getAmount = 1
 
     private var engine: Engine { session.engine }
     private var state: GameState { session.state }
+    private static let goods: [Resource?] = [nil, .grain, .copper, .tin, .horses, .timber, .stone, .iron, .wine, .luxuries]
 
     var body: some View {
-        Menu {
-            let gold = state.civs[human]?.gold ?? 0
-            Section("Gifts") {
+        let peace = state.atPeace(human, civ)
+        let gold = state.civs[human]?.gold ?? 0
+        VStack(alignment: .leading, spacing: 10) {
+            heading("Gifts")
+            HStack(spacing: 8) {
                 ForEach([5, 10, 20], id: \.self) { n in
-                    Button("Send \(n) gold") { propose(.gift(.gold(n))) }.disabled(gold < n)
+                    Button("\(n) gold") { propose(.gift(.gold(n))) }
+                        .buttonStyle(.bordered).controlSize(.small).disabled(gold < n)
                 }
             }
-            if state.atPeace(human, other) {
-                Section("Bonds") {
-                    if !engine.married(human, other, in: state) { item("Royal marriage", .marriage) }
-                    if engine.pact(human, other, in: state) == nil { item("Non-aggression pact", .pact) }
-                    if !engine.grantsAccess(other, to: human, in: state) { item("Ask leave to march through", .access) }
+            if peace {
+                heading("Bonds")
+                if !engine.married(human, civ, in: state) { option("A royal marriage", .marriage) }
+                if engine.pact(human, civ, in: state) == nil { option("A pact of non-aggression", .pact) }
+                if !engine.grantsAccess(civ, to: human, in: state) { option("Leave to march through their land", .access) }
+                if engine.grantsAccess(human, to: civ, in: state) {
+                    Button("Revoke their leave to march through your land") { _ = session.order(.revokeAccess(from: civ)) }
+                        .font(.caption.bold()).foregroundStyle(.orange)
                 }
-                Section("Trade") {
-                    ForEach(Array(bargains.enumerated()), id: \.offset) { _, b in
-                        item("\(DealText.goods(b.get)) a turn for \(DealText.goods(b.give))", .bargain(give: b.give, get: b.get))
-                    }
+                trade
+                let partners = state.players.filter { e in
+                    e != human && e != civ && !(state.civs[e]?.eliminated ?? true)
+                        && engine.tradeRoute(between: civ, and: e, in: state) != nil
                 }
-                let enemies = state.players.filter { e in
-                    e != human && e != other && !(state.civs[e]?.eliminated ?? true)
-                        && engine.tradeRoute(between: other, and: e, in: state) != nil
-                }
-                if !enemies.isEmpty {
-                    Section("Embargo") {
-                        ForEach(enemies, id: \.self) { e in item("Stop trading with \(Palette.name(e, state))", .embargo(against: e)) }
-                    }
+                if !partners.isEmpty {
+                    heading("Embargo")
+                    ForEach(partners, id: \.self) { e in option("Stop trading with \(Palette.name(e, state))", .embargo(against: e)) }
                 }
             }
-            if let theirs = state.civs[other]?.gold, theirs >= 5 {
-                Section("Demands") {
-                    item("Demand \(min(20, max(5, theirs / 3))) gold in tribute", .tribute(gold: min(20, max(5, theirs / 3))))
-                }
+            if let theirs = state.civs[civ]?.gold, theirs >= 5 {
+                heading("Demands")
+                option("Demand \(min(20, max(5, theirs / 3))) gold in tribute", .tribute(gold: min(20, max(5, theirs / 3))))
             }
-        } label: {
-            Label("Propose…", systemImage: "scroll").font(.caption.bold())
         }
-        .buttonStyle(.bordered).controlSize(.small)
     }
 
-    private func item(_ title: String, _ deal: Deal) -> some View {
-        let yes = engine.wouldAccept(deal, from: human, to: other, in: state)
-        return Button("\(title) · \(yes ? "likely yes" : "likely no")") { propose(deal) }
+    /// Any goods for any goods, every turn for some rounds.
+    @ViewBuilder private var trade: some View {
+        heading("Trade, each turn for \(engine.rules.diplomacy.bargainRounds) rounds")
+        let give = Goods(giveKind, giveAmount), get = Goods(getKind, getAmount)
+        tradeRow("You give, each turn", amount: $giveAmount, kind: $giveKind)
+        tradeRow("You get, each turn", amount: $getAmount, kind: $getKind)
+        let canGive = engine.canGive(give, from: human, in: state)
+        let canGet = engine.canGive(get, from: civ, in: state)
+        let same = giveKind == getKind
+        let deal = Deal.bargain(give: give, get: get)
+        HStack {
+            Text(same ? "Pick different goods" : !canGive ? "You can't spare that" : !canGet ? "They don't have that to spare"
+                 : engine.wouldAccept(deal, from: human, to: civ, in: state) ? "They'd likely agree" : "They'd likely refuse")
+                .font(.caption2).foregroundStyle(.white.opacity(0.65))
+            Spacer()
+            Button("Offer the trade") { propose(deal) }
+                .buttonStyle(.bordered).controlSize(.small).disabled(same || !canGive || !canGet)
+        }
     }
 
-    /// Sensible bargains: what they have that we lack, for gold or what we can spare.
-    private var bargains: [(give: Goods, get: Goods)] {
-        let tradeable: [Resource] = [.tin, .copper, .horses, .iron, .timber, .stone, .wine, .luxuries, .grain]
-        var result: [(give: Goods, get: Goods)] = []
-        for r in tradeable {
-            let want = Goods(r, r == .grain ? 2 : 1)
-            guard engine.canGive(want, from: other, in: state), engine.worth(want, to: human, in: state) > 0 else { continue }
-            let price = engine.worth(want, to: other, in: state) + 1
-            let pay = Goods.gold(price)
-            if engine.canGive(pay, from: human, in: state) { result.append((pay, want)) }
-            if result.count >= 4 { break }
+    /// A side of the trade: how many of what, on its own line beneath its label.
+    private func tradeRow(_ label: String, amount: Binding<Int>, kind: Binding<Resource?>) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption2).foregroundStyle(.white.opacity(0.65))
+            HStack(spacing: 8) {
+                Stepper("", value: amount, in: 1...20).labelsHidden().fixedSize()
+                Text("\(amount.wrappedValue)").font(.callout.monospacedDigit().bold()).frame(minWidth: 22)
+                goodsPicker(kind)
+                Spacer(minLength: 0)
+            }
         }
-        return result
+    }
+
+    private func goodsPicker(_ kind: Binding<Resource?>) -> some View {
+        Picker("", selection: kind) {
+            ForEach(Self.goods, id: \.self) { r in Text(r.map { DealText.name($0) } ?? "gold").tag(r) }
+        }
+        .pickerStyle(.menu).labelsHidden().tint(.white).fixedSize()
+    }
+
+    private func heading(_ text: String) -> some View {
+        Text(text.uppercased()).font(.caption2.bold()).tracking(1).foregroundStyle(Bronze.gradient).padding(.top, 4)
+    }
+
+    private func option(_ title: String, _ deal: Deal) -> some View {
+        let likely = engine.wouldAccept(deal, from: human, to: civ, in: state)
+        return Button { propose(deal) } label: {
+            HStack {
+                Text(title).font(.callout.bold())
+                Spacer()
+                Text(likely ? "likely yes" : "likely no").font(.caption2)
+                    .foregroundStyle(likely ? Color.green : Color.white.opacity(0.5))
+            }
+        }
+        .buttonStyle(.plain).foregroundStyle(.white)
     }
 
     private func propose(_ deal: Deal) {
-        if session.order(.propose(to: other, deal)) { Feedback.select() }
+        // An AI court answers at once, as `wouldAccept` foresees (the engine decides the same way).
+        let yes = engine.wouldAccept(deal, from: human, to: civ, in: state)
+        if session.order(.propose(to: civ, deal)) {
+            reply(deal, yes)
+            yes ? SoundBoard.shared.play(.coins, volume: 0.5) : Feedback.select()
+        }
     }
 }

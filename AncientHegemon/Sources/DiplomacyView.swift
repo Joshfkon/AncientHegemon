@@ -30,9 +30,17 @@ struct DiplomacyView: View {
                 }
                 .padding(.top, 8)
                 Text("Tap a ruler to visit their court.").font(.caption2).foregroundStyle(.secondary)
-                // Deals other courts have put to us.
+                // Deals other courts have put to us: answered at their court.
                 ForEach(state.proposals.filter { $0.to == human }, id: \.self) { p in
-                    ProposalCard(session: session, proposal: p)
+                    HStack {
+                        Label(DealText.describe(p.deal, from: p.from, state, engine), systemImage: "scroll.fill")
+                            .font(.caption.bold()).fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        Button("Answer at court") { session.audience = Audience(civ: p.from, reason: .proposal) }
+                            .buttonStyle(.borderedProminent).tint(.orange).controlSize(.small)
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
                 }
                 ForEach(Array(state.warRequests.filter { $0.to == human }).sorted { $0.from < $1.from }, id: \.self) { r in
                     VStack(alignment: .leading, spacing: 6) {
@@ -212,7 +220,11 @@ struct DiplomacyView: View {
             Label("They regard you: \(word.text) (\(r > 0 ? "+" : "")\(r))", systemImage: "heart.text.square")
                 .font(.caption.bold()).foregroundStyle(word.color)
             Spacer(minLength: 0)
-            DealsMenu(session: session, human: human, other: other)
+            // Gifts, marriages, trade and the rest are proposed at their court.
+            Button { session.audience = Audience(civ: other, reason: .visit) } label: {
+                Label("Visit court", systemImage: "building.columns").font(.caption.bold())
+            }
+            .buttonStyle(.bordered).controlSize(.small)
         }
         let ties = bondList(human, other)
         if !ties.isEmpty {
