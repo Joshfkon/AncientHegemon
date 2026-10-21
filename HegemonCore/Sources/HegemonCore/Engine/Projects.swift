@@ -64,9 +64,13 @@ extension Engine {
 
     func build(_ project: ProjectKind, in territory: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer
-        guard state.owner(of: territory) == civ else { throw GameError.notOwner(territory) }
-        guard homeNetwork(of: civ, in: state).contains(territory) else { throw GameError.outOfSupply(territory) }
-        guard canBuild(project, in: territory, state) else { throw GameError.projectUnavailable(territory, project) }
+        // An overlord may lay a road through its vassal's land.
+        let throughVassal = project == .road && canBuildRoad(through: territory, for: civ, state)
+        if !throughVassal {
+            guard state.owner(of: territory) == civ else { throw GameError.notOwner(territory) }
+            guard homeNetwork(of: civ, in: state).contains(territory) else { throw GameError.outOfSupply(territory) }
+            guard canBuild(project, in: territory, state) else { throw GameError.projectUnavailable(territory, project) }
+        }
         let cost = projectCost(project, for: civ, state, at: territory)
         let cs = state.civs[civ]!
         guard cs.gold >= cost.gold else { throw GameError.insufficientGold(needed: cost.gold, available: cs.gold) }
@@ -77,8 +81,27 @@ extension Engine {
         state.civs[civ]!.gold -= cost.gold
         state.civs[civ]!.stock[.stone, default: 0] -= cost.stone
         state.civs[civ]!.stock[.timber, default: 0] -= cost.timber
-        state.land[territory]!.construction = Construction(kind: project, turnsLeft: cost.turns)
+        state.land[territory]!.construction = Construction(kind: project, turnsLeft: cost.turns, builder: throughVassal ? civ : nil)
         return [.projectStarted(civ: civ, territory: territory, project: project)]
+    }
+
+    /// Whether `civ` may lay a road through `territory`: the land of a vassal of its (a kingdom
+    /// or an empire), with no road and no building site yet, next to land of its own.
+    public func canBuildRoad(through territory: TerritoryID, for civ: CivilizationID, _ state: GameState) -> Bool {
+        guard let land = state.land[territory], !land.improvements.contains(.road), land.construction == nil else { return false }
+        guard vassalLord(of: territory, state) == civ else { return false }
+        let home = Set(homeNetwork(of: civ, in: state))
+        return map.landNeighbors(of: territory).contains { home.contains($0) || canReachByRoad($0, civ, state) }
+    }
+
+    /// Vassal land of `civ`'s that already has a road (roads may run on from one to the next).
+    private func canReachByRoad(_ t: TerritoryID, _ civ: CivilizationID, _ state: GameState) -> Bool {
+        state.land[t]?.improvements.contains(.road) == true && vassalLord(of: t, state) == civ
+    }
+
+    /// The overlord of whoever holds a territory: a vassal empire's liege, or a vassal kingdom's.
+    func vassalLord(of t: TerritoryID, _ state: GameState) -> CivilizationID? {
+        state.owner(of: t).flatMap { liege(of: $0, in: state) } ?? overlord(of: t, in: state)
     }
 
     /// Advances a civilization's building sites by a turn, finishing what's due.
@@ -86,9 +109,18 @@ extension Engine {
         var events: [GameEvent] = []
         // An age of splendour builds twice as fast.
         let pace = state.civs[civ]!.splendour > 0 ? 2 : 1
-        for t in state.territories(of: civ) {
-            defer { events += startQueued(civ, t, &state) }
+        // Its own land, and roads it is laying through its vassals' land.
+        let elsewhere = state.land.filter { $0.value.construction?.builder == civ && $0.value.owner != civ }.keys.sorted()
+        for t in state.territories(of: civ) + elsewhere {
+            defer { if state.owner(of: t) == civ { events += startQueued(civ, t, &state) } }
             guard var site = state.land[t]!.construction else { continue }
+            // Someone else's site on our land (our overlord's road) is theirs to advance.
+            if let builder = site.builder, builder != civ { continue }
+            // A road through land that is no longer our vassal's is abandoned.
+            if state.owner(of: t) != civ, vassalLord(of: t, state) != civ {
+                state.land[t]!.construction = nil
+                continue
+            }
             site.turnsLeft -= pace
             if site.turnsLeft <= 0 {
                 if site.kind == .walls, state.land[t]!.improvements.contains(.walls) {

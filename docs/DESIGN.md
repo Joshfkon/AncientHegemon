@@ -2134,3 +2134,16 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   to submit.
 - Balance (80 games): Egypt 32%, Mesopotamia 25%, Greece 22%, Italia 20%. Rules version 32.
   Debug: `-demoDiplomacy YES`.
+
+### Roads through vassal land (Josh: "you should be able to build roads in a vassal state")
+
+- An overlord may lay a road through its vassal's land: a vassal kingdom's, or a vassal
+  empire's. The land must be next to the overlord's home network (or to another vassal land of
+  theirs with a road), with no road or building site yet. The overlord pays as for its own road.
+  The site remembers its builder (`Construction.builder`), so it advances on the overlord's
+  turn, not the vassal's. It is abandoned if the land stops being the overlord's vassal's.
+- Effects: supply runs free through the road (as any road does, and supply already passes
+  through vassal land). In a vassal empire's land, the overlord's armies may also road-march
+  along it. Roads stay with the land.
+- App: a "Lay a road" tile on vassal land (the vassal kingdom's panel; a "Vassal land" section
+  on a vassal empire's).

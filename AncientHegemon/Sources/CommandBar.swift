@@ -285,6 +285,9 @@ struct CommandBar: View {
                     ownSections(id, human)
                 } else if state.owner(of: id) == nil {
                     tribeSection(id, human)
+                } else if let owner = state.owner(of: id), engine.liege(of: owner, in: state) == human {
+                    // A vassal empire's land: roads of ours may run through it.
+                    section("Vassal land") { vassalRoadTile(id, human) }
                 }
             case .sea(let sea):
                 if state.fleet(of: human, in: sea) != nil { fleetSection(sea, human) }
@@ -490,11 +493,33 @@ struct CommandBar: View {
                  enabled: wait == 0 && warriors >= 2 && fronts.first != nil) {
                 if let to = fronts.first { session.order(.levy(territory: id, to: to)) }
             }
+            vassalRoadTile(id, human)
             let annex = engine.annexWait(id, in: state)
             Tile(symbol: "flag.fill", title: "Annex", detail: "Their land becomes yours, peacefully: no unrest",
                  cost: Text(annex > 0 ? "After \(annex) more loyal round\(annex == 1 ? "" : "s")" : "Their warriors join you"),
                  enabled: annex == 0) {
                 session.order(.annex(territory: id))
+            }
+        }
+    }
+
+    /// A road of ours through a vassal's land: free supply through it, and (in an empire's land)
+    /// road marches along it.
+    @ViewBuilder private func vassalRoadTile(_ id: TerritoryID, _ human: CivilizationID) -> some View {
+        let land = state.land[id]!
+        if land.improvements.contains(.road) {
+            Tile(symbol: Self.projectSymbol(.road), title: "Road", detail: "Supply runs free through their land",
+                 cost: Text("Built"), enabled: false) {}
+        } else if let site = land.construction, site.builder == human {
+            Tile(symbol: "hammer.fill", title: "Road", detail: "Our road under way",
+                 cost: Text("\(site.turnsLeft) turn\(site.turnsLeft == 1 ? "" : "s") left"), enabled: false) {}
+        } else if engine.canBuildRoad(through: id, for: human, state) {
+            let c = engine.projectCost(.road, for: human, state, at: id)
+            let cs = state.civs[human]!
+            let ok = cs.gold >= c.gold && (cs.stock[.stone] ?? 0) >= c.stone && (cs.stock[.timber] ?? 0) >= c.timber
+            Tile(symbol: Self.projectSymbol(.road), title: "Lay a road", detail: "Supply runs free through their land, at our cost",
+                 cost: Self.cost(gold: c.gold, stone: c.stone, timber: c.timber, turns: c.turns), enabled: ok) {
+                if session.order(.build(territory: id, project: .road)) { SoundBoard.shared.play(.coins, volume: 0.6) }
             }
         }
     }

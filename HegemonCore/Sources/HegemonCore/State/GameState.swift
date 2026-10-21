@@ -55,10 +55,13 @@ public struct TerritoryState: Codable, Sendable, Equatable {
 public struct Construction: Codable, Sendable, Equatable {
     public let kind: ProjectKind
     public var turnsLeft: Int
+    /// Who is building it, when not the land's owner: an overlord's road through its vassal's land.
+    public var builder: CivilizationID?
 
-    public init(kind: ProjectKind, turnsLeft: Int) {
+    public init(kind: ProjectKind, turnsLeft: Int, builder: CivilizationID? = nil) {
         self.kind = kind
         self.turnsLeft = turnsLeft
+        self.builder = builder
     }
 }
 

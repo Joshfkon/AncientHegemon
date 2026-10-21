@@ -259,11 +259,12 @@ public struct Engine: Sendable {
         return result
     }
 
-    /// Whether a march from `from` to `to` runs along a road: both have one, both are the civ's,
-    /// and nobody would fight at the far end.
+    /// Whether a march from `from` to `to` runs along a road: both have one, both are the civ's
+    /// (or a vassal empire's, whose roads its overlord may use), and nobody would fight at the far end.
     public func roadLinks(_ from: TerritoryID, _ to: TerritoryID, for civ: CivilizationID, in state: GameState) -> Bool {
         let road = { (t: TerritoryID) in state.land[t]?.improvements.contains(.road) == true }
-        return road(from) && road(to) && state.owner(of: from) == civ && state.owner(of: to) == civ
+        let ours = { (t: TerritoryID) in state.owner(of: t) == civ || hasAccess(civ, to: t, in: state) && vassalLord(of: t, state) == civ }
+        return road(from) && road(to) && ours(from) && ours(to)
             && defenders(of: to, against: civ, state) == nil
     }
 

@@ -303,3 +303,71 @@ private let thrace = kingdomID("thrace")
         #expect(s.armies["thrace"]?.units.infantry == 5)
     }
 }
+
+@Suite struct VassalRoadTests {
+    let engine = try! Engine.calm()
+
+    func greeceWithThraceSworn() throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: 4))
+        s.kingdoms[thrace]!.overlord = "greece"
+        s.kingdoms[thrace]!.vassalSince = s.turn
+        s.civs["greece"]!.gold = 200
+        s.civs["greece"]!.stock[.stone] = 20
+        return s
+    }
+
+    @Test func anOverlordLaysRoadsThroughItsVassalsLand() throws {
+        var s = try greeceWithThraceSworn()
+        #expect(engine.canBuildRoad(through: "thrace", for: "greece", s))
+        let gold = s.civs["greece"]!.gold
+        try engine.apply(.build(territory: "thrace", project: .road), to: &s)
+        #expect(s.civs["greece"]!.gold < gold)
+        #expect(s.land["thrace"]!.construction?.builder == "greece")
+        let turns = s.land["thrace"]!.construction!.turnsLeft
+        for _ in 0..<(turns * 2) { try engine.apply(.endTurn, to: &s) }
+        #expect(s.land["thrace"]!.improvements.contains(.road))
+        // The land is still the kingdom's.
+        #expect(s.owner(of: "thrace") == nil)
+        #expect(engine.overlord(of: "thrace", in: s) == "greece")
+    }
+
+    @Test func notThroughSomeoneElsesLand() throws {
+        var s = try greeceWithThraceSworn()
+        s.kingdoms[thrace]!.overlord = nil
+        #expect(!engine.canBuildRoad(through: "thrace", for: "greece", s))
+        #expect(throws: GameError.notOwner("thrace")) {
+            try engine.apply(.build(territory: "thrace", project: .road), to: &s)
+        }
+    }
+
+    @Test func andThroughAVassalEmpiresLand() throws {
+        var s = try greeceWithThraceSworn()
+        s.peace.insert(CivPair("greece", "egypt"))
+        s.land["petraea"]!.owner = "greece"
+        s.armies["petraea"] = nil
+        try #require(engine.homeNetwork(of: "greece", in: s).contains("petraea"))
+        #expect(!engine.canBuildRoad(through: "egypt", for: "greece", s))
+        _ = engine.submit("egypt", to: "greece", &s)
+        #expect(engine.canBuildRoad(through: "egypt", for: "greece", s))
+        try engine.apply(.build(territory: "egypt", project: .road), to: &s)
+        let turns = s.land["egypt"]!.construction!.turnsLeft
+        for _ in 0..<(turns * 2) { try engine.apply(.endTurn, to: &s) }
+        #expect(s.land["egypt"]!.improvements.contains(.road))
+        #expect(s.owner(of: "egypt") == "egypt")
+    }
+
+    @Test func aRoadThroughAVassalSpeedsTheSupply() throws {
+        var s = try greeceWithThraceSworn()
+        s.land["greece"]!.owner = "greece"
+        s.land["anatolia"]!.owner = "greece"
+        s.armies["anatolia"] = nil
+        // Seas closed: the only way to Anatolia is overland, through Thrace.
+        s.fleets = engine.map.seas.map { Fleet(sea: $0.id, owner: "egypt", ships: 1) }
+        let before = try #require(engine.supplySteps(of: "greece", to: "anatolia", in: s))
+        s.land["thrace"]!.improvements.insert(.road)
+        let after = try #require(engine.supplySteps(of: "greece", to: "anatolia", in: s))
+        #expect(after < before)
+    }
+}
