@@ -34,6 +34,9 @@ struct GameScreen: View {
     @State private var roadVia: TerritoryID?
     /// The army's menu rather than the land's: the cube was tapped.
     @State private var armyFocus = false
+    /// Whether the latest tap landed on an army's cube, so the tap can tell picking an army
+    /// (ready to march) from looking at the land.
+    @State private var cubeTap = false
     @State private var tab = PanelTab.orders
     @State private var panelOpen = false
     @State private var showKnowledge = false
@@ -81,7 +84,7 @@ struct GameScreen: View {
     private var screen: some View {
         ZStack {
             MapView(state: state, map: engine.map, engine: engine, layer: layer, focus: session.human,
-                    selected: selected, targets: targets, onTap: tapped, onCubeTap: { armyFocus = $0 },
+                    selected: selected, targets: targets, onTap: tapped, onCubeTap: { cubeTap = $0 },
                     onLongPress: { pick in
                         if case .territory(let t)? = pick { quickLook = t; Feedback.select() }
                     },
@@ -1129,7 +1132,7 @@ struct GameScreen: View {
                 FleetPanel(session: session, sea: sea)
             } else if session.human != nil, !session.isOver {
                 Text(session.isHumanTurn
-                     ? "Tap one of your territories to give its army orders, or to recruit and build there."
+                     ? "Tap an army to march it, or one of your lands to recruit and build there."
                      : "The other empires are taking their turns.")
                     .font(.callout).foregroundStyle(.secondary)
             }
@@ -1183,7 +1186,9 @@ struct GameScreen: View {
         guard session.isHumanTurn, let human = session.human, pending == nil else { return [] }
         switch selected {
         case .territory(let from)?:
-            guard let army = state.armies[from], army.owner == human,
+            // Marching is offered only once the army itself is picked (its cube, the idle
+            // button, or the bar's army view): with the land picked, a tap elsewhere just looks.
+            guard armyFocus, let army = state.armies[from], army.owner == human,
                   (army.units - (state.moved[from] ?? .zero)).total > 0 else { return [] }
             var picks = Set(engine.map.landNeighbors(of: from).filter { to in
                 canEnter(to, human)
@@ -1268,7 +1273,10 @@ struct GameScreen: View {
             return
         }
         pending = nil
-        selected = pick == selected ? nil : pick
+        // Tapping the army again lets it go; tapping its land picks the land instead.
+        let same = pick == selected && (pick.map { if case .territory = $0 { cubeTap == armyFocus } else { true } } ?? true)
+        selected = same ? nil : pick
+        armyFocus = cubeTap
         if pick != nil { SoundBoard.shared.play(.click, volume: 0.35) }
         // Selections show along the bottom; the side panel is for orders being composed and tabs.
         if tab == .orders { panelOpen = false }

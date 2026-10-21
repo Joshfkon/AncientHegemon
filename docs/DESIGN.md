@@ -2174,3 +2174,11 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
 - A proposal from an AI court arrives as a summons to that court, like a war or peace audience.
   The Rivals inbox and the map notice both lead into the audience ("Answer at court",
   "Visit court"). The old deals menu is gone.
+
+### Picking an army vs. looking at land (Josh: "it is difficult to deselect from an army")
+- Tapping a land used to offer its army's marches at once, so tapping another country to look
+  at it ordered a march instead. Now marching starts only from the army itself: its cube on the
+  map, the idle-army button, or the army view in the bottom bar. Tapping the land picks the
+  land; tapping elsewhere then just looks at the new place.
+- With the army picked, glowing lands are still one tap away, and tapping the army again lets
+  it go. Hints say "Tap the army to march it" in the land view.

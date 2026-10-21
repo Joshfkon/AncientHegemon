@@ -257,9 +257,10 @@ struct CommandBar: View {
             }
             let coastal = !(engine.map.territory(id)?.seas.isEmpty ?? true)
             let routes = engine.seaRoutes(from: id, for: human, in: state)
-            if !routes.isEmpty { return "Tap white land to march, or a blue coast ⛵ to sail there and attack in one go." }
-            if coastal { return "Tap a glowing territory to march. To cross the sea, build a ship (Ships, below) first." }
-            return "Tap a glowing territory to march."
+            // The land is picked here, not the army: marching starts from the army itself.
+            if !routes.isEmpty { return "Tap the army to march it, or to sail to a coast ⛵ and attack in one go." }
+            if coastal { return "Tap the army to march it. To cross the sea, build a ship (Ships, below) first." }
+            return "Tap the army to march it."
         }
         if let lord = engine.overlord(of: id, in: state) {
             return lord == human ? (engine.garrisoned(id, in: state)
