@@ -55,6 +55,7 @@ extension Engine {
     /// (one it is at war with that is at least as strong as it), and it has room for an ally.
     public func wouldAlly(_ civ: CivilizationID, with other: CivilizationID, in state: GameState) -> Bool {
         guard state.atPeace(civ, other), !allied(civ, other, in: state),
+              liege(of: civ, in: state) == nil, liege(of: other, in: state) == nil,
               allies(of: civ, in: state).count < rules.alliances.maxAllies else { return false }
         let mine = militaryStrength(civ, seenBy: civ, state)
         let sight = self.sight(of: civ, in: state)
@@ -75,11 +76,13 @@ extension Engine {
         guard state.atPeace(civ, to) else { throw GameError.notAtPeace(to) }
         guard !allied(civ, to, in: state) else { throw GameError.alreadyAllied(to) }
         guard allies(of: civ, in: state).count < rules.alliances.maxAllies else { throw GameError.tooManyAllies }
+        if let lord = liege(of: civ, in: state) { throw GameError.vassalBound(lord) }
+        if liege(of: to, in: state) != nil { throw GameError.vassalBound(to) }
         // AI courts answer at once; people answer on their turn.
         if !(c.isHuman) {
             guard wouldAlly(to, with: civ, in: state) else { return [.allianceRefused(by: to, to: civ)] }
             state.alliances.insert(CivPair(civ, to))
-            return [.allianceMade(CivPair(civ, to))]
+            return [.allianceMade(CivPair(civ, to))] + makeVassalPeace(&state)
         }
         state.allianceOffers.insert(PeaceOffer(from: civ, to: to))
         return [.allianceOffered(from: civ, to: to)]
@@ -90,8 +93,10 @@ extension Engine {
         guard state.allianceOffers.contains(PeaceOffer(from: from, to: civ)) else { throw GameError.noAllianceOffer(from) }
         state.allianceOffers.remove(PeaceOffer(from: from, to: civ))
         guard state.atPeace(civ, from) else { throw GameError.notAtPeace(from) }
+        if let lord = liege(of: civ, in: state) { throw GameError.vassalBound(lord) }
+        if liege(of: from, in: state) != nil { throw GameError.vassalBound(from) }
         state.alliances.insert(CivPair(civ, from))
-        return [.allianceMade(CivPair(civ, from))]
+        return [.allianceMade(CivPair(civ, from))] + makeVassalPeace(&state)
     }
 
     func leaveAlliance(_ with: CivilizationID, _ state: inout GameState) throws -> [GameEvent] {
@@ -114,7 +119,7 @@ extension Engine {
             state.warRequests.insert(WarRequest(from: civ, to: ally, against: against))
             return [.calledToWar(WarRequest(from: civ, to: ally, against: against))]
         }
-        guard willingToFight(ally, against: against, in: state) else {
+        guard mayDeclareWar(ally, on: against, in: state), willingToFight(ally, against: against, in: state) else {
             return [.warRefused(by: ally, ally: civ, against: against)]
         }
         return joinWar(ally, against: against, for: civ, &state)
@@ -127,7 +132,7 @@ extension Engine {
         guard state.warRequests.contains(request) else { throw GameError.noWarRequest(from) }
         state.warRequests.remove(request)
         if join {
-            guard state.atPeace(civ, against) else { return [] }
+            guard state.atPeace(civ, against), mayDeclareWar(civ, on: against, in: state) else { return [] }
             return joinWar(civ, against: against, for: from, &state)
         }
         return abandon(civ, ally: from, against: against, &state)
@@ -161,7 +166,8 @@ extension Engine {
     func rallyAllies(of victim: CivilizationID, against attacker: CivilizationID, _ state: inout GameState) -> [GameEvent] {
         guard state.isPlayer(victim), state.isPlayer(attacker) else { return [] }
         var events: [GameEvent] = []
-        for ally in allies(of: victim, in: state) where ally != attacker && state.atPeace(ally, attacker) {
+        for ally in allies(of: victim, in: state) where ally != attacker && state.atPeace(ally, attacker)
+            && mayDeclareWar(ally, on: attacker, in: state) {
             if state.civs[ally]?.isHuman == true {
                 let request = WarRequest(from: victim, to: ally, against: attacker)
                 if !state.warRequests.contains(request) {

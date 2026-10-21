@@ -28,7 +28,7 @@ struct RulerPortrait: View {
 
 enum RulerVoice {
     enum Moment: Hashable {
-        case war, peace, ally, refuse, covets, fears, friends, hostile, awed, cordial
+        case war, peace, ally, refuse, covets, fears, friends, hostile, awed, cordial, demand, defiant, overlord, vassal
     }
 
     /// How their court plays, in a few words.
@@ -69,13 +69,18 @@ enum RulerVoice {
         case (.hostile, _): ["We are at war. Do not expect kindness.", "Every border fort of yours is a target."]
         case (.awed, _): ["They say your hall shines like the sun.", "A court like yours is not lightly crossed."]
         case (.cordial, _): ["We watch, and we wait.", "Keep to your side of the river."]
+        case (.demand, "conqueror"): ["Kneel, and keep your crown. Refuse, and lose your head with it.", "Your armies are broken. Bow, and pay."]
+        case (.demand, _): ["You cannot win this war. Serve me, and your house endures.", "Bend the knee and send tribute, and the killing stops."]
+        case (.defiant, _): ["We are beaten, not broken.", "Bow to you? Not while one of my spears still stands."]
+        case (.overlord, _): ["My tribute will come, as promised.", "We keep the peace you imposed. For now."]
+        case (.vassal, _): ["Your tribute is late. Do not make me ask twice.", "You serve, and so you are safe."]
         }
     }
 }
 
 /// Why the player stands before a rival ruler.
 struct Audience: Identifiable, Equatable {
-    enum Reason: Equatable { case visit, peaceOffer, war }
+    enum Reason: Equatable { case visit, peaceOffer, war, submission }
     let civ: CivilizationID
     let reason: Reason
     var id: String { "\(civ)-\(reason)" }
@@ -127,6 +132,8 @@ struct AudienceView: View {
     /// The ruler's face: how their court regards you right now.
     private func mood(_ human: CivilizationID) -> RulerFigure.Mood {
         if audience.reason == .war { return .angry }
+        if audience.reason == .submission || state.submissionDemands.contains(PeaceOffer(from: civ, to: human)) { return .stern }
+        if engine.liege(of: civ, in: state) == human { return .wary }
         if audience.reason == .peaceOffer || state.peaceOffers.contains(PeaceOffer(from: civ, to: human)) { return .pleased }
         if engine.allied(human, civ, in: state) { return .pleased }
         if !state.atPeace(human, civ) { return .stern }
@@ -138,10 +145,15 @@ struct AudienceView: View {
     private func speech(_ human: CivilizationID, _ cs: CivState) -> some View {
         let peace = state.atPeace(human, civ)
         let offered = state.peaceOffers.contains(PeaceOffer(from: civ, to: human))
+        let demanding = state.submissionDemands.contains(PeaceOffer(from: civ, to: human))
         let moment: RulerVoice.Moment = switch audience.reason {
         case .war: .war
         case .peaceOffer: .peace
-        case .visit: offered ? .peace : peace ? (engine.allied(human, civ, in: state) ? .ally : .cordial) : .hostile
+        case .submission: .demand
+        case .visit: demanding ? .demand : offered ? .peace
+            : engine.liege(of: civ, in: state) == human ? .overlord
+            : engine.liege(of: human, in: state) == civ ? .vassal
+            : peace ? (engine.allied(human, civ, in: state) ? .ally : .cordial) : .hostile
         }
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -166,14 +178,32 @@ struct AudienceView: View {
     /// Where things stand between the two realms, in a line.
     private func standing(_ human: CivilizationID, peace: Bool) -> String {
         let theirs = state.territories(of: civ).count, troops = state.totalUnits(of: civ).total
-        let rel = engine.allied(human, civ, in: state) ? "Allies" : peace ? "At peace" : "At war"
+        let rel = engine.liege(of: civ, in: state) == human ? "Your vassal"
+            : engine.liege(of: human, in: state) == civ ? "Your overlord"
+            : engine.allied(human, civ, in: state) ? "Allies" : peace ? "At peace" : "At war"
         return "\(rel) · \(theirs) land\(theirs == 1 ? "" : "s") · \(troops) troops · \(engine.prestige(of: civ, in: state)) prestige"
     }
 
     @ViewBuilder private func actions(_ human: CivilizationID, peace: Bool, offered: Bool) -> some View {
         let isTurn = session.isHumanTurn
+        let demanding = state.submissionDemands.contains(PeaceOffer(from: civ, to: human))
+        let s = engine.rules.submission
         VStack(alignment: .leading, spacing: 8) {
-            if offered {
+            if demanding {
+                Text("They demand that you submit as their vassal: peace that neither may break, \(s.tributePercent)% of your gold income to them each turn, no alliances of your own and no war on their allies. You go free if your army outgrows theirs.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
+                Button("Submit") { act(.answerSubmission(from: civ, accept: true)) }.buttonStyle(BronzeButtonStyle())
+                Button("Refuse") { act(.answerSubmission(from: civ, accept: false)) }
+                    .font(.callout.bold()).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.45))
+                Text("Refusing: the war goes on, and they won't demand it again for \(engine.rules.alliances.rebuffedRounds) rounds.")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if engine.bound(human, civ, in: state) {
+                let theirs = engine.liege(of: civ, in: state) == human
+                Text(theirs ? "They pay you \(s.tributePercent)% of their gold income and may not war on you or your allies. They go free if their army outgrows yours."
+                            : "You pay them \(s.tributePercent)% of your gold income. You go free once your army outgrows theirs.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
+            } else if offered {
                 Button("Accept peace") { act(.acceptPeace(from: civ)) }.buttonStyle(BronzeButtonStyle())
                 Button("Decline") { act(.declinePeace(from: civ)) }
                     .font(.callout.bold()).foregroundStyle(.white.opacity(0.85))
@@ -184,6 +214,15 @@ struct AudienceView: View {
                     Text("Your envoys await their answer.").font(.callout).foregroundStyle(.white.opacity(0.8))
                 } else {
                     Button("Offer peace") { act(.offerPeace(to: civ)) }.buttonStyle(BronzeButtonStyle())
+                }
+                if engine.liege(of: human, in: state) == nil, engine.liege(of: civ, in: state) == nil {
+                    Button("Demand their submission") { act(.demandSubmission(of: civ)) }
+                        .font(.callout.bold()).foregroundStyle(Bronze.gradient)
+                    Text(engine.wouldSubmit(civ, to: human, in: state)
+                         ? "They are beaten: they would likely bow."
+                         : "They bow only if you hold their capital or they're down to \(s.acceptStrengthPercent)% of your strength.")
+                        .font(.caption2).foregroundStyle(.white.opacity(0.6))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 if !engine.allied(human, civ, in: state), !state.allianceOffers.contains(PeaceOffer(from: human, to: civ)) {

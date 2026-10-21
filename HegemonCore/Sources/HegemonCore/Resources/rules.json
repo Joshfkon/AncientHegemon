@@ -1,5 +1,5 @@
 {
-  "version": 30,
+  "version": 31,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -839,6 +839,11 @@
     "revoltPerRestless": 5,
     "sizeCalm": 8,
     "revoltPerExtraLand": 3
+  },
+  "submission": {
+    "acceptStrengthPercent": 40,
+    "tributePercent": 20,
+    "prestige": 25
   },
   "alliances": {
     "enemyTooStrongPercent": 200,

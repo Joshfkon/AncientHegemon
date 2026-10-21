@@ -386,6 +386,15 @@ final class GameSession {
                     Feedback.outcome(false)
                 case let .joinedWar(civ, against, ally) where ally == human:
                     answers[civ] = (state.turn, "They marched to war against \(Palette.name(against, state)) for you.", true)
+                case let .submitted(vassal, lord) where lord == human:
+                    answers[vassal] = (state.turn, "They bowed: \(Palette.name(vassal, state)) is your vassal and will pay you tribute.", true)
+                    toast = ("\(Palette.name(vassal, state)) submits to you", (toast?.id ?? 0) + 1, false)
+                    SoundBoard.shared.play(.horn, volume: 0.5)
+                    Feedback.outcome(true)
+                case let .submissionRefused(by, to) where to == human:
+                    answers[by] = (state.turn, "“\(RulerVoice.line(.defiant, by, state))” They won't bow while they still have the strength to fight.", false)
+                    toast = ("\(Palette.name(by, state)) refuses to submit", (toast?.id ?? 0) + 1, true)
+                    Feedback.outcome(false)
                 default: break
                 }
             }
@@ -455,6 +464,8 @@ final class GameSession {
                     waitingAudiences.append(Audience(civ: from, reason: .peaceOffer))
                 case let .warDeclared(by, on) where on == human:
                     waitingAudiences.append(Audience(civ: by, reason: .war))
+                case let .submissionDemanded(from, to) where to == human:
+                    waitingAudiences.append(Audience(civ: from, reason: .submission))
                 default: break
                 }
             }
@@ -577,6 +588,8 @@ final class GameSession {
         case .tooManyAllies: return "Your realm can keep only \(engine.rules.alliances.maxAllies) allies."
         case .notAtWar: return "You are not at war with them."
         case .alreadyAsked: return "You already asked them this turn."
+        case .vassalBound(let c): return "Vassalage binds you and \(engine.map.civilization(c)?.name ?? c): no war between overlord and vassal, nor with the overlord's allies, and a vassal makes no alliances."
+        case .noSubmissionDemand: return "They aren't demanding your submission."
         case .noWarRequest: return "That call to arms has lapsed."
         case .unknownDecoration: return "No such decoration."
         case .noPeaceOffer: return "That offer of peace has lapsed."
@@ -773,6 +786,9 @@ final class GameSession {
         case let .splendourBegan(civ), let .splendourEnded(civ), let .projectQueued(civ, _, _): return civ == me
         case .ironAgeBegan: return true
         case let .peaceDeclined(by, offerer): return by == me || offerer == me
+        case let .submissionDemanded(a, b), let .submitted(a, b), let .submissionRefused(a, b),
+             let .tributePaid(a, b, _), let .vassalEmpireFreed(a, b, _):
+            return a == me || b == me
         case let .monumentStarted(civ, _, _), let .monumentCompleted(civ, _, _), let .monumentLost(civ, _, _),
              let .decided(civ, _, _), let .patronageSet(civ, _):
             return civ == me
@@ -923,6 +939,13 @@ final class GameSession {
                 add(civ, "\(place(t)) " + (parley == .gifts ? "takes your gifts but will not bow" : "refuses your demand and sharpens its spears"), at: t)
             case let .recruited(civ, t, unit, count) where civ == human:
                 add(civ, "Raised \(count) \(unit.rawValue) in \(place(t))", at: t)
+            case let .submissionDemanded(from, to): add(from, "\(name(from)) demands that \(name(to)) submit as its vassal")
+            case let .submitted(vassal, lord):
+                add(lord, "\(name(vassal)) bows to \(name(lord)) and becomes its vassal, paying a \(engine.rules.submission.tributePercent)% tribute")
+            case let .submissionRefused(by, to): add(by, "\(name(by)) refuses to submit to \(name(to))")
+            case let .vassalEmpireFreed(vassal, lord, fell):
+                add(vassal, fell ? "With \(name(lord)) fallen, \(name(vassal)) is its own master again"
+                                 : "\(name(vassal)) has outgrown \(name(lord)) and throws off its yoke")
             case let .peaceMade(pair): add(nil, "Peace between \(name(pair.a)) and \(name(pair.b))")
             case let .allianceMade(pair): add(pair.a, "\(name(pair.a)) and \(name(pair.b)) swear an alliance")
             case let .allianceRefused(by, to): add(by, "\(name(by)) declines an alliance with \(name(to))")
@@ -1029,6 +1052,18 @@ final class GameSession {
         state.kingdoms[k]!.overlord = human
         state.kingdoms[k]!.vassalSince = state.turn
         return t
+    }
+
+    /// For -demoSubmission: `civ` demands the player's submission, or (with `vassal`) has already
+    /// submitted to the player.
+    func demoSubmission(_ civ: CivilizationID, vassal: Bool) {
+        guard let human, state.civs[civ] != nil, civ != human else { return }
+        state.peace.remove(CivPair(human, civ))
+        if vassal {
+            _ = engine.submit(civ, to: human, &state)
+        } else {
+            state.submissionDemands.insert(PeaceOffer(from: civ, to: human))
+        }
     }
 
     /// For -demoThrone: every decoration in the human's throne room.

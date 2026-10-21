@@ -27,6 +27,10 @@ struct StandingsBar: View {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 3) {
                                 if i == 0 { Image(systemName: "crown.fill").font(.system(size: 8)).foregroundStyle(Bronze.gradient) }
+                                // A vassal empire wears its overlord's chain.
+                                if engine.liege(of: civ, in: state) != nil {
+                                    Image(systemName: "link").font(.system(size: 8, weight: .bold)).foregroundStyle(.white.opacity(0.7))
+                                }
                                 Text(Self.short(civ, state)).font(.caption2.weight(mine ? .heavy : .semibold))
                                     .foregroundStyle(.white.opacity(mine ? 1 : 0.8))
                                     .lineLimit(1).fixedSize()
@@ -97,6 +101,17 @@ struct StandingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// "Vassal of Mesopotamia" or "Overlord of Egypt and Italia", if either.
+    static func vassalage(_ civ: CivilizationID, engine: Engine, state: GameState, human: CivilizationID?) -> String? {
+        func name(_ c: CivilizationID) -> String { c == human ? "you" : Palette.name(c, state) }
+        if let lord = engine.liege(of: civ, in: state) {
+            return "Vassal of \(name(lord)), paying \(engine.rules.submission.tributePercent)% of its income in tribute"
+        }
+        let vassals = engine.vassalEmpires(of: civ, in: state)
+        guard !vassals.isEmpty else { return nil }
+        return "Overlord of " + ListFormatter.localizedString(byJoining: vassals.map(name))
+    }
+
     private func chart(_ order: [CivilizationID]) -> some View {
         EmpireGraphs(history: session.statsHistory, lastRound: state.turn, order: order, human: session.human, state: state)
     }
@@ -120,6 +135,9 @@ struct StandingsView: View {
                     }
                     Text("\(engine.prestige(of: civ, in: state))").font(.title3.bold().monospacedDigit())
                 }
+            }
+            if !fallen, let ties = Self.vassalage(civ, engine: engine, state: state, human: session.human) {
+                Label(ties, systemImage: "link").font(.caption.bold()).foregroundStyle(.orange)
             }
             if !fallen {
                 ForEach(engine.prestigeBreakdown(of: civ, in: state), id: \.source) { part in

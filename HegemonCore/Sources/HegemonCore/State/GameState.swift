@@ -297,6 +297,11 @@ public struct GameState: Codable, Sendable, Equatable {
     public var kingdoms: [CivilizationID: Kingdom] = [:]
     /// Kingdoms' warriors standing beside an overlord's garrison, by territory.
     public var stationed: [TerritoryID: Stationed] = [:]
+    /// Empires that have submitted to another, by the vassal; demands for submission waiting
+    /// for a person's answer; and demands turned down, with the last round the demander waits.
+    public var vassalage: [CivilizationID: Vassalage] = [:]
+    public var submissionDemands: Set<PeaceOffer> = []
+    public var submissionRebuffed: [PeaceOffer: Int] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

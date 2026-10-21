@@ -90,7 +90,7 @@ struct EconomyView: View {
             Text("Granary \(econ.granary) of \(econ.granaryCap)"
                  + (econ.grainBalance < 0 ? " · empties in \(max(1, econ.granary / max(1, -econ.grainBalance) + 1)) turns, then people starve" : ""))
                 .font(.caption).foregroundStyle(econ.grainBalance < 0 ? .red : .secondary)
-            ledger("Gold", [("Taxes", econ.taxes), ("Mines", econ.mines), ("Trade", econ.trade), ("Vassals & peoples", econ.peoples), ("Army pay", -econ.pay)],
+            ledger("Gold", [("Taxes", econ.taxes), ("Mines", econ.mines), ("Trade", econ.trade), ("Vassals & peoples", econ.peoples), ("Tribute from vassal empires", econ.tributeReceived), ("Tribute to your overlord", -econ.tributePaid), ("Army pay", -econ.pay)],
                    total: ("Each turn", econ.netIncome))
             VStack(alignment: .leading, spacing: 3) {
                 Text("Trade").font(.caption.bold())

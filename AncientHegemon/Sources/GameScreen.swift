@@ -310,6 +310,14 @@ struct GameScreen: View {
                 let war = who.hasPrefix("war:")
                 session.audience = Audience(civ: war ? String(who.dropFirst(4)) : who, reason: war ? .war : .visit)
             }
+            // Launch with -demoSubmission egypt to hear Egypt demand your submission, or
+            // vassal:egypt to have Egypt already your vassal.
+            if let who = UserDefaults.standard.string(forKey: "demoSubmission") {
+                let vassal = who.hasPrefix("vassal:")
+                let civ = vassal ? String(who.dropFirst(7)) : who
+                session.demoSubmission(civ, vassal: vassal)
+                if !vassal { session.audience = Audience(civ: civ, reason: .submission) }
+            }
             if UserDefaults.standard.bool(forKey: "demoRebellion"), let human = session.human,
                let seat = engine.seat(of: human, in: state) {
                 session.moments = [Moment(kind: .rebellion(general: "Horemheb", lands: [seat], rebel: human, bribed: true))]
@@ -1141,6 +1149,16 @@ struct GameScreen: View {
         return result
     }
 
+    /// Whether the player's troops may go into `to`: not a peace partner's land, except a vassal
+    /// empire's (where they may stand if the vassal's own army isn't there), and not past an
+    /// army of someone at peace with us.
+    private func canEnter(_ to: TerritoryID, _ human: CivilizationID) -> Bool {
+        let army = state.armies[to].flatMap { $0.owner != human && state.isPlayer($0.owner) ? $0.owner : nil }
+        if engine.hasAccess(human, to: to, in: state) { return army == nil }
+        if let other = army, state.atPeace(human, other) { return false }
+        return !(state.owner(of: to).map { $0 != human && state.atPeace(human, $0) } ?? false)
+    }
+
     private var seaRoutes: [TerritoryID: SeaRoute] {
         guard session.isHumanTurn, let human = session.human, case .territory(let from)? = selected,
               let army = state.armies[from], army.owner == human,
@@ -1156,8 +1174,11 @@ struct GameScreen: View {
             guard let army = state.armies[from], army.owner == human,
                   (army.units - (state.moved[from] ?? .zero)).total > 0 else { return [] }
             var picks = Set(engine.map.landNeighbors(of: from).filter { to in
-                !(state.owner(of: to).map { $0 != human && state.atPeace(human, $0) } ?? false)
+                canEnter(to, human)
             }.map(MapPick.territory))
+            // Land beyond a vassal empire's, marched through in one order.
+            picks.formUnion(engine.empirePassageTargets(from: from, for: human, in: state).map(\.to)
+                .filter { canEnter($0, human) }.map(MapPick.territory))
             for sea in engine.map.seas(bordering: from) {
                 if let fleet = state.fleet(of: human, in: sea),
                    fleet.cargo.total < fleet.ships * engine.rules.ships.capacity {
@@ -1183,7 +1204,7 @@ struct GameScreen: View {
             }
             if fleet.cargo.total > 0 {
                 picks.formUnion(engine.map.coastalTerritories(of: sea).filter { to in
-                    !(state.owner(of: to).map { $0 != human && state.atPeace(human, $0) } ?? false)
+                    canEnter(to, human)
                 }.map(MapPick.territory))
             }
             return picks
@@ -1202,8 +1223,9 @@ struct GameScreen: View {
                     roadVia = via
                     pending = .march(from: a, to: b)
                 } else if !engine.map.areLandAdjacent(a, b), let human = session.human,
-                          engine.vassalPassage(a, b, for: human, in: state) != nil {
-                    // Straight through a vassal's land.
+                          engine.vassalPassage(a, b, for: human, in: state) != nil
+                            || engine.empirePassage(from: a, to: b, for: human, in: state) != nil {
+                    // Straight through a vassal's land (a kingdom's or an empire's).
                     pending = .march(from: a, to: b)
                 } else if !engine.map.areLandAdjacent(a, b), let route = seaRoutes[b] {
                     pending = .seaAssault(from: a, to: b, route: SeaRouteKey(route))

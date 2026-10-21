@@ -30,6 +30,12 @@ public struct CivRecord: Sendable, Equatable {
     public var events: [EventKind: Int] = [:]
     public var projectsBuilt = 0
     public var projectsDestroyed = 0
+    /// Vassal empires: rivals that submitted to this civ, times it submitted, times it went
+    /// free, and tribute received.
+    public var vassalsTaken = 0
+    public var submissions = 0
+    public var freedFromVassalage = 0
+    public var tributeReceived = 0
     /// Knowledge levels at the start of round 20, if the civ was alive then.
     public var knowledgeAt20: [KnowledgeField: Int]?
     /// Gold in hand and units under arms at the start of rounds 10, 20 and 30, if it held land then.
@@ -199,6 +205,13 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 civs[c]?.unitsLostToAttrition += lost
             case let .eliminated(c):
                 civs[c]?.eliminatedOnTurn = state.turn
+            case let .submitted(vassal, lord):
+                civs[lord]?.vassalsTaken += 1
+                civs[vassal]?.submissions += 1
+            case let .vassalEmpireFreed(vassal, _, _):
+                civs[vassal]?.freedFromVassalage += 1
+            case let .tributePaid(_, lord, gold):
+                civs[lord]?.tributeReceived += gold
             case let .battle(report):
                 let a = report.setup.attacker, d = report.setup.defender
                 let attackerWon = report.winner == .attacker

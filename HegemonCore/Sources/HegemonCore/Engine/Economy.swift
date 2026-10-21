@@ -70,6 +70,7 @@ extension Engine {
         let tradeIncome = gold.trade
         let income = gold.total
         state.civs[civ]!.gold += income
+        events += payTribute(civ, income: income, &state)
         events += payArmy(civ, &state)
 
         wearBronze(civ, &state)
@@ -248,8 +249,9 @@ extension Engine {
     private func attrition(_ civ: CivilizationID, outside home: Set<TerritoryID>,
                            _ state: inout GameState) -> [GameEvent] {
         var events: [GameEvent] = []
-        // A vassal feeds the garrison its overlord stations there.
-        for (territory, units) in state.armies(of: civ) where !home.contains(territory) && overlord(of: territory, in: state) != civ {
+        // A vassal (kingdom or empire) feeds the garrison its overlord stations there.
+        for (territory, units) in state.armies(of: civ) where !home.contains(territory)
+            && overlord(of: territory, in: state) != civ && !hasAccess(civ, to: territory, in: state) {
             var loss = rules.supply.outOfSupplyAttrition
             if map.territory(territory)!.terrain == .desert { loss += rules.supply.desertAttrition }
             loss = min(loss, units.total)

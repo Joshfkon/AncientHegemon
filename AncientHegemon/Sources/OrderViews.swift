@@ -133,8 +133,12 @@ struct OrderComposer: View {
         case let .march(from, to):
             if let via { return "\(isBattle ? "Attack" : "March to") \(place(to)) by road through \(place(via))" }
             if !engine.map.areLandAdjacent(from, to), let human = session.human,
-               let vassal = engine.vassalPassage(from, to, for: human, in: state) {
-                return "\(isBattle ? "Attack" : "March to") \(place(to)) through your vassal \(place(vassal))"
+               let through = engine.vassalPassage(from, to, for: human, in: state)
+                ?? engine.empirePassage(from: from, to: to, for: human, in: state) {
+                return "\(isBattle ? "Attack" : "March to") \(place(to)) through \(place(through)), your vassal's land"
+            }
+            if let human = session.human, engine.hasAccess(human, to: to, in: state) || engine.overlord(of: to, in: state) == human {
+                return "Station troops in \(place(to)), your vassal's land"
             }
             return "\(isBattle ? "Attack" : "March to") \(place(to)) from \(place(from))"
         case let .embark(from, sea): return "Board ships in the \(place(sea)) from \(place(from))"
@@ -372,7 +376,7 @@ struct OrderComposer: View {
                 units[type] = min(left, available[type])
                 left -= units[type]
             }
-        case .march(_, let to) where !isBattle && state.owner(of: to) != human:
+        case .march(_, let to) where !isBattle && state.owner(of: to) != human && !engine.hasAccess(human, to: to, in: state):
             // Claiming empty land takes one unit.
             let type = UnitType.allCases.first { available[$0] > 0 } ?? .infantry
             units = .zero
