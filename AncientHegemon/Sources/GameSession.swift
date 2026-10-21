@@ -625,6 +625,27 @@ final class GameSession {
         statsHistory.append(stats)
     }
 
+    /// A line for the chronicle about a deal made or refused.
+    static func dealLine(_ deal: Deal, _ from: CivilizationID, _ to: CivilizationID, made: Bool,
+                         name: (CivilizationID?) -> String) -> String {
+        let a = name(from), b = name(to)
+        switch (deal, made) {
+        case (.marriage, true): return "The houses of \(a) and \(b) are joined in marriage"
+        case (.marriage, false): return "\(b) declines a marriage with the house of \(a)"
+        case let (.bargain(give, get), true): return "\(a) and \(b) strike a bargain: \(DealText.goods(give)) for \(DealText.goods(get)) a turn"
+        case (.bargain, false): return "\(b) turns down \(a)'s bargain"
+        case let (.tribute(gold), true): return "\(b) pays \(a) \(gold) gold in tribute"
+        case (.tribute, false): return "\(b) refuses \(a)'s demand for tribute: \(a) has its cause for war"
+        case (.pact, true): return "\(a) and \(b) swear a pact of non-aggression"
+        case (.pact, false): return "\(b) will not swear a pact with \(a)"
+        case (.access, true): return "\(b) grants \(a) leave to march through its land"
+        case (.access, false): return "\(b) refuses \(a)'s armies passage"
+        case let (.embargo(against), true): return "\(b) stops trading with \(name(against)) at \(a)'s asking"
+        case (.embargo, false): return "\(b) will not cut its trade for \(a)"
+        case (.gift, _): return "\(a) sends \(b) a gift"
+        }
+    }
+
     // MARK: Music
 
     /// Picks the music for the moment: war while the player fights or is besieged (and for a
@@ -1059,27 +1080,6 @@ final class GameSession {
         state.civs[human]!.stock = [.stone: 10, .timber: 10]
         state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
         state.land[seat]!.queue = [.road]
-    }
-
-    /// A line for the chronicle about a deal made or refused.
-    static func dealLine(_ deal: Deal, _ from: CivilizationID, _ to: CivilizationID, made: Bool,
-                         name: (CivilizationID?) -> String) -> String {
-        let a = name(from), b = name(to)
-        switch (deal, made) {
-        case (.marriage, true): return "The houses of \(a) and \(b) are joined in marriage"
-        case (.marriage, false): return "\(b) declines a marriage with the house of \(a)"
-        case let (.bargain(give, get), true): return "\(a) and \(b) strike a bargain: \(DealText.goods(give)) for \(DealText.goods(get)) a turn"
-        case (.bargain, false): return "\(b) turns down \(a)'s bargain"
-        case let (.tribute(gold), true): return "\(b) pays \(a) \(gold) gold in tribute"
-        case (.tribute, false): return "\(b) refuses \(a)'s demand for tribute: \(a) has its cause for war"
-        case (.pact, true): return "\(a) and \(b) swear a pact of non-aggression"
-        case (.pact, false): return "\(b) will not swear a pact with \(a)"
-        case (.access, true): return "\(b) grants \(a) leave to march through its land"
-        case (.access, false): return "\(b) refuses \(a)'s armies passage"
-        case let (.embargo(against), true): return "\(b) stops trading with \(name(against)) at \(a)'s asking"
-        case (.embargo, false): return "\(b) will not cut its trade for \(a)"
-        case (.gift, _): return "\(a) sends \(b) a gift"
-        }
     }
 
     /// For -demoDiplomacy: a rival proposes a marriage, another holds us in high regard, a pact.
