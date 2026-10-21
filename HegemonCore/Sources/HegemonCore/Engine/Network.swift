@@ -184,7 +184,8 @@ extension Engine {
     /// connect through their own land and open sea lanes.
     public func tradeRoute(between a: CivilizationID, and b: CivilizationID,
                            in state: GameState) -> TradeRoute? {
-        guard state.atPeace(a, b), (state.disruptedRoutes[CivPair(a, b)] ?? 0) < state.turn else { return nil }
+        guard state.atPeace(a, b), (state.disruptedRoutes[CivPair(a, b)] ?? 0) < state.turn,
+              !embargoed(a, b, in: state) else { return nil }
         let homeA = homeNetwork(of: a, in: state)
         let homeB = Set(homeNetwork(of: b, in: state))
         guard !homeA.isEmpty, !homeB.isEmpty else { return nil }
@@ -228,7 +229,8 @@ extension Engine {
                                routes: [TradeRoute]? = nil) -> Int {
         // Iron ore is just rock until a civilization learns ironworking.
         if resource == .iron, !ironWorked(civ, state) { return 0 }
-        let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
+        // Bargains move yields between courts: what comes in, less what goes out.
+        let own = max(0, yield(of: resource, in: homeNetwork(of: civ, in: state), state) + bargainYield(resource, for: civ, in: state))
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {
             let partner = $1.partner(of: civ)

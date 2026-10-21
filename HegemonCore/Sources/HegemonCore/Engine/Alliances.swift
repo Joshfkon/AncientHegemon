@@ -59,6 +59,8 @@ extension Engine {
               allies(of: civ, in: state).count < rules.alliances.maxAllies else { return false }
         let mine = militaryStrength(civ, seenBy: civ, state)
         let sight = self.sight(of: civ, in: state)
+        // A court that thinks highly of the other allies for friendship's sake.
+        if regard(of: civ, toward: other, in: state) >= 50 { return true }
         // Against a menace, any fellow enemy of it will do.
         if let m = menace(in: state), m != civ, m != other, state.atWar(civ, m), state.atWar(other, m) { return true }
         return state.players.contains { enemy in

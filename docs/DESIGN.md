@@ -2072,3 +2072,65 @@ bow to Mesopotamia instead of fighting to the last town. `Engine/Submission.swif
   so as before. Balance (80 games): Egypt 30%, Greece 26%, Mesopotamia 23%, Italia 20%;
   empire-against-empire battles about as common as before. Rules version 30. Test rules
   (`Engine.calm()`) still start at war, as the older tests expect.
+
+### Diplomacy between the empires (Josh: "more diplomacy options with them… let's do all of those")
+
+After the Amarna letters, in which the great kings bargained, married, gifted and threatened.
+`Engine/Diplomacy.swift`, `AI/DiplomacyAI.swift`; rules in `diplomacy`.
+
+- **Regard** (`GameState.regard`, −100…100, how each court regards each other). It drifts 3 a
+  round toward where things stand between them:
+  - war −40, a trade route +10, kin +25, allies +20, a shared enemy +10, a long border −5.
+  
+  On top of that come deeds:
+  - gifts: +2 per gold's worth, up to +30;
+  - a marriage: +30 both ways;
+  - a declaration of war: −40 with the victim, −20 with its allies;
+  - tribute paid: −25 with the payer;
+  - a broken pact: −60, and −15 with every other court.
+  
+  Every AI answer weighs it. Courts with regard 50+ ally for friendship's sake. A pact,
+  kinship or regard 40+ restrains an AI from declaring war unless it is overwhelmingly stronger.
+- **Deals** (`Command.propose(to:, Deal)`; AI courts answer at once, a person on their turn with
+  `Command.answer`):
+  - **Gift** of gold or goods, given at once.
+  - **Royal marriage** (they need regard 20+): +5 legitimacy for both, lasting kin regard. It
+    ends if the houses go to war.
+  - **Bargain**: so much of one good for another (or gold), every turn for 10 rounds. Yields
+    (copper, tin, horses, wine, luxuries) flow through `effectiveYield`; gold, grain, stone,
+    timber and iron are sent at each turn's start. A bargain that can't be kept lapses and is
+    resented. An AI wants 10% more value than it gives, less half its regard, and twice the
+    value for what it lacks.
+  - **Tribute demand**: a court pays only someone 1.5× its strength, and resents it. A
+    refusal gives the demander just cause for war for 10 rounds: declaring it then costs no
+    legitimacy.
+  - **Non-aggression pact**, 10 rounds. Breaking it costs −20 legitimacy on top of breaking the
+    peace, −60 regard with the victim and −15 with every other court.
+  - **Military access** (needs regard 50+ or alliance): armies may cross and stand in the
+    grantor's land, through the same machinery as vassal empires' land. It can be revoked,
+    and the armies go home.
+  - **Embargo**: a friend (regard 30+) stops trading with your enemy (whom it regards at 0
+    or less) for 10 rounds. The target resents it.
+  
+  Going to war ends bargains, access and marriages between the two, and their open proposals.
+- **AI initiative.** At most one proposal a turn, to the same court at most every 6 rounds,
+  and a person sees one at a time:
+  - a pact with a stronger neighbour it fears, with a small gift first if relations are truly
+    hostile (gifting every frightening neighbour drained Greece: 11% wins);
+  - marriages with friends;
+  - gold for tin or copper it lacks;
+  - tribute demands on much weaker neighbours (the aggressive);
+  - embargoes against its enemies;
+  - access through allies' land.
+- **App.**
+  - Rivals: an inbox of proposals, with Accept/Pay and Decline/Refuse.
+  - Each rival's card shows how they regard you and what binds you: marriage, pact, access,
+    bargains, embargoes, just causes. A "Propose…" menu offers gifts, bonds, sensible
+    bargains (what they have for a fair price), embargoes and demands, each marked "likely
+    yes" or "likely no".
+  - Waiting proposals show on the map.
+  - The chronicle tells of marriages, bargains, tribute, pacts kept and broken.
+- **Vassal empires** (from their branch) are merged in alongside: a beaten rival can be made
+  to submit.
+- Balance (80 games): Egypt 32%, Mesopotamia 25%, Greece 22%, Italia 20%. Rules version 32.
+  Debug: `-demoDiplomacy YES`.

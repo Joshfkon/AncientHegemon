@@ -1,5 +1,5 @@
 {
-  "version": 31,
+  "version": 32,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -844,6 +844,35 @@
     "acceptStrengthPercent": 40,
     "tributePercent": 20,
     "prestige": 25
+  },
+  "diplomacy": {
+    "drift": 3,
+    "warRegard": -40,
+    "tradeRegard": 10,
+    "kinRegard": 25,
+    "allyRegard": 20,
+    "sharedEnemyRegard": 10,
+    "borderRegard": -5,
+    "declaredWarRegard": -40,
+    "giftRegardPerGold": 2,
+    "giftRegardMax": 30,
+    "marriageRegard": 30,
+    "marriageLegitimacy": 5,
+    "marriageMinRegard": 20,
+    "bargainRounds": 10,
+    "bargainMarginPercent": 110,
+    "tributeRegard": -25,
+    "tributeFearPercent": 150,
+    "casusBelliRounds": 10,
+    "pactRounds": 10,
+    "pactBrokenLegitimacy": -20,
+    "pactBrokenRegard": -60,
+    "reputationRegard": -15,
+    "accessRegard": 50,
+    "embargoRounds": 10,
+    "embargoMinRegard": 30,
+    "embargoMaxRegard": 0,
+    "proposalRounds": 6
   },
   "alliances": {
     "enemyTooStrongPercent": 200,

@@ -289,6 +289,12 @@ struct GameScreen: View {
                let t = session.demoVassal(sworn: how != "look"), how != "silent" {
                 selected = .territory(how == "march" ? (session.human.flatMap { engine.seat(of: $0, in: state) } ?? t) : t)
             }
+            // -demoDiplomacy YES: Rivals open, with a proposal waiting.
+            if UserDefaults.standard.bool(forKey: "demoDiplomacy") {
+                session.demoDiplomacy()
+                tab = .diplomacy
+                panelOpen = true
+            }
             // -demoKingdom anatolia: an audience with that land's kingdom's ruler.
             if let t = UserDefaults.standard.string(forKey: "demoKingdom") { session.kingdomAudience = KingdomAudience(territory: t) }
             if UserDefaults.standard.string(forKey: "demoThrone") != nil {
@@ -451,6 +457,10 @@ struct GameScreen: View {
                         // Each offer answered right here; more than two wait on the Rivals tab.
                         let offers = state.peaceOffers.filter { $0.to == human }.map(\.from).sorted()
                         ForEach(offers.prefix(2), id: \.self) { from in peaceNotice(from) }
+                        // Other courts' proposals: answered in Rivals.
+                        if let p = state.proposals.first(where: { $0.to == session.human }) {
+                            notice("📜 \(DealText.describe(p.deal, from: p.from, state, engine))", "Answer") { open(.diplomacy) }
+                        }
                         if offers.count > 2 { notice("🕊️ +\(offers.count - 2) more", "View") { open(.diplomacy) } }
                     }
                     if !session.report.isEmpty, !session.report.contains(where: { $0.mine == true }) {
@@ -571,7 +581,7 @@ struct GameScreen: View {
 
     private var offerCount: Int {
         guard let human = session.human else { return 0 }
-        return state.peaceOffers.filter { $0.to == human }.count
+        return state.peaceOffers.filter { $0.to == human }.count + state.proposals.filter { $0.to == human }.count
     }
 
     /// Where the player is looking: the order's target, else the selected territory.

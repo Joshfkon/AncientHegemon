@@ -41,6 +41,12 @@ public struct Engine: Sendable {
             return try setFormation(territory, formation, &state)
         case let .parley(territory, kind):
             return try parley(territory, kind, &state)
+        case let .propose(to, deal):
+            return try propose(deal, to: to, &state)
+        case let .answer(from, deal, accept):
+            return try answer(from, deal, accept: accept, &state)
+        case let .revokeAccess(from):
+            return try revokeAccess(from, &state)
         case let .levy(territory, to):
             return try levy(territory, to: to, &state)
         case let .annex(territory):
@@ -324,7 +330,7 @@ public struct Engine: Sendable {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return closing + ended }
-            age = dawnOfIron(&state) + piratesRound(&state) + minorsRound(&state)
+            age = dawnOfIron(&state) + piratesRound(&state) + minorsRound(&state) + diplomacyRound(&state)
         }
 
         return closing + beginTurn(age, &state)
@@ -344,6 +350,7 @@ public struct Engine: Sendable {
             events += storms(civ, &state)
             if !state.civs[civ]!.eliminated {
                 events += harvest(civ, &state)
+                events += keepBargains(civ, &state)
                 events += pressSieges(civ, &state)
                 events += governmentPhase(civ, &state)
                 events += updateSplendour(civ, &state)
@@ -421,11 +428,15 @@ public struct Engine: Sendable {
         _ = try rival(on, state)
         guard state.atPeace(civ, on) else { throw GameError.notAtPeace(on) }
         guard mayDeclareWar(civ, on: on, in: state) else { throw GameError.vassalBound(on) }
-        adjustLegitimacy(civ, rules.government.legitimacy.brokePeace, &state)
+        // A just cause (a refused demand) spares the throne the shame of breaking the peace.
+        if !casusBelli(civ, against: on, in: state) {
+            adjustLegitimacy(civ, rules.government.legitimacy.brokePeace, &state)
+        }
+        let consequences = warConsequences(civ, on: on, &state)
         state.peace.remove(CivPair(civ, on))
         state.peaceOffers.remove(PeaceOffer(from: civ, to: on))
         state.peaceOffers.remove(PeaceOffer(from: on, to: civ))
-        var events: [GameEvent] = [.warDeclared(by: civ, on: on)]
+        var events: [GameEvent] = [.warDeclared(by: civ, on: on)] + consequences
         // Turning on an ally ends the alliance, with the shame of it.
         if allied(civ, on, in: state) {
             state.alliances.remove(CivPair(civ, on))

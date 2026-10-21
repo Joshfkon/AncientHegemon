@@ -37,6 +37,7 @@
 		811367309C8774DE014E4391 /* BattlePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */; };
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
+		8A882B64833EFEDE1680CE41 /* DiplomacyDeals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86340715449269D80EBD0169 /* DiplomacyDeals.swift */; };
 		94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DF88279096FCF589EA9D0E /* Walkthrough.swift */; };
 		A37CDC7C8E110B7E6FEB7348 /* war.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 2ED27BCD3EBA9EA24D94359E /* war.m4a */; };
 		A41087CA8A624B7E29CB90B2 /* AgeFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D757836BEC95C0399096193 /* AgeFeatures.swift */; };
@@ -93,6 +94,7 @@
 		821EC596738E6EAD5B72DCA9 /* GuidedOpening.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedOpening.swift; sourceTree = "<group>"; };
 		8264F7FC3FCC73EAA576137C /* SaveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveStore.swift; sourceTree = "<group>"; };
 		84160A606F9979A055583705 /* wardrums.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = wardrums.wav; sourceTree = "<group>"; };
+		86340715449269D80EBD0169 /* DiplomacyDeals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyDeals.swift; sourceTree = "<group>"; };
 		87DF88279096FCF589EA9D0E /* Walkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Walkthrough.swift; sourceTree = "<group>"; };
 		8A90B3B6C1AAB1BC8FD6862B /* mesopotamia.m4a */ = {isa = PBXFileReference; path = mesopotamia.m4a; sourceTree = "<group>"; };
 		90545C84FE5971D4416409AA /* OrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderViews.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				C815DC03A75A0FBDC73B4D9D /* CityView.swift */,
 				C531F5931E1FB610194769C0 /* CommandBar.swift */,
 				0ECFFACBAD68C2C31E4A376E /* Council.swift */,
+				86340715449269D80EBD0169 /* DiplomacyDeals.swift */,
 				2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */,
 				CCFBA6CC17996FE4BB0B8833 /* EmpireView.swift */,
 				698F3135FF252AFF8CF0C79B /* EndScreen.swift */,
@@ -354,6 +357,7 @@
 				D61E57E5F2593CC3904B21C0 /* CityView.swift in Sources */,
 				E42D185130EDA0A316B69986 /* CommandBar.swift in Sources */,
 				27FB2A89E777BFECC518BFC5 /* Council.swift in Sources */,
+				8A882B64833EFEDE1680CE41 /* DiplomacyDeals.swift in Sources */,
 				E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */,
 				BB2A82BA7E91A2D993C2FC0A /* EmpireView.swift in Sources */,
 				E0E3C7D4ADB7EC0596F234C6 /* EndScreen.swift in Sources */,

@@ -57,6 +57,11 @@ public enum Command: Codable, Sendable, Equatable {
     case declinePeace(from: CivilizationID)
     /// End a peace. Withdraws any offers between the two.
     case declareWar(on: CivilizationID)
+    /// Diplomacy: offer a deal (a gift is simply given), answer one, or withdraw leave to cross
+    /// your land.
+    case propose(to: CivilizationID, Deal)
+    case answer(from: CivilizationID, Deal, accept: Bool)
+    case revokeAccess(from: CivilizationID)
     /// Appoint a new general to lead the army in a home territory. Costs gold.
     case appointGeneral(territory: TerritoryID)
     /// Shower a general with honors: costs gold (more for famous ones), restores loyalty.
@@ -104,6 +109,15 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case joinedWar(civ: CivilizationID, against: CivilizationID, ally: CivilizationID)
     case warRefused(by: CivilizationID, ally: CivilizationID, against: CivilizationID)
     case warDeclared(by: CivilizationID, on: CivilizationID)
+    case giftSent(from: CivilizationID, to: CivilizationID, goods: Goods)
+    case dealProposed(from: CivilizationID, to: CivilizationID, deal: Deal)
+    case dealMade(from: CivilizationID, to: CivilizationID, deal: Deal)
+    case dealRefused(from: CivilizationID, to: CivilizationID, deal: Deal)
+    case pactEnded(CivPair)
+    case pactBroken(by: CivilizationID, with: CivilizationID)
+    case marriageEnded(CivPair)
+    case bargainBroken(by: CivilizationID, with: CivilizationID)
+    case accessRevoked(by: CivilizationID, from: CivilizationID)
     case recruited(civ: CivilizationID, territory: TerritoryID, unit: UnitType, count: Int)
     case disbanded(civ: CivilizationID, territory: TerritoryID, units: UnitCounts, rejoined: Int)
     case tribeJoined(civ: CivilizationID, territory: TerritoryID, parley: Parley, warriors: Int)
@@ -230,6 +244,10 @@ public struct EventReport: Codable, Sendable, Equatable {
 
 public enum GameError: Error, Equatable, Sendable {
     case notVassal(TerritoryID)
+    case cannotAfford
+    case alreadyMarried(CivilizationID)
+    case alreadyProposed(CivilizationID)
+    case noProposal(CivilizationID)
     case tooSoon(TerritoryID)
     /// A vassal under the protection of its overlord, or of someone at peace with you.
     case shielded(TerritoryID)

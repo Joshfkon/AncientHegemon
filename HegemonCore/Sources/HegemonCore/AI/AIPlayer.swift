@@ -30,6 +30,7 @@ public struct AIPlayer: Sendable {
         var turn = AITurn()
         let civ = state.activePlayer
         diplomacy(civ, &state, &turn)
+        propose(civ, &state, &turn)
         setTaxes(civ, &state, &turn)
         court(civ, &state, &turn)
         let campaign = seaCampaign(civ, state)
@@ -163,7 +164,10 @@ public struct AIPlayer: Sendable {
                 if engine.allied(civ, other, in: state) { continue }
                 // Vassalage binds both sides, and a vassal its overlord's allies.
                 if !engine.mayDeclareWar(civ, on: other, in: state) { continue }
-                if prey, personality.trade < 0.9 || edge >= 2 {
+                // A just cause emboldens; a pact, kin or warm regard restrains.
+                let cause = engine.casusBelli(civ, against: other, in: state) && neighbor && edge >= warEdge * 0.8
+                if (prey || cause), personality.trade < 0.9 || edge >= 2 || cause,
+                   !restrained(civ, from: other, edge: edge, state), engine.mayDeclareWar(civ, on: other, in: state) {
                     issue(.declareWar(on: other), &state, &turn)
                 }
                 continue

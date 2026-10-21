@@ -917,6 +917,25 @@ final class GameSession {
                                    : "\(peopleName(p).capitalizedFirst) raid \(place(t)) and are beaten off", at: t)
             case let .peopleJoined(civ, t, _):
                 add(civ, "\(place(t)) comes over to \(name(civ)) of its own accord", at: t)
+            // Diplomacy between the courts.
+            case let .giftSent(from, to, goods) where from == human || to == human:
+                add(from, "\(name(from)) sends \(name(to)) a gift of \(DealText.goods(goods))")
+            case let .dealMade(from, to, deal):
+                if from == human || to == human || { if case .marriage = deal { true } else { false } }() {
+                    add(from, Self.dealLine(deal, from, to, made: true, name: name))
+                }
+            case let .dealRefused(from, to, deal) where from == human || to == human:
+                add(to, Self.dealLine(deal, from, to, made: false, name: name))
+            case let .pactBroken(by, with):
+                add(by, "\(name(by)) breaks its pact with \(name(with)): every court remembers")
+            case let .pactEnded(pair) where pair.a == human || pair.b == human:
+                add(nil, "The pact between \(name(pair.a)) and \(name(pair.b)) runs out")
+            case let .marriageEnded(pair):
+                add(nil, "War sunders the marriage between the houses of \(name(pair.a)) and \(name(pair.b))")
+            case let .bargainBroken(by, with) where by == human || with == human:
+                add(by, "\(name(by)) can no longer keep its bargain with \(name(with))")
+            case let .accessRevoked(by, from) where by == human || from == human:
+                add(by, "\(name(by)) withdraws \(name(from))'s leave to march through its land")
             case let .storm(civ, sea, ships, drowned) where civ == human:
                 add(civ, "A storm in the \(place(sea)) sinks \(ships) ship\(ships == 1 ? "" : "s")"
                     + (drowned.total > 0 ? " and drowns \(drowned.total) troops" : "")
@@ -1040,6 +1059,38 @@ final class GameSession {
         state.civs[human]!.stock = [.stone: 10, .timber: 10]
         state.land[seat]!.construction = Construction(kind: .farm, turnsLeft: 1)
         state.land[seat]!.queue = [.road]
+    }
+
+    /// A line for the chronicle about a deal made or refused.
+    static func dealLine(_ deal: Deal, _ from: CivilizationID, _ to: CivilizationID, made: Bool,
+                         name: (CivilizationID?) -> String) -> String {
+        let a = name(from), b = name(to)
+        switch (deal, made) {
+        case (.marriage, true): return "The houses of \(a) and \(b) are joined in marriage"
+        case (.marriage, false): return "\(b) declines a marriage with the house of \(a)"
+        case let (.bargain(give, get), true): return "\(a) and \(b) strike a bargain: \(DealText.goods(give)) for \(DealText.goods(get)) a turn"
+        case (.bargain, false): return "\(b) turns down \(a)'s bargain"
+        case let (.tribute(gold), true): return "\(b) pays \(a) \(gold) gold in tribute"
+        case (.tribute, false): return "\(b) refuses \(a)'s demand for tribute: \(a) has its cause for war"
+        case (.pact, true): return "\(a) and \(b) swear a pact of non-aggression"
+        case (.pact, false): return "\(b) will not swear a pact with \(a)"
+        case (.access, true): return "\(b) grants \(a) leave to march through its land"
+        case (.access, false): return "\(b) refuses \(a)'s armies passage"
+        case let (.embargo(against), true): return "\(b) stops trading with \(name(against)) at \(a)'s asking"
+        case (.embargo, false): return "\(b) will not cut its trade for \(a)"
+        case (.gift, _): return "\(a) sends \(b) a gift"
+        }
+    }
+
+    /// For -demoDiplomacy: a rival proposes a marriage, another holds us in high regard, a pact.
+    func demoDiplomacy() {
+        guard let human else { return }
+        let rivals = state.players.filter { $0 != human }
+        guard rivals.count >= 2 else { return }
+        state.proposals.append(Proposal(from: rivals[0], to: human, deal: .marriage, round: state.turn))
+        state.regard[Opinion(rivals[0], about: human)] = 35
+        state.regard[Opinion(rivals[1], about: human)] = -25
+        state.pacts[CivPair(human, rivals[1])] = state.turn + 8
     }
 
     /// For -demoVassal: the first people next to the capital swears to the player (or, with

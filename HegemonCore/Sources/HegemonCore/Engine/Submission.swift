@@ -216,7 +216,7 @@ extension Engine {
     /// enter, stand in and march through without a fight.
     public func hasAccess(_ civ: CivilizationID, to territory: TerritoryID, in state: GameState) -> Bool {
         guard let owner = state.owner(of: territory), owner != civ else { return false }
-        return liege(of: owner, in: state) == civ
+        return liege(of: owner, in: state) == civ || grantsAccess(owner, to: civ, in: state)
     }
 
     /// Checks an army of `civ` may go into `territory`. In a vassal's land it may only stop

@@ -302,6 +302,19 @@ public struct GameState: Codable, Sendable, Equatable {
     public var vassalage: [CivilizationID: Vassalage] = [:]
     public var submissionDemands: Set<PeaceOffer> = []
     public var submissionRebuffed: [PeaceOffer: Int] = [:]
+    /// Diplomacy: how each court regards each other; marriages; pacts (through which round);
+    /// leave to cross another's land (from the grantor to the grantee); embargoes; standing
+    /// bargains; just causes for war (from the wronged, through which round); deals waiting for
+    /// a person's answer; and when each court last proposed to each other.
+    public var regard: [Opinion: Int] = [:]
+    public var marriages: Set<CivPair> = []
+    public var pacts: [CivPair: Int] = [:]
+    public var access: Set<PeaceOffer> = []
+    public var embargoes: [Embargo] = []
+    public var bargains: [Bargain] = []
+    public var casusBelli: [PeaceOffer: Int] = [:]
+    public var proposals: [Proposal] = []
+    public var lastProposal: [PeaceOffer: Int] = [:]
 
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held

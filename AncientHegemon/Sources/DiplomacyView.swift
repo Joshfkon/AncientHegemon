@@ -30,6 +30,10 @@ struct DiplomacyView: View {
                 }
                 .padding(.top, 8)
                 Text("Tap a ruler to visit their court.").font(.caption2).foregroundStyle(.secondary)
+                // Deals other courts have put to us.
+                ForEach(state.proposals.filter { $0.to == human }, id: \.self) { p in
+                    ProposalCard(session: session, proposal: p)
+                }
                 ForEach(Array(state.warRequests.filter { $0.to == human }).sorted { $0.from < $1.from }, id: \.self) { r in
                     VStack(alignment: .leading, spacing: 6) {
                         Label("\(Palette.name(r.from, state)) calls you to war against \(Palette.name(r.against, state))",
@@ -154,6 +158,7 @@ struct DiplomacyView: View {
             let mood = attitude(human, other, trading: route != nil)
             Label(mood.text, systemImage: mood.icon)
                 .font(.caption.bold()).foregroundStyle(mood.color)
+            bonds(human, other)
             HStack(alignment: .top, spacing: 10) {
                 Button { session.audience = Audience(civ: other, reason: .visit) } label: {
                     RulerPortrait(civ: other, state: state, size: 38).padding(.top, 6)
@@ -197,6 +202,45 @@ struct DiplomacyView: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+    }
+
+    /// How their court regards ours, what binds us, and what we can propose.
+    @ViewBuilder private func bonds(_ human: CivilizationID, _ other: CivilizationID) -> some View {
+        let r = engine.regard(of: other, toward: human, in: state)
+        let word = DealText.regard(r)
+        HStack(spacing: 8) {
+            Label("They regard you: \(word.text) (\(r > 0 ? "+" : "")\(r))", systemImage: "heart.text.square")
+                .font(.caption.bold()).foregroundStyle(word.color)
+            Spacer(minLength: 0)
+            DealsMenu(session: session, human: human, other: other)
+        }
+        let ties = bondList(human, other)
+        if !ties.isEmpty {
+            Text(ties.joined(separator: " · ")).font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        if engine.grantsAccess(human, to: other, in: state) {
+            Button("Revoke their leave to march through your land") { session.order(.revokeAccess(from: other)) }
+                .font(.caption2).buttonStyle(.bordered).controlSize(.mini)
+        }
+    }
+
+    private func bondList(_ human: CivilizationID, _ other: CivilizationID) -> [String] {
+        var ties: [String] = []
+        if engine.married(human, other, in: state) { ties.append("Married houses") }
+        if let until = engine.pact(human, other, in: state) { ties.append("Pact until round \(until)") }
+        if engine.grantsAccess(other, to: human, in: state) { ties.append("You may march through their land") }
+        if engine.grantsAccess(human, to: other, in: state) { ties.append("They may march through yours") }
+        for b in state.bargains where (b.a == human && b.b == other) || (b.a == other && b.b == human) {
+            let (gives, gets) = b.a == human ? (b.aGives, b.bGives) : (b.bGives, b.aGives)
+            ties.append("Bargain: your \(DealText.goods(gives)) for their \(DealText.goods(gets)) a turn, until round \(b.until)")
+        }
+        for e in state.embargoes where e.until >= state.turn && (e.by == other || e.against == other) {
+            ties.append(e.by == other ? "Embargo on \(Palette.name(e.against, state))" : "Embargoed by \(Palette.name(e.by, state))")
+        }
+        if engine.casusBelli(human, against: other, in: state) { ties.append("You have just cause for war") }
+        if engine.casusBelli(other, against: human, in: state) { ties.append("They have just cause for war on you") }
+        return ties
     }
 
     /// How vassalage ties them: to you, or to someone else.
