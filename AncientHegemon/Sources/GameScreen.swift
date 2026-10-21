@@ -283,10 +283,10 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
-            // -demoVassal YES|look|march: a sworn vassal (or not) selected, or the capital's army
-            // selected with a vassal next door to march through.
+            // -demoVassal YES|look|march|silent: a sworn vassal (or not) selected, the capital's army
+            // selected with a vassal next door to march through, or a sworn vassal and nothing selected.
             if let how = UserDefaults.standard.string(forKey: "demoVassal"),
-               let t = session.demoVassal(sworn: how != "look") {
+               let t = session.demoVassal(sworn: how != "look"), how != "silent" {
                 selected = .territory(how == "march" ? (session.human.flatMap { engine.seat(of: $0, in: state) } ?? t) : t)
             }
             // -demoKingdom anatolia: an audience with that land's kingdom's ruler.
@@ -680,8 +680,15 @@ struct GameScreen: View {
         SoundBoard.shared.play(call.mood == .alarm ? .horn : .click, volume: 0.35)
     }
 
-    /// Where an advisor's button leads.
+    /// Where an advisor's button leads. A place that doesn't exist (a bug elsewhere) leads nowhere.
     private func follow(_ go: AdvisorCall.Go) {
+        switch go {
+        case let .territory(t), let .city(t):
+            guard engine.map.territory(t) != nil else { return }
+        case let .sea(s):
+            guard engine.map.sea(s) != nil else { return }
+        default: break
+        }
         switch go {
         case .realm: open(.empire)
         case .knowledge: showKnowledge = true

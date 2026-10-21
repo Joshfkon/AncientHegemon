@@ -219,9 +219,14 @@ enum Advisors {
                 "Pirates prowl the \(place(pirates.sea)). They plunder unwalled coasts with none of our ships nearby, and close the sea to trade. Three ships on patrol scatter them, and sinking them pays a bounty.",
                 go: .sea(pirates.sea)))
         }
-        if let v = engine.vassals(of: civ, in: state).first {
+        // Vassals are kingdoms: each is named for its people, and shown at one of its lands.
+        let vassals = engine.vassals(of: civ, in: state).compactMap { k -> (name: String, land: TerritoryID)? in
+            guard let land = engine.lands(of: k, in: state).first else { return nil }
+            return ((state.kingdoms[k]?.name ?? place(land)).capitalizedFirst, land)
+        }
+        if let (name, v) = vassals.first {
             intros.append(say("intro.vassals", .envoy, .calm,
-                "\(engine.rules.minors.peoples[v]?.name ?? place(v)) are our vassals now. They send tribute each turn and levies every few rounds, and need no garrison. Leave them unwatched too long and they may break free; after years of loyalty, they may be annexed.",
+                "\(name) are our vassals now. They send tribute each turn and levies every few rounds, and need no garrison. Leave them unwatched too long and they may break free; after years of loyalty, they may be annexed.",
                 go: .territory(v)))
         }
 
@@ -262,15 +267,14 @@ enum Advisors {
                 "Pirates plundered \(place(t))\(gold > 0 ? " and took \(gold) gold" : ""). Walls, or our own ships in that sea, would keep them off.",
                 go: .territory(t), cooldown: 4))
         }
-        let vassals = engine.vassals(of: civ, in: state)
-        if let v = vassals.first(where: { engine.annexWait($0, in: state) == 0 }) {
+        if let (name, v) = vassals.first(where: { engine.annexWait($0.land, in: state) == 0 }) {
             reminders.append(say("annex", .envoy, .calm,
-                "\(engine.rules.minors.peoples[v]?.name ?? place(v)) have served us loyally for years. They could be annexed now, in peace: their land would be ours outright.",
+                "\(name) have served us loyally for years. They could be annexed now, in peace: their land would be ours outright.",
                 go: .territory(v), cooldown: 8))
         }
-        if let v = vassals.first(where: { engine.levyWait($0, in: state) == 0 }) {
+        if let (name, v) = vassals.first(where: { engine.levyWait($0.land, in: state) == 0 }) {
             reminders.append(say("levy", .general, .calm,
-                "\(engine.rules.minors.peoples[v]?.name ?? place(v)) owe us a levy of warriors. Call them up wherever we need them.",
+                "\(name) owe us a levy of warriors. Call them up wherever we need them.",
                 go: .territory(v), cooldown: 6))
         }
 
