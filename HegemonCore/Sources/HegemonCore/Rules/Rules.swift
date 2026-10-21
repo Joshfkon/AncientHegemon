@@ -172,6 +172,9 @@ public struct StartRules: Codable, Sendable, Equatable {
     public let fleets: [CivilizationID: StartingFleet]?
     /// Knowledge points a civilization starts with, by field (a head start, e.g. Galleys).
     public let knowledge: [CivilizationID: [KnowledgeField: Int]]?
+    /// The empires begin at peace with one another (war must be declared, at a cost in
+    /// legitimacy); otherwise they begin at war.
+    public let atPeace: Bool?
 }
 
 public struct StartingFleet: Codable, Sendable, Equatable {

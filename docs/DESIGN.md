@@ -1989,3 +1989,18 @@ goals: everything here follows from how real Bronze Age empires held together or
   realm, they're asked: "Guide me through the first turns" or "Jump right in". The answer sets
   the **Guided** switch on the title screen (beside difficulty and scenarios), which they can
   flip for later games. Scenarios are never guided. Debug: `-demoAs <civ> -demoGuided YES`.
+
+### A peaceful start (Josh: "we should start at peace with our rivals")
+
+- The four empires now begin at peace with one another (`start.atPeace` in rules.json). War
+  must be declared, at the usual cost in legitimacy for breaking the peace (−8). Kingdoms,
+  tribes, barbarians and pirates are not party to it. Scenarios are wars already under way:
+  everyone starts them at war.
+- Starting at peace also means trade routes from the first turn, and no flood of peace envoys
+  on round 1.
+- A rival's land now shows whether you're at peace, allied or at war, with a "Meet <ruler>"
+  button: the audience offers peace or an alliance, or a confirmed declaration of war.
+- The AI already declared war on weaker neighbours when it ran out of land to settle; it does
+  so as before. Balance (80 games): Egypt 30%, Greece 26%, Mesopotamia 23%, Italia 20%;
+  empire-against-empire battles about as common as before. Rules version 30. Test rules
+  (`Engine.calm()`) still start at war, as the older tests expect.

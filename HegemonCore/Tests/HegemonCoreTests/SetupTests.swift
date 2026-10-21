@@ -108,3 +108,30 @@ import Testing
         #expect(!stormy.drawEvents("greece", &s).isEmpty)
     }
 }
+
+@Suite struct PeacefulStartTests {
+    let engine = try! Engine.bundled()
+
+    @Test func theEmpiresBeginAtPeace() throws {
+        let s = try engine.newGame(seed: 1)
+        for a in s.players { for b in s.players where a != b { #expect(s.atPeace(a, b)) } }
+        // Natives and kingdoms are another matter.
+        #expect(s.atWar("greece", kingdomID("thrace")))
+    }
+
+    @Test func scenariosAreWarsAlreadyUnderWay() throws {
+        var s = try engine.newGame(seed: 1)
+        engine.prepare(&s, human: nil, difficulty: .medium, scenario: Scenario.named("kadesh"))
+        #expect(s.atWar("egypt", "mesopotamia"))
+    }
+
+    @Test func goingToWarBreaksThePeaceAtACost() throws {
+        var s = try engine.newGame(seed: 1)
+        let civ = s.activePlayer
+        let other = s.players.first { $0 != civ }!
+        let legitimacy = s.civs[civ]!.legitimacy
+        try engine.apply(.declareWar(on: other), to: &s)
+        #expect(s.atWar(civ, other))
+        #expect(s.civs[civ]!.legitimacy < legitimacy)
+    }
+}

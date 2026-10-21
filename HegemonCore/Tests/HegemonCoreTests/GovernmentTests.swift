@@ -170,6 +170,7 @@ private func own(_ s: inout GameState, _ civ: CivilizationID, _ territories: Ter
 
     @Test func tradeBringsPlague() throws {
         var s = try engine.newGame(seed: 1)
+        s.peace = []  // nobody trading at first
         let alone = weight(.plague, "greece", s)
         s.peace.insert(CivPair("greece", "egypt"))
         s.peace.insert(CivPair("greece", "italia"))

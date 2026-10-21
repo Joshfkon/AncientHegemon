@@ -138,7 +138,9 @@ extension Engine {
             state.scenario = scenario.id
             state.roundLimit = state.turn - 1 + scenario.rounds
             state.objectives = scenario.objectives.isEmpty ? nil : scenario.objectives
-            // Everyone starts the scenario at war, as in the full game.
+            // A scenario is a war already under way: everyone starts it at war.
+            state.peace = []
+            state.peaceOffers = []
         }
         state.difficulty = difficulty
         let level = rules.difficulty[difficulty] ?? rules.difficulty[.medium]!

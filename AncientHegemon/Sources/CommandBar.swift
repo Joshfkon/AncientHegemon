@@ -150,6 +150,25 @@ struct CommandBar: View {
             } else {
                 Text("\(owner.map { Palette.name($0, state) } ?? "Unclaimed") · \(t.terrain.rawValue)")
                     .font(.caption).foregroundStyle(.white.opacity(0.7))
+                // A rival's land: where you stand with them, and their ruler to meet (for peace,
+                // alliance, or a declaration of war).
+                if let owner, let human = session.human, owner != human, state.isPlayer(owner),
+                   let ruler = state.civs[owner]?.ruler.name {
+                    HStack(spacing: 8) {
+                        Button { session.audience = Audience(civ: owner, reason: .visit) } label: {
+                            Label("Meet \(ruler)", systemImage: "person.crop.circle")
+                                .font(.caption.bold()).lineLimit(1)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(Bronze.gradient, in: Capsule())
+                                .foregroundStyle(.black)
+                        }
+                        .buttonStyle(.plain)
+                        Label(state.atPeace(human, owner) ? (engine.allied(human, owner, in: state) ? "Allies" : "At peace") : "At war",
+                              systemImage: state.atPeace(human, owner) ? "hand.raised.fill" : "flag.2.crossed.fill")
+                            .font(.caption2.bold())
+                            .foregroundStyle(state.atPeace(human, owner) ? Color.green : .red)
+                    }
+                }
             }
             if session.sees(id) {
                 HStack(spacing: 8) {

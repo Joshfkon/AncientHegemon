@@ -301,7 +301,7 @@ public struct GameState: Codable, Sendable, Equatable {
     /// Starts a new game. Each participating civilization begins holding its capital and
     /// heartland, with the starting army in the capital; everything else is unowned and held
     /// by native garrisons.
-    /// Everyone starts at war.
+    /// The empires start at peace with one another, or at war if the rules say so.
     public init(map: GameMap, rules: Rules, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
         let ids = civilizations ?? map.civilizations.map(\.id)
         guard !ids.isEmpty else { throw MapError.invalid("a game needs at least one civilization") }
@@ -387,7 +387,12 @@ public struct GameState: Codable, Sendable, Equatable {
         self.kingdoms = kingdoms
         self.fleets = startingFleets
         self.generalsMoved = []
-        self.peace = []
+        // At peace, every pair of empires; at war, none.
+        var peace: Set<CivPair> = []
+        if rules.start.atPeace == true {
+            for (i, a) in ids.enumerated() { for b in ids[(i + 1)...] { peace.insert(CivPair(a, b)) } }
+        }
+        self.peace = peace
         self.harvestPercent = [:]
         self.bonusGold = [:]
         self.rebellions = 0

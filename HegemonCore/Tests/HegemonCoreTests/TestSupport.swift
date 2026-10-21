@@ -33,6 +33,10 @@ extension Engine {
             for key in ["growthCap", "raidPercent", "joinPercent", "breakFreePercent"] { minors[key] = 0 }
             minors["expandPercent"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
             json["minors"] = minors
+            // The empires start at war, as tests written before peaceful starts expect.
+            var start = json["start"] as! [String: Any]
+            start["atPeace"] = false
+            json["start"] = start
             let traits = json["rulerTraits"] as! [String: Any]
             json["rulerTraits"] = traits.mapValues { _ in [String: Any]() }
         }
