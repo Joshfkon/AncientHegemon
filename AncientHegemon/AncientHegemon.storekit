@@ -1,0 +1,40 @@
+{
+  "identifier" : "6F0B6C2E-8E1D-4C59-9C1F-7A9B3E2D4A11",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : true,
+      "internalID" : "6741000001",
+      "localizations" : [
+        {
+          "description" : "A fifth empire: the Great Kings of Hatti",
+          "displayName" : "The Hittites",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.joshuakonstantinos.ancienthegemon.empire.hittites",
+      "referenceName" : "Empire: The Hittites",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6741000000",
+    "_developerTeamID" : "5LBB8BWZB3",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

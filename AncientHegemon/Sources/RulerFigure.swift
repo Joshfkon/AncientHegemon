@@ -4,7 +4,8 @@ import SwiftUI
 /// A ruler in person, Civilization-style: seated, breathing, blinking, speaking, with a face
 /// that shows how their court regards you. Drawn, not pictured, in each realm's own dress:
 /// Egypt's pharaoh in the striped nemes with the false beard, Mesopotamia's king with his tall
-/// cap and long curled beard, the Greek in a bronze helmet pushed back, the Italian in a laurel.
+/// cap and long curled beard, the Greek in a bronze helmet pushed back, the Italian in a laurel,
+/// the Hittite Great King (an expansion empire) clean-shaven in his tall cap, with the lituus.
 struct RulerFigure: View {
     enum Mood { case pleased, neutral, stern, angry, wary }
 
@@ -92,6 +93,18 @@ struct RulerFigure: View {
         let panel = Path(roundedRect: CGRect(x: 54, y: 64, width: 92, height: 180), cornerRadius: 10)
         ctx.fill(panel, with: .color(robe.opacity(0.55)))
         ctx.fill(panel, with: .color(.black.opacity(0.25)))
+        if style == "hatti" {
+            // The winged sun of the Great King, above his head.
+            ctx.fill(Path(ellipseIn: CGRect(x: 92, y: 66, width: 16, height: 16)), with: .color(gold))
+            for side in [-1.0, 1] {
+                var wing = Path()
+                wing.move(to: CGPoint(x: 100 + side * 9, y: 72))
+                wing.addQuadCurve(to: CGPoint(x: 100 + side * 42, y: 66), control: CGPoint(x: 100 + side * 26, y: 60))
+                wing.addQuadCurve(to: CGPoint(x: 100 + side * 9, y: 78), control: CGPoint(x: 100 + side * 28, y: 80))
+                ctx.fill(wing, with: .color(gold.opacity(0.9)))
+                ctx.stroke(wing, with: .color(ink.opacity(0.6)), lineWidth: 0.8)
+            }
+        }
         // Arms and legs.
         for x in [26.0, 152] {
             let arm = Path(roundedRect: CGRect(x: x, y: 226, width: 22, height: 12), cornerRadius: 5)
@@ -174,8 +187,18 @@ struct RulerFigure: View {
         staff.move(to: CGPoint(x: 162, y: 312))
         staff.addLine(to: CGPoint(x: 168, y: 150 - CGFloat(raise)))
         ctx.stroke(staff, with: .color(Color(red: 0.55, green: 0.38, blue: 0.16)), lineWidth: 4.5)
-        ctx.fill(Path(ellipseIn: CGRect(x: 161, y: 140 - CGFloat(raise), width: 14, height: 14)), with: .color(gold))
-        ctx.stroke(Path(ellipseIn: CGRect(x: 161, y: 140 - CGFloat(raise), width: 14, height: 14)), with: .color(ink), lineWidth: 1)
+        if style == "hatti" {
+            // The lituus: the Hittite kings' crook, curled back at the top.
+            var crook = Path()
+            crook.move(to: CGPoint(x: 168, y: 152 - CGFloat(raise)))
+            crook.addCurve(to: CGPoint(x: 154, y: 132 - CGFloat(raise)), control1: CGPoint(x: 170, y: 132 - CGFloat(raise)),
+                           control2: CGPoint(x: 160, y: 124 - CGFloat(raise)))
+            crook.addQuadCurve(to: CGPoint(x: 160, y: 142 - CGFloat(raise)), control: CGPoint(x: 150, y: 142 - CGFloat(raise)))
+            ctx.stroke(crook, with: .color(gold), style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+        } else {
+            ctx.fill(Path(ellipseIn: CGRect(x: 161, y: 140 - CGFloat(raise), width: 14, height: 14)), with: .color(gold))
+            ctx.stroke(Path(ellipseIn: CGRect(x: 161, y: 140 - CGFloat(raise), width: 14, height: 14)), with: .color(ink), lineWidth: 1)
+        }
         let hand = CGRect(x: 156, y: 206 - CGFloat(raise * 0.5), width: 18, height: 14)
         ctx.fill(Path(roundedRect: hand, cornerRadius: 6), with: .color(skin))
         ctx.stroke(Path(roundedRect: hand, cornerRadius: 6), with: .color(ink), lineWidth: 1)

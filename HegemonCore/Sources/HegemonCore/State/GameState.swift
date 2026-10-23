@@ -327,7 +327,7 @@ public struct GameState: Codable, Sendable, Equatable {
     /// by native garrisons.
     /// The empires start at peace with one another, or at war if the rules say so.
     public init(map: GameMap, rules: Rules, seed: UInt64, civilizations: [CivilizationID]? = nil) throws {
-        let ids = civilizations ?? map.civilizations.map(\.id)
+        let ids = civilizations ?? map.baseCivilizations.map(\.id)
         guard !ids.isEmpty else { throw MapError.invalid("a game needs at least one civilization") }
         guard Set(ids).count == ids.count else { throw MapError.invalid("duplicate civilization in game setup") }
 

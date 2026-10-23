@@ -388,6 +388,7 @@ struct AdvisorBust: View {
         switch civ {
         case "egypt": Color(red: 0.62, green: 0.42, blue: 0.27)
         case "mesopotamia": Color(red: 0.66, green: 0.47, blue: 0.32)
+        case "hatti": Color(red: 0.74, green: 0.53, blue: 0.37)
         default: Color(red: 0.86, green: 0.67, blue: 0.5)
         }
     }

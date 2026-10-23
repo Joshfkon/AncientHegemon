@@ -9,7 +9,8 @@ import Testing
         #expect(map.territories.count == 40)
         #expect(map.seas.count == 12)
         #expect(map.chokepoints.count == 7)
-        #expect(map.civilizations.count == 4)
+        #expect(map.civilizations.count == 5)
+        #expect(map.baseCivilizations.count == 4)
     }
 
     @Test func everyTerritoryProducesGrain() {

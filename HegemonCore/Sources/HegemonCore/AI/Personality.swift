@@ -29,13 +29,14 @@ public struct Personality: Codable, Sendable, Equatable {
         all.first { $0.name == name }
     }
 
-    /// Default temperaments for the starting civilizations.
+    /// Each empire's temperament as the map gives it (rebel realms and unknown civs: opportunist).
     public static func `default`(for civ: CivilizationID) -> Personality {
-        switch civ {
-        case "greece": .merchant
-        case "egypt": .turtle
-        case "italia": .conqueror
-        default: .opportunist
-        }
+        catalog[civ].flatMap(named) ?? .opportunist
     }
+
+    /// The bundled map's empires (classic and expansion) by id; generated worlds copy them.
+    private static let catalog: [CivilizationID: String] = {
+        guard let map = try? GameMap.bundled() else { return [:] }
+        return Dictionary(uniqueKeysWithValues: map.civilizations.compactMap { c in c.personality.map { (c.id, $0) } })
+    }()
 }

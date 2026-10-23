@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		078D4E78F0B4ACFCE6E38010 /* egypt.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 45953A68D4681A79E242E231 /* egypt.m4a */; };
 		0B6840A6ABAE607241E85D31 /* clash.wav in Resources */ = {isa = PBXBuildFile; fileRef = 56A2A90E394E1F771A7B0376 /* clash.wav */; };
+		15BB025F19458741DD95AFD8 /* StoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CCB3D619A162DEAFACA33D /* StoreTests.swift */; };
 		1ABCA866ED9D87E1233E4F9D /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = F40E34A4B9B83B40EDBECB72 /* coins.wav */; };
 		1C04762F5D77B52DB80A1BBB /* mesopotamia.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 8A90B3B6C1AAB1BC8FD6862B /* mesopotamia.m4a */; };
 		1D02DB9FAF4598900FB0AC6F /* wardrums.wav in Resources */ = {isa = PBXBuildFile; fileRef = 84160A606F9979A055583705 /* wardrums.wav */; };
@@ -38,6 +39,7 @@
 		86F91473DD43BAF6EC405E67 /* horn.wav in Resources */ = {isa = PBXBuildFile; fileRef = C7087D3414E9471A080F99F9 /* horn.wav */; };
 		8A444B4E05BCEF5E01A79100 /* drum.wav in Resources */ = {isa = PBXBuildFile; fileRef = FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */; };
 		8A882B64833EFEDE1680CE41 /* DiplomacyDeals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86340715449269D80EBD0169 /* DiplomacyDeals.swift */; };
+		8F4FE2E2C58E74934B5E6AAE /* hatti.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 123BBB68FBC79CB394F99B59 /* hatti.m4a */; };
 		94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DF88279096FCF589EA9D0E /* Walkthrough.swift */; };
 		A37CDC7C8E110B7E6FEB7348 /* war.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 2ED27BCD3EBA9EA24D94359E /* war.m4a */; };
 		A41087CA8A624B7E29CB90B2 /* AgeFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D757836BEC95C0399096193 /* AgeFeatures.swift */; };
@@ -50,6 +52,7 @@
 		C7B2349C02C3DDA155CE3F7B /* Advisors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95FDAA491E83A7BB267F5FA1 /* Advisors.swift */; };
 		C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8264F7FC3FCC73EAA576137C /* SaveStore.swift */; };
 		CCB85C16629CED6910E816B4 /* HegemonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5ACD1C217BD355BA7B28AFB5 /* HegemonCore */; };
+		CD4086CE842BDB7A66DE2099 /* StoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF1F2E9B2215B9709081271 /* StoreView.swift */; };
 		D51D6E2865259BF35F35C166 /* AncientHegemonApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */; };
 		D61E57E5F2593CC3904B21C0 /* CityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C815DC03A75A0FBDC73B4D9D /* CityView.swift */; };
 		D63B75A9E041A4FB1ADB15CD /* OrderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90545C84FE5971D4416409AA /* OrderViews.swift */; };
@@ -59,18 +62,31 @@
 		E42D185130EDA0A316B69986 /* CommandBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C531F5931E1FB610194769C0 /* CommandBar.swift */; };
 		E5E14341228DD01BE0EDAB4C /* DiplomacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */; };
 		E7556D90D724BDDC279954B9 /* BattleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F51D7653E79E5A5C39C47A5 /* BattleViews.swift */; };
+		ECEEF46C3AA40B36A4EF4D0C /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 930CA20FFB8874E3848434F2 /* Store.swift */; };
 		F29BC1C9EAEB273DAD0CE0B1 /* greece.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3EB2ABD5B6BBCB3ECFC080A8 /* greece.m4a */; };
 		F38B5FFD26C968F15B7E66DD /* victory.wav in Resources */ = {isa = PBXBuildFile; fileRef = D2374D4F4DD8663AC2D35069 /* victory.wav */; };
 		F679B7A870F692418B01A07B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E710095DFC58ED6E6AD23B14 /* Assets.xcassets */; };
+		F7258F51E11381C3622AEC1C /* AncientHegemon.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 8BAB806D75D094B6E9CEAE15 /* AncientHegemon.storekit */; };
 		F959F0A69661E89FBC832BFD /* gallop.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5C556F203B94E6D2190DFCCC /* gallop.wav */; };
 		FC0C2A3CF6D20616851B8CFD /* roar.wav in Resources */ = {isa = PBXBuildFile; fileRef = 99446154A61CAABED13A5D65 /* roar.wav */; };
 		FDF4BE078F0BB2D4F163960F /* RulerStatue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4FC92586EA217081B93582 /* RulerStatue.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		95F86D5C627A4588E6F66B16 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF0BF32E831B81BAC7C9E1F8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A7D089A5C2CF4618AD3DC15B;
+			remoteInfo = AncientHegemon;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		095BFA7DCC2670D90123446F /* MapMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarks.swift; sourceTree = "<group>"; };
 		0ECFFACBAD68C2C31E4A376E /* Council.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Council.swift; sourceTree = "<group>"; };
 		0FCEE35A1C25107FDE363ED9 /* italia.m4a */ = {isa = PBXFileReference; path = italia.m4a; sourceTree = "<group>"; };
+		123BBB68FBC79CB394F99B59 /* hatti.m4a */ = {isa = PBXFileReference; path = hatti.m4a; sourceTree = "<group>"; };
 		13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlePlan.swift; sourceTree = "<group>"; };
 		14768232649EF1859B451DAC /* Peoples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Peoples.swift; sourceTree = "<group>"; };
 		185BAB29A57542F88154144A /* Guidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Guidance.swift; sourceTree = "<group>"; };
@@ -87,6 +103,7 @@
 		5C556F203B94E6D2190DFCCC /* gallop.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = gallop.wav; sourceTree = "<group>"; };
 		698F3135FF252AFF8CF0C79B /* EndScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndScreen.swift; sourceTree = "<group>"; };
 		6FA988893EB7B67616AC6394 /* ResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourcesView.swift; sourceTree = "<group>"; };
+		7AF1F2E9B2215B9709081271 /* StoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreView.swift; sourceTree = "<group>"; };
 		7DEFB823D986E1A428DCF40F /* MapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLayout.swift; sourceTree = "<group>"; };
 		7E7B5FD5E53683B4C70351A3 /* map_shapes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = map_shapes.json; sourceTree = "<group>"; };
 		81666E7D20EECA8701512537 /* arrows.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = arrows.wav; sourceTree = "<group>"; };
@@ -97,8 +114,10 @@
 		86340715449269D80EBD0169 /* DiplomacyDeals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyDeals.swift; sourceTree = "<group>"; };
 		87DF88279096FCF589EA9D0E /* Walkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Walkthrough.swift; sourceTree = "<group>"; };
 		8A90B3B6C1AAB1BC8FD6862B /* mesopotamia.m4a */ = {isa = PBXFileReference; path = mesopotamia.m4a; sourceTree = "<group>"; };
+		8BAB806D75D094B6E9CEAE15 /* AncientHegemon.storekit */ = {isa = PBXFileReference; path = AncientHegemon.storekit; sourceTree = "<group>"; };
 		90545C84FE5971D4416409AA /* OrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderViews.swift; sourceTree = "<group>"; };
 		90FA72590070862E642AFFAE /* Moments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Moments.swift; sourceTree = "<group>"; };
+		930CA20FFB8874E3848434F2 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		94D52CB4E9FEB43B0DCEBD40 /* KnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeView.swift; sourceTree = "<group>"; };
 		95FDAA491E83A7BB267F5FA1 /* Advisors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Advisors.swift; sourceTree = "<group>"; };
 		98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TechTreeView.swift; sourceTree = "<group>"; };
@@ -109,6 +128,7 @@
 		A9FFEA270691335D57E5FC99 /* GameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreen.swift; sourceTree = "<group>"; };
 		AB7DFD256D339C8C845A29C9 /* BattlefieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlefieldView.swift; sourceTree = "<group>"; };
 		AD395B564F5864E92AF2E613 /* SoundBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundBoard.swift; sourceTree = "<group>"; };
+		B2CCB3D619A162DEAFACA33D /* StoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTests.swift; sourceTree = "<group>"; };
 		BD6DDA213A9E31B4C7C20FF7 /* click.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = click.wav; sourceTree = "<group>"; };
 		C2E4AD6639ED1329E331B67C /* Rulers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rulers.swift; sourceTree = "<group>"; };
 		C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AncientHegemon.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,6 +143,7 @@
 		DF62B9B0DA2E5D54D7D1909B /* MusicDirector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicDirector.swift; sourceTree = "<group>"; };
 		E650D367E47C728BA1E35242 /* AncientHegemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AncientHegemonApp.swift; sourceTree = "<group>"; };
 		E710095DFC58ED6E6AD23B14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F3764474E4B6C0E6C060FACF /* AncientHegemonTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = AncientHegemonTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F40E34A4B9B83B40EDBECB72 /* coins.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = coins.wav; sourceTree = "<group>"; };
 		FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleScreen.swift; sourceTree = "<group>"; };
 		FAEF6BB7AB4B4D2E02E618B7 /* drum.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = drum.wav; sourceTree = "<group>"; };
@@ -164,6 +185,7 @@
 			children = (
 				45953A68D4681A79E242E231 /* egypt.m4a */,
 				3EB2ABD5B6BBCB3ECFC080A8 /* greece.m4a */,
+				123BBB68FBC79CB394F99B59 /* hatti.m4a */,
 				0FCEE35A1C25107FDE363ED9 /* italia.m4a */,
 				8A90B3B6C1AAB1BC8FD6862B /* mesopotamia.m4a */,
 				32EED3E86C6950F1C6B7AFA7 /* title.m4a */,
@@ -175,9 +197,11 @@
 		6E85AD14D5B595611F91587B = {
 			isa = PBXGroup;
 			children = (
+				8BAB806D75D094B6E9CEAE15 /* AncientHegemon.storekit */,
 				732CB08F6BDCAAA40B857620 /* Packages */,
 				F437369A8B03AE5D329AEE2C /* Resources */,
 				BFA8AFED8A6372F6F5B96C27 /* Sources */,
+				790230F992D1097F3E1755F4 /* Tests */,
 				7BD20A532AA72D17F2858F8E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -190,10 +214,19 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		790230F992D1097F3E1755F4 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				B2CCB3D619A162DEAFACA33D /* StoreTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		7BD20A532AA72D17F2858F8E /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */,
+				F3764474E4B6C0E6C060FACF /* AncientHegemonTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -232,6 +265,8 @@
 				8264F7FC3FCC73EAA576137C /* SaveStore.swift */,
 				AD395B564F5864E92AF2E613 /* SoundBoard.swift */,
 				9B6EFEC6B7A04539C9215408 /* Standings.swift */,
+				930CA20FFB8874E3848434F2 /* Store.swift */,
+				7AF1F2E9B2215B9709081271 /* StoreView.swift */,
 				98A0C21A8B01FC0DB21FB92C /* TechTreeView.swift */,
 				34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */,
 				FA3B8AF6EAFB7F3FB5A557B0 /* TitleScreen.swift */,
@@ -277,6 +312,25 @@
 			productReference = C4AEE9995EFE15ACF566D2B3 /* AncientHegemon.app */;
 			productType = "com.apple.product-type.application";
 		};
+		CBDE6D3553B2291FC76E2B36 /* AncientHegemonTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F6D464B5776A31851D82D792 /* Build configuration list for PBXNativeTarget "AncientHegemonTests" */;
+			buildPhases = (
+				89425EDD680A18F05472E64A /* Sources */,
+				9EDB402D5DB0906AEDC94E38 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				19828865A05E7664482FCD0C /* PBXTargetDependency */,
+			);
+			name = AncientHegemonTests;
+			packageProductDependencies = (
+			);
+			productName = AncientHegemonTests;
+			productReference = F3764474E4B6C0E6C060FACF /* AncientHegemonTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -287,6 +341,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					A7D089A5C2CF4618AD3DC15B = {
+						DevelopmentTeam = 5LBB8BWZB3;
+						ProvisioningStyle = Automatic;
+					};
+					CBDE6D3553B2291FC76E2B36 = {
 						DevelopmentTeam = 5LBB8BWZB3;
 						ProvisioningStyle = Automatic;
 					};
@@ -310,6 +368,7 @@
 			projectRoot = "";
 			targets = (
 				A7D089A5C2CF4618AD3DC15B /* AncientHegemon */,
+				CBDE6D3553B2291FC76E2B36 /* AncientHegemonTests */,
 			);
 		};
 /* End PBXProject section */
@@ -329,6 +388,7 @@
 				078D4E78F0B4ACFCE6E38010 /* egypt.m4a in Resources */,
 				F959F0A69661E89FBC832BFD /* gallop.wav in Resources */,
 				F29BC1C9EAEB273DAD0CE0B1 /* greece.m4a in Resources */,
+				8F4FE2E2C58E74934B5E6AAE /* hatti.m4a in Resources */,
 				86F91473DD43BAF6EC405E67 /* horn.wav in Resources */,
 				64BF5AA30EDE587F90306A86 /* italia.m4a in Resources */,
 				45672360191504BA6F4B6C43 /* map_shapes.json in Resources */,
@@ -338,6 +398,14 @@
 				F38B5FFD26C968F15B7E66DD /* victory.wav in Resources */,
 				A37CDC7C8E110B7E6FEB7348 /* war.m4a in Resources */,
 				1D02DB9FAF4598900FB0AC6F /* wardrums.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EDB402D5DB0906AEDC94E38 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F7258F51E11381C3622AEC1C /* AncientHegemon.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -379,6 +447,8 @@
 				C90F613F3FDD003D9EF712B2 /* SaveStore.swift in Sources */,
 				27BF326315ACADF36CF8AA3F /* SoundBoard.swift in Sources */,
 				5A8C3BEE15D78A51658DDEC1 /* Standings.swift in Sources */,
+				ECEEF46C3AA40B36A4EF4D0C /* Store.swift in Sources */,
+				CD4086CE842BDB7A66DE2099 /* StoreView.swift in Sources */,
 				50E6C0A7804B5C7AC769CA43 /* TechTreeView.swift in Sources */,
 				63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */,
 				D6A3684AA3DFF02F560C3B4B /* TitleScreen.swift in Sources */,
@@ -389,7 +459,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		89425EDD680A18F05472E64A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15BB025F19458741DD95AFD8 /* StoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		19828865A05E7664482FCD0C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A7D089A5C2CF4618AD3DC15B /* AncientHegemon */;
+			targetProxy = 95F86D5C627A4588E6F66B16 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		28C29918A26EB3FCE9AD7EA9 /* Debug */ = {
@@ -509,6 +595,46 @@
 			};
 			name = Release;
 		};
+		783AAB29A14E68411670AD8B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5LBB8BWZB3;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.joshuakonstantinos.AncientHegemonTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AncientHegemon.app/AncientHegemon";
+			};
+			name = Release;
+		};
+		78F1D1256365FE377F5BD250 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5LBB8BWZB3;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.joshuakonstantinos.AncientHegemonTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AncientHegemon.app/AncientHegemon";
+			};
+			name = Debug;
+		};
 		9DDD78B374A03AAAEE1B8BE4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -582,6 +708,15 @@
 			buildConfigurations = (
 				28C29918A26EB3FCE9AD7EA9 /* Debug */,
 				9DDD78B374A03AAAEE1B8BE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F6D464B5776A31851D82D792 /* Build configuration list for PBXNativeTarget "AncientHegemonTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				78F1D1256365FE377F5BD250 /* Debug */,
+				783AAB29A14E68411670AD8B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

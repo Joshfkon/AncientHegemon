@@ -39,6 +39,7 @@ struct Advisor: Identifiable {
         case "greece": [.general: "Diomedes", .steward: "Eumaeus", .envoy: "Nestor", .priest: "Kassandra"]
         case "italia": [.general: "Turnus", .steward: "Lars", .envoy: "Latinus", .priest: "Tages the augur"]
         case "mesopotamia": [.general: "Ninurta-apil", .steward: "Belshunu", .envoy: "Ili-pada", .priest: "Enlil-nadin"]
+        case "hatti": [.general: "Kurunta", .steward: "Taprammi the scribe", .envoy: "Piha-walwi", .priest: "Puduhepa"]
         default: [.general: "The general", .steward: "The steward", .envoy: "The envoy", .priest: "The priest"]
         }
     }

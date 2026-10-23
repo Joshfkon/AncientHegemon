@@ -75,6 +75,8 @@ enum Palette {
         "egypt": Color(red: 0.56, green: 0.26, blue: 0.70),
         "italia": Color(red: 0.80, green: 0.20, blue: 0.20),
         "mesopotamia": Color(red: 0.18, green: 0.62, blue: 0.35),
+        // Expansion: the Hittites, in saffron.
+        "hatti": Color(red: 0.90, green: 0.52, blue: 0.10),
     ]
 
     /// Each kingdom its own earthy colour, the same every game: ochres, madders, olives, slates.

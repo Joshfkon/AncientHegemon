@@ -28,6 +28,8 @@ public struct GameMap: Sendable, Codable {
     public let seaLinks: [[SeaZoneID]]
     public let chokepoints: [Chokepoint]
     public let civilizations: [Civilization]
+    /// The empires of a game nobody asked otherwise for: every civilization not from an expansion.
+    public var baseCivilizations: [Civilization] { civilizations.filter { $0.expansion == nil } }
     /// The named peoples of a generated world, by homeland (the classic map's are in the rules).
     public let peoples: [TerritoryID: People]?
     /// How a generated world is drawn (the classic board's art ships with the app).
@@ -157,6 +159,9 @@ public struct GameMap: Sendable, Codable {
             }
         }
         for civ in f.civilizations { try checkT(civ.capital, "civilization '\(civ.id)'") }
+        if Set(f.civilizations.map(\.capital)).count != f.civilizations.count {
+            throw MapError.invalid("two civilizations share a capital")
+        }
         for t in (f.peoples ?? [:]).keys { try checkT(t, "peoples") }
         for t in (f.art?.territories ?? [:]).keys { try checkT(t, "art") }
     }

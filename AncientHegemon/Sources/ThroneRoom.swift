@@ -250,6 +250,10 @@ struct Hall: View {
         case "greece": Style(wall: [Color(red: 0.92, green: 0.88, blue: 0.8), Color(red: 0.8, green: 0.74, blue: 0.64)],
                              floor: Color(red: 0.55, green: 0.42, blue: 0.32), column: Color(red: 0.62, green: 0.18, blue: 0.14),
                              frieze: Color(red: 0.2, green: 0.35, blue: 0.65))
+        // Hattusa's grey andesite and basalt, with a frieze of red ochre.
+        case "hatti": Style(wall: [Color(red: 0.62, green: 0.58, blue: 0.52), Color(red: 0.46, green: 0.42, blue: 0.37)],
+                            floor: Color(red: 0.42, green: 0.36, blue: 0.3), column: Color(red: 0.3, green: 0.29, blue: 0.28),
+                            frieze: Color(red: 0.66, green: 0.28, blue: 0.16))
         case "italia": Style(wall: [Color(red: 0.6, green: 0.45, blue: 0.32), Color(red: 0.45, green: 0.32, blue: 0.22)],
                              floor: Color(red: 0.4, green: 0.3, blue: 0.22), column: Color(red: 0.35, green: 0.22, blue: 0.14),
                              frieze: Color(red: 0.7, green: 0.25, blue: 0.15))
@@ -257,6 +261,62 @@ struct Hall: View {
                        floor: Color(red: 0.55, green: 0.45, blue: 0.32), column: Color(red: 0.75, green: 0.62, blue: 0.4),
                        frieze: Color(red: 0.85, green: 0.7, blue: 0.3))
         }
+    }
+
+    /// Hattusa's walls: great many-sided blocks fitted without mortar, and along the foot of the
+    /// wall carved slabs (orthostats) of lions and processions, as at Alaca Höyük.
+    private func hittiteWall(w: CGFloat, floorTop: CGFloat) -> some View {
+        Canvas { ctx, size in
+            var rng: UInt64 = 0x4A77_15A1
+            func next() -> CGFloat {
+                rng = rng &* 6364136223846793005 &+ 1442695040888963407
+                return CGFloat(rng >> 33) / CGFloat(UInt64(1) << 31)
+            }
+            let slabTop = floorTop - size.height * 0.13
+            var y: CGFloat = size.height * 0.2
+            while y < slabTop - 8 {
+                let rowH = 22 + next() * 14
+                var x: CGFloat = -next() * 20
+                while x < size.width {
+                    let bw = 34 + next() * 40
+                    var block = Path()
+                    block.move(to: CGPoint(x: x + next() * 4, y: y))
+                    block.addLine(to: CGPoint(x: x + bw - next() * 6, y: y + next() * 3))
+                    block.addLine(to: CGPoint(x: x + bw, y: min(y + rowH, slabTop)))
+                    block.addLine(to: CGPoint(x: x + next() * 5, y: min(y + rowH, slabTop) - next() * 3))
+                    block.closeSubpath()
+                    ctx.stroke(block, with: .color(.black.opacity(0.22)), lineWidth: 1.2)
+                    x += bw
+                }
+                y += rowH
+            }
+            // The carved slabs.
+            let slabW: CGFloat = 46
+            for i in 0..<Int(size.width / slabW) + 1 {
+                let r = CGRect(x: CGFloat(i) * slabW + 1, y: slabTop, width: slabW - 2, height: floorTop - slabTop)
+                ctx.fill(Path(r), with: .color(.white.opacity(0.1)))
+                ctx.stroke(Path(r), with: .color(.black.opacity(0.3)), lineWidth: 1)
+                // A striding lion or a figure in a pointed cap, in a few cut lines.
+                var cut = Path()
+                let mx = r.midX, base = r.maxY - 6
+                if i % 2 == 0 {
+                    cut.move(to: CGPoint(x: mx - 14, y: base))
+                    cut.addLine(to: CGPoint(x: mx - 12, y: base - 12))
+                    cut.addQuadCurve(to: CGPoint(x: mx + 10, y: base - 14), control: CGPoint(x: mx, y: base - 18))
+                    cut.addLine(to: CGPoint(x: mx + 14, y: base))
+                    cut.addEllipse(in: CGRect(x: mx + 6, y: base - 22, width: 10, height: 9))
+                } else {
+                    cut.move(to: CGPoint(x: mx - 4, y: base))
+                    cut.addLine(to: CGPoint(x: mx - 2, y: base - 20))
+                    cut.addLine(to: CGPoint(x: mx, y: base - 30))
+                    cut.addLine(to: CGPoint(x: mx + 2, y: base - 20))
+                    cut.addLine(to: CGPoint(x: mx + 4, y: base))
+                }
+                ctx.stroke(cut, with: .color(.black.opacity(0.35)), lineWidth: 1.4)
+            }
+        }
+        .frame(width: w, height: floorTop)
+        .allowsHitTesting(false)
     }
 
     static func symbol(_ id: DecorationID) -> String {
@@ -288,6 +348,7 @@ struct Hall: View {
                     }
                     .stroke(.black.opacity(0.15), lineWidth: 1)
                 }
+                if builder == "hatti" { hittiteWall(w: w, floorTop: floorTop) }
                 Rectangle().fill(s.frieze).frame(height: 12).offset(y: h * 0.16)
                 // Ceiling: bare rafters, or a cedar ceiling.
                 Rectangle()

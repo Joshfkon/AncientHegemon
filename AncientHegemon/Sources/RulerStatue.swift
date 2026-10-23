@@ -30,6 +30,8 @@ struct RulerStatue: View {
                             dark: Color(red: 0.6, green: 0.46, blue: 0.3))
         case "mesopotamia": Stone(light: Color(red: 0.5, green: 0.52, blue: 0.55), base: Color(red: 0.3, green: 0.31, blue: 0.34),
                                   dark: Color(red: 0.14, green: 0.15, blue: 0.17))
+        case "hatti": Stone(light: Color(red: 0.6, green: 0.58, blue: 0.55), base: Color(red: 0.4, green: 0.38, blue: 0.36),
+                            dark: Color(red: 0.2, green: 0.19, blue: 0.18))
         case "greece": Stone(light: Color(white: 0.99), base: Color(red: 0.9, green: 0.88, blue: 0.84),
                              dark: Color(red: 0.66, green: 0.64, blue: 0.62))
         default: Stone(light: Color(red: 0.93, green: 0.72, blue: 0.4), base: Color(red: 0.6, green: 0.4, blue: 0.2),
@@ -86,7 +88,7 @@ struct RulerStatue: View {
     private func draw(_ ctx: GraphicsContext) {
         switch civ {
         case "egypt": pharaoh(ctx)
-        case "mesopotamia": king(ctx)
+        case "mesopotamia", "hatti": king(ctx)
         case "greece": warrior(ctx)
         default: orator(ctx)
         }

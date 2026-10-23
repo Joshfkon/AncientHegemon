@@ -133,9 +133,10 @@
     { "id": "cilician_gates",  "name": "Cilician Gates",      "heldBy": ["taurus"] }
   ],
   "civilizations": [
-    { "id": "greece",      "name": "Greece",      "capital": "greece",      "government": "republic" },
-    { "id": "egypt",       "name": "Egypt",       "capital": "egypt",       "government": "monarchy" },
-    { "id": "italia",      "name": "Italia",      "capital": "italia",      "government": "republic" },
-    { "id": "mesopotamia", "name": "Mesopotamia", "capital": "mesopotamia", "government": "monarchy" }
+    { "id": "greece",      "name": "Greece",      "capital": "greece",      "government": "republic", "personality": "merchant" },
+    { "id": "egypt",       "name": "Egypt",       "capital": "egypt",       "government": "monarchy", "personality": "turtle" },
+    { "id": "italia",      "name": "Italia",      "capital": "italia",      "government": "republic", "personality": "conqueror" },
+    { "id": "mesopotamia", "name": "Mesopotamia", "capital": "mesopotamia", "government": "monarchy", "personality": "opportunist" },
+    { "id": "hatti",       "name": "Hatti",       "capital": "anatolia",    "government": "monarchy", "personality": "opportunist", "expansion": "hittites" }
   ]
 }

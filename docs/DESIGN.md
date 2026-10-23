@@ -232,6 +232,7 @@ Bronze Age collapse, which was a collapse of trade networks.) *Post-MVP unless c
 
 Starting set from the original prototype: **Greece, Egypt, Italia, Mesopotamia**. Later: Persia,
 Carthage, Macedonia, Gaul... Each has a starting government, territory, and one unique trait.
+More empires come as paid expansions, the first being **the Hittites** (see "Paid expansions").
 
 ## 11. MVP scope
 
@@ -2257,3 +2258,76 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   Games end sooner than on the classic board, and trade victories happen (about a quarter of
   games): random worlds have more coasts and seas between the empires, so trade routes form.
   Defences hold 38–55% (classic 39–90%).
+
+### Paid expansions (Josh: "free, then paid expansions like Polytopia")
+- **What an expansion is: a new playable empire.** Polytopia sells tribes, and that fits here: an
+  empire changes every game you play, on the classic board and on random worlds, while a
+  scenario is played a few times. Each empire is one non-consumable in-app purchase (US$1.99).
+  Scenario packs may come later, after there are a few empires, since the three scenarios
+  are free now and new ones would want the new empires in them anyway.
+- **The base game stays whole and free**: the four empires, both kinds of map, every scenario
+  and difficulty, no ads, no timers, nothing withheld. The only sign of the Store is a Store
+  button at the top right of the title screen and the locked expansion banner beside the four
+  (lock, price, "Tap for the Store"). Nothing in a game ever mentions the Store.
+- **The first expansion: the Hittites (Hatti).** They are the great power of the game's own
+  moment: rivals of Egypt at Kadesh, chariot lords, famous for iron, and destroyed in the very
+  collapse the game plays out (c. 1180 BC). On the classic board Anatolia, already the Hatti
+  kingdom's homeland, becomes their capital, between Greece, Mesopotamia and the Black Sea.
+  - Monarchy; personality *opportunist*; the chariot general Muwatalli (cavalry commander);
+    2 infantry and 1 cavalry; a 20-grain war chest (see balance below). Kings Suppiluliuma,
+    Mursili, Muwatalli, Hattusili, Tudhaliya…; council Kurunta, Taprammi the scribe, Piha-walwi,
+    Queen Puduhepa as priestess.
+  - Art: saffron on the map; a double-headed eagle on their banner; the king clean-shaven in the
+    tall pointed cap with the lituus (the curled royal crook) and a winged sun on his throne; a
+    throne room of Hattusa's many-sided grey stone with carved lion and procession slabs; the
+    Lion Gate in their capital's city view; a dark andesite statue; their own theme (after the
+    Hurrian hymns of Ugarit) from `tools/make_music.py`.
+- **Expansion empires play only when owned.** Decided: a player who hasn't bought the Hittites
+  never meets them; their games are exactly the classic four (the sims confirm the same seeds
+  give the same games as before). A player who owns them gets them at **every** new game's
+  table: as their own realm, or as a fifth AI rival when they pick another empire, and in
+  watched games. Reasons: the free game stays the one we balanced, nobody faces an empire they
+  can't then play, and buying an empire also buys variety in every game, which is the point of
+  it. Scenarios stay with the classic four (their set-ups are written for them), so an
+  expansion banner reads "Not in scenarios" while one is picked.
+- **Balance** (`hegemon-sim --expansions`, seed 501; classic 80 games, random worlds 100):
+
+  | | Greece | Egypt | Italia | Mesopotamia | Hatti |
+  |---|---|---|---|---|---|
+  | Classic four, no expansion (same as before, game for game) | 31% | 31% | 13% | 23% | — |
+  | Classic, first cut (conqueror, no war chest) | 23% | 25% | 20% | 20% | 11% |
+  | Classic, 3 infantry + 2 cavalry + 14 grain | 21% | 22% | 28% | 15% | 12% |
+  | Classic, 20-grain war chest, conqueror | 23% | 23% | 8% | 25% | 18% |
+  | Classic, war chest + 3 infantry | 23% | 28% | 15% | 10% | 22% |
+  | **Classic, war chest, opportunist (adopted)** | 25% | 21% | 10% | 23% | **20%** |
+  | Random worlds, first cut | 8% | 27% | 28% | 28% | 9% |
+  | **Random worlds, adopted** | 10% | 21% | 27% | 29% | **13%** |
+
+  A fifth empire on the 40-territory board leaves everyone smaller (Hatti peaks at 4–5
+  lands, hemmed in by the Thracians, the Lukka and Nairi), and every game still ends in a
+  legacy victory at round 50. Anatolia's 5 grain doesn't feed an army fast enough on its own,
+  hence the war chest (as Greece and Italia get). The adopted start gives the Hittites a fair
+  fifth of the classic games without pushing anyone else out of the 10–30% band. Extra troops
+  (3 infantry) won more but cut Mesopotamia to 10%; a paid empire shouldn't be the strongest.
+  On random worlds they are a hard empire, like Greece: an ordinary coastal start without the
+  river grain of Egypt and Mesopotamia. All 180 games decided; Hatti collapses in 18–23%.
+- **Random worlds** are generated for the empires at the table, so a world number makes the same
+  world for everyone with the same empires (with the Hittites, World 4821 is a different world
+  from World 4821 without them). The generator places a fifth start just as it does four, the
+  Hittites' homeland keeps Anatolia's character, and no minor people is also called Hatti.
+- **Engine: empires are data.** `map.json`'s civilizations carry `personality` and, for an
+  expansion empire, `expansion` (the purchase's id); the start (army, granary, general, names)
+  is in `rules.json` keyed by the empire, as for the classic four. `GameMap.baseCivilizations`
+  is the default table; `GameState`, `WorldGenerator.generate(…, civilizations:)` and
+  `hegemon-sim --expansions` / `--civs a,b,c` take a list. `Personality.default(for:)` reads the
+  map instead of a switch. The next empire needs map and rules data, a Store entry and its
+  art, and no engine code.
+- **App**: `Store.swift` (StoreKit 2: products, buy, Ask to Buy, Restore Purchases via
+  `AppStore.sync()`, entitlements from `Transaction.currentEntitlements` with refunds dropping
+  out, `Transaction.updates` listened to from launch; the last answer cached in UserDefaults so
+  the title doesn't flicker). `StoreView.swift` (the Store sheet). No server: StoreKit checks
+  the signed transactions on the device. `AncientHegemon.storekit` sells the Hittites in the
+  Simulator when run from Xcode; `AncientHegemonTests` (StoreKitTest) buys, refunds, approves
+  Ask to Buy and saves the review screenshot. Debug launch argument `-unlockExpansions YES`.
+- **App Store Connect**: the product, the Paid Apps agreement, banking and tax, and the listing
+  and privacy changes are in `docs/appstore/expansions.md`. Nothing has been created there yet.

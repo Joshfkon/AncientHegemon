@@ -232,6 +232,7 @@ private struct TownPainter {
         switch owner {
         case "egypt"?: "egypt"
         case "mesopotamia"?: "meso"
+        case "hatti"?: "hatti"
         case "greece"?, "italia"?: "med"
         default: t.terrain == .desert ? "meso" : "med"
         }
@@ -637,6 +638,38 @@ private struct TownPainter {
             }
             ctx.fill(Path(CGRect(x: c.x - 22, y: c.y - 130, width: 44, height: 28)), with: .color(Color(red: 0.2, green: 0.36, blue: 0.7)))
             ctx.fill(Path(CGRect(x: c.x - 8, y: c.y - 102, width: 16, height: 102)), with: .color(Color(red: 0.7, green: 0.55, blue: 0.36)))
+        case "hatti":
+            // Hattusa's Lion Gate: two grey stone towers, a pointed arch between them, a lion
+            // carved on each jamb.
+            let stone = Color(red: 0.6, green: 0.57, blue: 0.52)
+            for side in [-1.0, 1] {
+                let x = c.x + side * 62
+                let tower = Path(CGRect(x: x - 34, y: c.y - 118, width: 68, height: 118))
+                ctx.fill(tower, with: .linearGradient(Gradient(colors: [stone, stone.opacity(0.8)]),
+                                                      startPoint: CGPoint(x: x, y: c.y - 118), endPoint: CGPoint(x: x, y: c.y)))
+                ctx.stroke(tower, with: .color(ink), lineWidth: 1)
+                for k in 0..<4 { ctx.fill(Path(CGRect(x: x - 32 + Double(k) * 18, y: c.y - 128, width: 10, height: 10)), with: .color(stone)) }
+                for y in stride(from: c.y - 100, to: c.y, by: 22) {
+                    ctx.stroke(Path(CGRect(x: x - 34, y: y, width: 68, height: 0.5)), with: .color(.black.opacity(0.2)), lineWidth: 1)
+                }
+                pennant(&ctx, at: CGPoint(x: x, y: c.y - 128), height: 40)
+            }
+            ctx.fill(Path(CGRect(x: c.x - 30, y: c.y - 96, width: 60, height: 96)), with: .color(stone.opacity(0.9)))
+            var arch = Path()
+            arch.move(to: CGPoint(x: c.x - 20, y: c.y))
+            arch.addLine(to: CGPoint(x: c.x - 20, y: c.y - 46))
+            arch.addQuadCurve(to: CGPoint(x: c.x, y: c.y - 84), control: CGPoint(x: c.x - 18, y: c.y - 78))
+            arch.addQuadCurve(to: CGPoint(x: c.x + 20, y: c.y - 46), control: CGPoint(x: c.x + 18, y: c.y - 78))
+            arch.addLine(to: CGPoint(x: c.x + 20, y: c.y))
+            arch.closeSubpath()
+            ctx.fill(arch, with: .color(Color(red: 0.22, green: 0.16, blue: 0.1)))
+            ctx.stroke(arch, with: .color(ink), lineWidth: 1)
+            for side in [-1.0, 1] {
+                let lion = Path(ellipseIn: CGRect(x: c.x + side * 26 - 7, y: c.y - 62, width: 14, height: 16))
+                ctx.fill(lion, with: .color(Color(red: 0.78, green: 0.72, blue: 0.62)))
+                ctx.stroke(lion, with: .color(ink), lineWidth: 0.8)
+                ctx.fill(Path(CGRect(x: c.x + side * 26 - 5, y: c.y - 48, width: 10, height: 30)), with: .color(Color(red: 0.72, green: 0.66, blue: 0.56)))
+            }
         default:
             // A columned temple on a stepped base, a pediment in the realm's colour.
             ctx.fill(Path(CGRect(x: c.x - 110, y: c.y - 14, width: 220, height: 14)), with: .color(Color(red: 0.85, green: 0.83, blue: 0.78)))

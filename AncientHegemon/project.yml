@@ -18,6 +18,11 @@ targets:
     dependencies:
       - package: HegemonCore
         product: HegemonCore
+    # Running from Xcode sells the expansions from the local StoreKit file (no App Store needed).
+    scheme:
+      storeKitConfiguration: AncientHegemon.storekit
+      testTargets:
+        - AncientHegemonTests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.joshuakonstantinos.ancienthegemon
@@ -36,3 +41,21 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.strategy-games
         INFOPLIST_KEY_UIRequiresFullScreen: YES
+  # Store tests: buying, restoring and refunds against AncientHegemon.storekit (StoreKitTest), in
+  # the app on the Simulator. `xcodebuild test -scheme AncientHegemon -destination '…Simulator…'`.
+  AncientHegemonTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+      - path: AncientHegemon.storekit
+        buildPhase: resources
+    dependencies:
+      - target: AncientHegemon
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 5LBB8BWZB3

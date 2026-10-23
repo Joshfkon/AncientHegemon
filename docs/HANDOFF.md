@@ -161,6 +161,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     store the generated map; `GameState.worldSeed` names it. `hegemon-sim --random-map` balances
     on random worlds; `hegemon-sim world --seed S --json PATH` dumps one for
     `tools/validate_map.py`. Debug launch argument `-demoWorld N` (with `-demoAs civ`).
+  - **Paid expansions** (DESIGN.md, "Paid expansions"; for the first update after 1.0): the
+    Hittites as a fifth empire, sold as a StoreKit 2 non-consumable (`Store.swift`,
+    `StoreView.swift`, `AncientHegemon.storekit`, `AncientHegemonTests`). Empires are data:
+    `map.json` civilizations carry `personality` and `expansion`; `hegemon-sim --expansions`.
+    Expansion empires sit at the table only when owned. App Store Connect steps (nothing
+    created yet) are in `docs/appstore/expansions.md`.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

@@ -15,14 +15,22 @@ public enum WorldGenerator {
     /// The map version of generated worlds (the classic map's is a small number).
     public static var mapVersion: Int { 100 + version }
 
-    /// The world for a seed. `template` supplies the empires and their capitals (the classic map).
-    public static func generate(seed: UInt64, template: GameMap) throws -> GameMap {
+    /// The world for a seed. `template` supplies the empires and their capitals (the classic map);
+    /// `civilizations` picks which of them get a start (the classic four unless asked), so a world
+    /// number names the same world for everyone playing with the same empires.
+    public static func generate(seed: UInt64, template: GameMap, civilizations: [CivilizationID]? = nil) throws -> GameMap {
+        let civs = try civilizations.map { ids in
+            try ids.map { id in
+                guard let civ = template.civilization(id) else { throw MapError.invalid("unknown civilization '\(id)'") }
+                return civ
+            }
+        } ?? template.baseCivilizations
         var failure: Error = MapError.invalid("no world could be made")
         // A plan that doesn't work out (no fair starts, too few lands) is redrawn from the same
         // seed's next attempt, so the result is still fixed by the seed.
         for attempt in 0..<40 {
             do {
-                var builder = WorldBuilder(seed: seed, attempt: attempt, template: template)
+                var builder = WorldBuilder(seed: seed, attempt: attempt, template: template, civs: civs)
                 return try builder.build()
             } catch {
                 failure = error
@@ -91,6 +99,8 @@ private struct WorldBuilder {
 
     let seed: UInt64
     let template: GameMap
+    /// The empires that get a start, in the template's terms.
+    let civs: [Civilization]
     var rng: SeededRNG
     let n = cols * rows
     var neighbors: [[Int?]] = []
@@ -107,9 +117,10 @@ private struct WorldBuilder {
     var seaCount = 0
     var plan = 0
 
-    init(seed: UInt64, attempt: Int, template: GameMap) {
+    init(seed: UInt64, attempt: Int, template: GameMap, civs: [Civilization]) {
         self.seed = seed
         self.template = template
+        self.civs = civs
         rng = SeededRNG(seed: seed &* 0x2545_F491_4F6C_DD1D ^ UInt64(attempt) &* 0x9E37_79B9_7F4A_7C15 ^ 0xA5E5_0C1E)
         for i in 0..<n {
             let (vx, vy) = Self.units(i)
@@ -692,7 +703,6 @@ private struct WorldBuilder {
 
         // The empires' starts: coasts on big enough lands, far apart, with room to grow; the
         // river empires on a river.
-        let civs = template.civilizations
         let homes = civs.map { template.territory($0.capital)! }
         let candidates = (0..<R).filter { coastal($0) && !island($0) && regionsInComponent[regions[$0].component] >= 4
             && regions[$0].terrain != .mountains && regions[$0].cells.count >= 9
@@ -850,7 +860,8 @@ private struct WorldBuilder {
                 : t == .forest || latitude[r] < 0.35 ? .cold
                 : latitude[r] > 0.72 ? .dry : .warm
         }
-        var lands = WorldNames.lands
+        // An empire at the table isn't also a minor people (the Hittites' Anatolia).
+        var lands = WorldNames.lands.filter { land in !homes.contains { $0.name == land.land } }
         var tribes = WorldNames.homelands
         var peoples: [TerritoryID: People] = [:]
         var naming = Array(0..<R)
@@ -1025,7 +1036,8 @@ private struct WorldBuilder {
         var seaLinks: [[SeaZoneID]] = []
         for a in 0..<S { for b in (a + 1)..<max(a + 1, S) where seaContact[a][b] > 0 { seaLinks.append([seaIDs[a], seaIDs[b]]) } }
         let seas = (0..<S).map { SeaZone(id: seaIDs[$0], name: seaNames[$0 % seaNames.count]) }
-        let empires = civs.map { Civilization(id: $0.id, name: $0.name, capital: $0.id, government: $0.government) }
+        let empires = civs.map { Civilization(id: $0.id, name: $0.name, capital: $0.id, government: $0.government,
+                                              personality: $0.personality, expansion: $0.expansion) }
         return try GameMap(version: WorldGenerator.mapVersion, territories: territories, landLinks: links, seas: seas,
                            seaLinks: seaLinks, chokepoints: chokepoints, civilizations: empires, peoples: peoples,
                            art: art, worldSeed: seed)

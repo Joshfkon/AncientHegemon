@@ -8,6 +8,8 @@ import HegemonCore
 //       --personality gives every civ the same temperament, so differences come from the map.
 //       --random-map plays each game on a freshly generated world (seeded by the game's seed);
 //       --world W plays every game on generated world W.
+//       --expansions seats the expansion empires (the Hittites) beside the classic four;
+//       --civs a,b,c picks the empires at the table.
 //   hegemon-sim world [--seed S] [--count N] [--json PATH]
 //       Generates and describes random worlds; --json writes the first as map JSON.
 //       Turn order is shuffled per game (seeded) unless --fixed-order.
@@ -64,6 +66,15 @@ func makeEngine() throws -> Engine {
     return Engine(map: bundled.map, rules: rules)
 }
 let engine = try makeEngine()
+/// The empires at the table: the classic four unless --expansions or --civs says otherwise.
+let tableCivs: [CivilizationID] = {
+    if let list = option("--civs") {
+        let ids = list.split(separator: ",").map(String.init)
+        for id in ids where engine.map.civilization(id) == nil { print("unknown civilization '\(id)'"); exit(1) }
+        return ids
+    }
+    return (CommandLine.arguments.contains("--expansions") ? engine.map.civilizations : engine.map.baseCivilizations).map(\.id)
+}()
 
 if CommandLine.arguments.dropFirst().first == "world" {
     // hegemon-sim world [--seed S] [--count N] [--json PATH]: generate random worlds and describe
@@ -72,7 +83,7 @@ if CommandLine.arguments.dropFirst().first == "world" {
     let count = Int(option("--count") ?? "1") ?? 1
     let start = Date()
     for k in 0..<count {
-        let map = try WorldGenerator.generate(seed: first + UInt64(k), template: engine.map)
+        let map = try WorldGenerator.generate(seed: first + UInt64(k), template: engine.map, civilizations: tableCivs)
         let islands = map.islands.count
         let terrain = Dictionary(grouping: map.territories, by: \.terrain).mapValues(\.count)
         let goods = Resource.allCases.filter { $0 != .grain }.map { r in "\(r.rawValue) \(map.territories.reduce(0) { $0 + ($1.resources[r] ?? 0) })" }
@@ -158,15 +169,15 @@ if let name = option("--personality") {
         print("unknown personality '\(name)'; choose from \(Personality.all.map(\.name).joined(separator: ", "))")
         exit(1)
     }
-    for civ in engine.map.civilizations.map(\.id) { personalities[civ] = p }
+    for civ in tableCivs { personalities[civ] = p }
 }
 
 if CommandLine.arguments.contains("--trace") {
-    print("round  " + engine.map.civilizations.map { $0.id.padding(toLength: 28, withPad: " ", startingAt: 0) }.joined())
-    print("       " + engine.map.civilizations.map { _ in "land units  pop gold granary ".padding(toLength: 28, withPad: " ", startingAt: 0) }.joined())
-    let record = try playAIMatch(engine: engine, seed: firstSeed, personalities: personalities, maxTurns: maxTurns) { s in
-        let cols = engine.map.civilizations.map { c -> String in
-            let civ = c.id
+    print("round  " + tableCivs.map { $0.padding(toLength: 28, withPad: " ", startingAt: 0) }.joined())
+    print("       " + tableCivs.map { _ in "land units  pop gold granary ".padding(toLength: 28, withPad: " ", startingAt: 0) }.joined())
+    let record = try playAIMatch(engine: engine, seed: firstSeed, personalities: personalities,
+                                 civilizations: tableCivs, maxTurns: maxTurns) { s in
+        let cols = tableCivs.map { civ -> String in
             guard let cs = s.civs[civ], !cs.eliminated else { return "out".padding(toLength: 28, withPad: " ", startingAt: 0) }
             let units = s.totalUnits(of: civ).total
             return (pad(String(s.territories(of: civ).count), 4) + pad(String(units), 6) + pad(String(s.totalPopulation(of: civ)), 5)
@@ -182,11 +193,11 @@ let started = Date()
 var records: [MatchRecord] = []
 for g in 0..<games {
     let seed = firstSeed + UInt64(g)
-    let civsInOrder = engine.map.civilizations.map(\.id)
+    let civsInOrder = tableCivs
     let order = CommandLine.arguments.contains("--fixed-order") ? civsInOrder : shuffledTurnOrder(civsInOrder, seed: seed)
     // --random-map: a fresh generated world each game (its seed the game's); --world S: one world.
     let world: UInt64? = CommandLine.arguments.contains("--random-map") ? seed : option("--world").flatMap { UInt64($0) }
-    let gameEngine = try world.map { engine.on(try WorldGenerator.generate(seed: $0, template: engine.map)) } ?? engine
+    let gameEngine = try world.map { engine.on(try WorldGenerator.generate(seed: $0, template: engine.map, civilizations: tableCivs)) } ?? engine
     let record = try playAIMatch(engine: gameEngine, seed: seed, personalities: personalities,
                                  civilizations: order, maxTurns: maxTurns)
     records.append(record)
@@ -197,7 +208,7 @@ for g in 0..<games {
 }
 let elapsed = Date().timeIntervalSince(started)
 
-let civs = engine.map.civilizations.map(\.id)
+let civs = tableCivs
 let decided = records.filter { $0.winner != nil }
 print("")
 print("\(games) games, max \(maxTurns) turns, \(String(format: "%.1f", elapsed))s")

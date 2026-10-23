@@ -42,6 +42,9 @@ final class GameSession {
     private(set) var engine: Engine
     /// The world new games are played on: a generated world's seed, or nil for the classic board.
     private(set) var world: UInt64?
+    /// The expansions the player owns (from the Store). Their empires sit at every new game's
+    /// table, as the player's realm or as rivals; without them a game is the classic four.
+    private(set) var expansions: Set<String> = []
     private(set) var state: GameState {
         didSet {
             refreshEconomy()
@@ -209,28 +212,42 @@ final class GameSession {
         classic = engine
         self.engine = engine
         self.seed = seed
-        state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
+        state = try! engine.newGame(seed: seed, civilizations: Self.order(Self.table(engine, []), seed))
         saved = SaveStore.load(for: engine)
+    }
+
+    /// The empires at a new game's table: the classic four and every owned expansion's.
+    static func table(_ engine: Engine, _ expansions: Set<String>) -> [CivilizationID] {
+        engine.map.civilizations.filter { $0.expansion.map(expansions.contains) ?? true }.map(\.id)
+    }
+
+    var table: [CivilizationID] { Self.table(classic, expansions) }
+
+    /// The Store's word on what the player owns. A change redraws the board behind the title.
+    func setExpansions(_ owned: Set<String>) {
+        guard owned != expansions else { return }
+        expansions = owned
+        if !started { chooseWorld(world) }
     }
 
     /// Picks the world for the next game (nil: the classic board), shown behind the title.
     func chooseWorld(_ seed: UInt64?) {
         guard !started else { return }
         world = seed
-        engine = Self.engine(on: seed, classic)
-        state = try! engine.newGame(seed: self.seed, civilizations: Self.order(engine, self.seed))
+        engine = Self.engine(on: seed, classic, table)
+        state = try! engine.newGame(seed: self.seed, civilizations: Self.order(table, self.seed))
     }
 
     /// A new world number, for a game on a fresh random map.
     static func freshWorld() -> UInt64 { UInt64.random(in: 1...999_999) }
 
-    private static func engine(on world: UInt64?, _ classic: Engine) -> Engine {
+    private static func engine(on world: UInt64?, _ classic: Engine, _ table: [CivilizationID]) -> Engine {
         guard let world else { return classic }
-        return classic.on(try! WorldGenerator.generate(seed: world, template: classic.map))
+        return classic.on(try! WorldGenerator.generate(seed: world, template: classic.map, civilizations: table))
     }
 
-    private static func order(_ engine: Engine, _ seed: UInt64) -> [CivilizationID] {
-        shuffledTurnOrder(engine.map.civilizations.map(\.id), seed: seed)
+    private static func order(_ table: [CivilizationID], _ seed: UInt64) -> [CivilizationID] {
+        shuffledTurnOrder(table, seed: seed)
     }
 
     /// Starts a game as `civ`, or as a spectator when nil.
@@ -239,7 +256,9 @@ final class GameSession {
         // Scenarios are set on the classic board.
         if scenario != nil, world != nil { chooseWorld(nil) }
         seed = UInt64.random(in: 1...99_999)
-        state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
+        // Scenarios are written for the classic four.
+        let civs = scenario == nil ? table : Self.table(classic, [])
+        state = try! engine.newGame(seed: seed, civilizations: Self.order(civs, seed))
         human = civ
         if let civ { state.civs[civ]!.isHuman = true }
         engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario, guided: guided)

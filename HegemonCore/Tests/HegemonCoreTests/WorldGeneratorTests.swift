@@ -58,7 +58,7 @@ import Testing
         #expect(reached.count == map.territories.count + map.seas.count)
 
         // The four empires, on coasts, apart from one another.
-        #expect(map.civilizations.map(\.id) == Self.classic.civilizations.map(\.id))
+        #expect(map.civilizations.map(\.id) == Self.classic.baseCivilizations.map(\.id))
         for civ in map.civilizations {
             let capital = try #require(map.territory(civ.capital))
             #expect(capital.isCoastal)

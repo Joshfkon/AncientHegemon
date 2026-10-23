@@ -217,6 +217,10 @@
       "mesopotamia": {
         "name": "Sargon",
         "trait": "reckless"
+      },
+      "hatti": {
+        "name": "Muwatalli",
+        "trait": "cavalryCommander"
       }
     },
     "natives": {
@@ -231,10 +235,12 @@
       "mesopotamia": []
     },
     "armies": {
+      "hatti": { "infantry": 2, "archers": 0, "cavalry": 1 },
       "greece": { "infantry": 5, "archers": 0, "cavalry": 0 },
       "italia": { "infantry": 5, "archers": 0, "cavalry": 0 }
     },
     "granaries": {
+      "hatti": 20,
       "greece": 20,
       "italia": 20
     },
@@ -1003,6 +1009,28 @@
         "Sin-shar",
         "Bel-ibni",
         "Nergal-eresh"
+      ]
+    },
+    "hatti": {
+      "rulers": [
+        "Suppiluliuma",
+        "Mursili",
+        "Muwatalli",
+        "Hattusili",
+        "Tudhaliya",
+        "Arnuwanda",
+        "Urhi-Teshub",
+        "Telipinu"
+      ],
+      "generals": [
+        "Kurunta",
+        "Ini-Teshub",
+        "Talmi-Teshub",
+        "Hutupiyanzi",
+        "Kantuzili",
+        "Zida",
+        "Himuili",
+        "Kassu"
       ]
     }
   }

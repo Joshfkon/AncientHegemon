@@ -392,6 +392,10 @@ TRACKS = [
           pattern="beats", drone_gain=0.09),
     Track("italia", 196.0, MIXOLYDIAN, 92, 4, "ney", "lyre", "light", [0, 3, 6, 0], [4, 3, 6, 4],
           lead_gain=0.34),
+    # Expansion: the Hittites, after the Hurrian hymns of Ugarit (the oldest written music): a
+    # plain lyre tune over horns and a frame drum.
+    Track("hatti", 130.81, AEOLIAN, 70, 6, "aulos", "lyre", "frame", [0, 4, 5, 0], [3, 0, 4, 6],
+          horns=True, lead_gain=0.3, drone_gain=0.08),
     # War: drums, horns and a hard-plucked ostinato.
     Track("war", 110.0, AEOLIAN, 108, 5, "aulos", "lyre", "war", [0, 0, 5, 6], [3, 4, 5, 4],
           horns=True, pattern="beats", string_gain=0.34, lead_gain=0.26, drone_gain=0.08),

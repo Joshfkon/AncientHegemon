@@ -107,4 +107,19 @@ public struct Civilization: Codable, Sendable, Identifiable, Hashable {
     public let name: String
     public let capital: TerritoryID
     public let government: Government
+    /// The AI temperament this empire plays with by default (a `Personality` name).
+    public var personality: String?
+    /// The paid expansion that adds this empire; nil for the four classic empires. Expansion
+    /// empires sit at the table only when a game asks for them (see `GameMap.baseCivilizations`).
+    public var expansion: String?
+
+    public init(id: CivilizationID, name: String, capital: TerritoryID, government: Government,
+                personality: String? = nil, expansion: String? = nil) {
+        self.id = id
+        self.name = name
+        self.capital = capital
+        self.government = government
+        self.personality = personality
+        self.expansion = expansion
+    }
 }

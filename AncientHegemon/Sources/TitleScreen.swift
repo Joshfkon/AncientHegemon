@@ -9,6 +9,8 @@ struct CivPickerView: View {
     @State private var chosen: CivilizationID?
     @State private var appeared = false
     @State private var showWalkthrough = false
+    @State private var showStore = false
+    private var store: Store { Store.shared }
     /// First time on the title screen: the How to play button pulses.
     @AppStorage("walkthroughSeen") private var walkthroughSeen = false
 
@@ -31,16 +33,45 @@ struct CivPickerView: View {
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : -20)
+                // The Store, level with the subtitle (the top edge can fall off small screens).
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .bottomTrailing) {
+                    Button { showStore = true } label: {
+                        Label("Store", systemImage: "bag.fill").lineLimit(1).fixedSize()
+                            .font(.callout.bold())
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(Bronze.gradient, lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.trailing, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .accessibilityIdentifier("storeButton")
+                }
 
                 HStack(spacing: 14) {
-                    ForEach(Array(engine.map.civilizations.enumerated()), id: \.element.id) { i, civ in
-                        CivBanner(civ: civ, engine: engine, state: session.state)
+                    // Every empire, the expansions' too: one not yet owned hangs locked and
+                    // opens the Store.
+                    ForEach(Array(session.classic.map.civilizations.enumerated()), id: \.element.id) { i, civ in
+                        let locked = civ.expansion.map { !store.owns($0) } ?? false
+                        let offScenario = civ.expansion != nil && scenario != nil
+                        CivBanner(civ: civ, engine: session.classic, state: session.state)
+                            .overlay { if locked { LockedBannerCover(expansion: civ.expansion.flatMap(Expansion.named), store: store) } }
+                            .overlay(alignment: .bottom) {
+                                if offScenario, !locked {
+                                    Text("Not in scenarios").font(.caption2.bold()).foregroundStyle(.white)
+                                        .padding(.bottom, 8)
+                                }
+                            }
                             .scaleEffect(chosen == civ.id ? 1.08 : 1)
-                            .opacity(chosen == nil || chosen == civ.id ? 1 : 0.25)
+                            .opacity(chosen == nil || chosen == civ.id ? (offScenario ? 0.45 : 1) : 0.25)
                             .offset(y: appeared ? 0 : 60)
                             .opacity(appeared ? 1 : 0)
                             .animation(.spring(duration: 0.6).delay(0.1 + Double(i) * 0.08), value: appeared)
-                            .onTapGesture { choose(civ.id) }
+                            .onTapGesture {
+                                if locked { showStore = true } else if !offScenario { choose(civ.id) }
+                            }
                     }
                 }
                 .padding(.horizontal, 24)
@@ -93,6 +124,7 @@ struct CivPickerView: View {
             }
             .padding(.vertical)
         }
+        .sheet(isPresented: $showStore) { StoreView(store: store, state: session.state, map: session.classic.map) }
         .alert("Your first reign?", isPresented: Binding(get: { askingFor != nil }, set: { if !$0 { askingFor = nil } })) {
             Button("Guide me through the first turns") { answerGuide(true) }
             Button("Jump right in") { answerGuide(false) }
@@ -316,6 +348,7 @@ struct CivBanner: View {
             Text(civ.name.uppercased())
                 .font(.system(size: 16, weight: .black, design: .serif))
                 .tracking(2)
+                .lineLimit(1).minimumScaleFactor(0.6)
                 .foregroundStyle(.white)
             Rectangle().fill(.white.opacity(0.5)).frame(width: 40, height: 1)
             Text(Self.tagline(civ.id))
@@ -328,6 +361,7 @@ struct CivBanner: View {
             if let g = engine.rules.start.generals[civ.id] {
                 Text("\(g.name) · \(traitName(g.trait))")
                     .font(.caption2.bold())
+                    .lineLimit(1).minimumScaleFactor(0.75)
                     .foregroundStyle(.white.opacity(0.75))
             }
             Text(civ.government == .republic ? "Republic" : "Monarchy")
@@ -361,6 +395,7 @@ struct CivBanner: View {
                 Image(systemName: "laurel.trailing").resizable().scaledToFit()
             }
         case "mesopotamia": Image(systemName: "crown.fill").resizable().scaledToFit()
+        case "hatti": HittiteEagle().fill()
         default: Image(systemName: "flag.fill").resizable().scaledToFit()
         }
     }
@@ -371,6 +406,7 @@ struct CivBanner: View {
         case "egypt": "The Nile's endless grain, and chariots."
         case "italia": "Rugged and seaborne, ready to expand."
         case "mesopotamia": "Rich river valleys at the crossroads of the world."
+        case "hatti": "Chariots and iron on the high plateau, between every rival."
         default: ""
         }
     }

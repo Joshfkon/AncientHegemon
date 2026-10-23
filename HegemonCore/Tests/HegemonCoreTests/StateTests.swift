@@ -35,9 +35,10 @@ import Testing
     let rules = try! Rules.bundled()
 
     @Test func civsStartWithTheirCapitalAndOwnStart() throws {
-        let state = try GameState(map: map, rules: rules, seed: 1)
+        // Every empire, the expansions' too, seated at once.
+        let state = try GameState(map: map, rules: rules, seed: 1, civilizations: map.civilizations.map(\.id))
         #expect(state.turn == 1)
-        #expect(state.players.count == 4)
+        #expect(state.players.count == 5)
         for civ in map.civilizations {
             let realm = [civ.capital] + (rules.start.realms[civ.id] ?? [])
             #expect(state.owner(of: civ.capital) == civ.id)
