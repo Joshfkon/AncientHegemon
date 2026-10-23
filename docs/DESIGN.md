@@ -2182,3 +2182,78 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   land; tapping elsewhere then just looks at the new place.
 - With the army picked, glowing lands are still one tap away, and tapping the army again lets
   it go. Hints say "Tap the army to march it" in the land view.
+
+### Random worlds (Josh: "a lot of the fun is gone as the first optimal moves are the same… let's auto generate maps")
+- **Choice on the title screen**: the map button beside "Watch" picks *Classic Mediterranean*
+  (Josh's painted board, unchanged) or *Random world*. A random world is drawn fresh every time
+  the title screen comes up; *World by number…* replays or shares one ("World 4821"). The world
+  shows behind the title before you pick a realm. Scenarios are set on the classic board, so
+  picking one switches back to it. The choice is remembered.
+- **Deterministic from a seed**: `WorldGenerator.generate(seed:template:)` in
+  `HegemonCore/Map/WorldGenerator.swift`. All randomness is a SplitMix64 stream from the world
+  seed (no system random, no Dictionary-order choices), so a number always makes the same world.
+  `GameState.worldSeed` says which world a game is on, and the save stores the generated map
+  whole (`SavedGame.map`), so a save reloads exactly even if the generator changes later.
+  `WorldGenerator.version` is bumped whenever the same seed would give a different world;
+  generated maps have map version 100 + that.
+- **How a world is made**:
+  1. A grid of 1,792 small hexes over the board's frame. Height is noise plus one of four world
+     plans: an inland sea (land all round, like the Mediterranean), two continents across a sea,
+     a northern and a southern shore with a long sea between (Europe and Africa), or scattered
+     lands. 40–50% is land; specks of land sink and ponds are filled.
+  2. Land is grown into 34–46 territories of about 19 cells (each island gets its own); tiny
+     ones join a neighbour, and a territory can't ring another. Water is grown into 9–14 sea
+     zones; seas without a shore or too small join a neighbour.
+  3. Rivers run from the uplands down to the sea along cell edges (4–6 of them). A river along
+     a border is a river crossing; plains a river runs through are breadbaskets (river-valley
+     tag, +2 grain). Lands a channel apart that are far apart by land get a strait crossing
+     (at most one per pair of landmasses, six in all).
+  4. Terrain: the highest tenth are mountains, the next quarter hills; the dry south is desert
+     and the wet north forest; the rest plains. Grain follows terrain (plains 3–5, hills 2–3,
+     forest 2–3, desert 1–2, mountains 1; big lands +1).
+  5. **The empires' starts**: 900 candidate placements are scored and the best kept. Each capital
+     is a coastal territory on a landmass of four or more territories, not hemmed against the
+     board's edge, at least three steps from every other capital by land and by sea, with two
+     or more territories within two marches; Egypt and Mesopotamia go on a river. The score
+     rewards distance and an even share of the lands nearest each capital. The capital keeps its
+     classic character exactly (terrain, grain, goods, river valley), so each civ plays like
+     itself and the balance work on starting armies, grain and fleets carries over; Greece and
+     Italia's starting ship sails from the capital's own sea. A poor, rocky capital (Greece)
+     prefers a peninsula: few land borders and more than one sea, as on the classic board.
+  6. **Goods** are scattered by terrain in the classic map's proportions (copper and stone in
+     the hills and mountains, timber in forests, horses on the plains and steppes, wine on warm
+     coasts, luxuries in the desert). **Tin** is the hunt: two or three lodes, never beside a
+     capital and apart from one another. Every empire has copper within three steps.
+  7. The wandering tribes' homelands (about a fifth of the land, as on the classic map) are the
+     territories farthest from every capital, preferably at the world's edge. Every other land is
+     a minor kingdom with a people, a ruler, a temperament and a look, drawn from a pool of ~70
+     peoples of the age (the classic board's plus Wilusa, Mitanni, Ugarit's neighbours, Mycenae,
+     Kush, Dilmun, the Kaska and more) and placed by climate: islanders on islands, highlanders
+     in the hills, desert peoples in the desert. Seas get Latin names.
+  8. Chokepoints: the narrowest waters between two seas, held from the shores that touch both
+     ("Straits of X", up to three), and every mountain territory between two others ("X Passes").
+  9. Art: territory outlines are traced from the cells, with every shared corner jittered the
+     same way and one pass of corner-cutting that keeps the points where three owners meet, so
+     neighbours share every point exactly. Name, army token, sea labels and peaks are placed at
+     each area's deepest cell. The art is in the classic board's coordinates, so the renderer,
+     zoom, pan and tap handling are unchanged (`MapArt`, the same format as `map_shapes.json`).
+- **Checks**: `swift test` makes 60 worlds and checks each the way `tools/validate_map.py`
+  checks the classic map (borders both ways, every land and sea reachable, every sea has a
+  shore, grain ≥ 1), plus fair starts (coastal, not adjacent), tin never beside a capital,
+  kingdoms everywhere but capitals and homelands, every name and army token inside its outline,
+  determinism and save round-trips. `hegemon-sim world --seed S --json PATH` writes a world for
+  `validate_map.py`; 200 seeds in a row all generate (about 1 ms each in release).
+- **Balance** (`hegemon-sim --games 100 --random-map`, default personalities, shuffled seating):
+
+  | | Greece | Egypt | Italia | Mesopotamia | rounds | endings |
+  |---|---|---|---|---|---|---|
+  | Classic board (80 games, seed 501) | 31% | 31% | 13% | 23% | 50 | all legacy |
+  | Random worlds, first cut (seed 501) | 11% | 25% | 31% | 32% | 41 | 72 legacy, 28 trade |
+  | Random worlds, Greece on a peninsula (seed 501) | 16% | 23% | 26% | 34% | 41 | 73 legacy, 26 trade, 1 domination |
+  | Same, seeds 1001+ | 12% | 34% | 24% | 30% | 41 | 73 legacy, 26 trade, 1 domination |
+
+  Every game is decided. No empire wins more than about a third; Greece is the hardest
+  again (as Josh wants it), because random coasts rarely shelter it like the Aegean does.
+  Games end sooner than on the classic board, and trade victories happen (about a quarter of
+  games): random worlds have more coasts and seas between the empires, so trade routes form.
+  Defences hold 38–55% (classic 39–90%).

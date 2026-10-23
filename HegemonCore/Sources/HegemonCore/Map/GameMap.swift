@@ -20,7 +20,7 @@ public enum MapError: Error, Equatable, CustomStringConvertible {
 
 /// The static map: territories, seas, links, chokepoints and civilizations, with adjacency indexes.
 /// Built once from JSON and validated on load; queries never fail for ids that came from the map.
-public struct GameMap: Sendable {
+public struct GameMap: Sendable, Codable {
     public let version: Int
     public let territories: [Territory]
     public let landLinks: [LandLink]
@@ -28,6 +28,12 @@ public struct GameMap: Sendable {
     public let seaLinks: [[SeaZoneID]]
     public let chokepoints: [Chokepoint]
     public let civilizations: [Civilization]
+    /// The named peoples of a generated world, by homeland (the classic map's are in the rules).
+    public let peoples: [TerritoryID: People]?
+    /// How a generated world is drawn (the classic board's art ships with the app).
+    public let art: MapArt?
+    /// The seed a generated world was made from; nil for the classic map.
+    public let worldSeed: UInt64?
 
     private let territoryIndex: [TerritoryID: Territory]
     private let seaIndex: [SeaZoneID: SeaZone]
@@ -37,7 +43,7 @@ public struct GameMap: Sendable {
 
     // MARK: Loading
 
-    private struct File: Decodable {
+    private struct File: Codable {
         let version: Int
         let territories: [Territory]
         let landLinks: [LandLink]
@@ -45,6 +51,9 @@ public struct GameMap: Sendable {
         let seaLinks: [[SeaZoneID]]
         let chokepoints: [Chokepoint]
         let civilizations: [Civilization]
+        var peoples: [TerritoryID: People]?
+        var art: MapArt?
+        var worldSeed: UInt64?
     }
 
     /// Loads the bundled `map.json`.
@@ -56,7 +65,29 @@ public struct GameMap: Sendable {
     }
 
     public init(json: Data) throws {
-        let f = try JSONDecoder().decode(File.self, from: json)
+        try self.init(file: JSONDecoder().decode(File.self, from: json))
+    }
+
+    public init(from decoder: Decoder) throws {
+        try self.init(file: File(from: decoder))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try File(version: version, territories: territories, landLinks: landLinks, seas: seas, seaLinks: seaLinks,
+                 chokepoints: chokepoints, civilizations: civilizations, peoples: peoples, art: art,
+                 worldSeed: worldSeed).encode(to: encoder)
+    }
+
+    /// A map from its parts, validated as a loaded one is.
+    public init(version: Int, territories: [Territory], landLinks: [LandLink], seas: [SeaZone],
+                seaLinks: [[SeaZoneID]], chokepoints: [Chokepoint], civilizations: [Civilization],
+                peoples: [TerritoryID: People]? = nil, art: MapArt? = nil, worldSeed: UInt64? = nil) throws {
+        try self.init(file: File(version: version, territories: territories, landLinks: landLinks, seas: seas,
+                                 seaLinks: seaLinks, chokepoints: chokepoints, civilizations: civilizations,
+                                 peoples: peoples, art: art, worldSeed: worldSeed))
+    }
+
+    private init(file f: File) throws {
         version = f.version
         territories = f.territories
         landLinks = f.landLinks
@@ -64,6 +95,9 @@ public struct GameMap: Sendable {
         seaLinks = f.seaLinks
         chokepoints = f.chokepoints
         civilizations = f.civilizations
+        peoples = f.peoples
+        art = f.art
+        worldSeed = f.worldSeed
 
         var tIndex: [TerritoryID: Territory] = [:]
         for t in f.territories {
@@ -123,6 +157,8 @@ public struct GameMap: Sendable {
             }
         }
         for civ in f.civilizations { try checkT(civ.capital, "civilization '\(civ.id)'") }
+        for t in (f.peoples ?? [:]).keys { try checkT(t, "peoples") }
+        for t in (f.art?.territories ?? [:]).keys { try checkT(t, "art") }
     }
 
     // MARK: Queries

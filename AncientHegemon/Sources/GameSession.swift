@@ -37,7 +37,11 @@ struct BattleEntry: Identifiable, Codable {
 /// their moves can be watched, and keeps a readable chronicle.
 @MainActor @Observable
 final class GameSession {
-    let engine: Engine
+    /// The rules on the classic board; `engine` is the same rules on this game's world.
+    let classic: Engine
+    private(set) var engine: Engine
+    /// The world new games are played on: a generated world's seed, or nil for the classic board.
+    private(set) var world: UInt64?
     private(set) var state: GameState {
         didSet {
             refreshEconomy()
@@ -202,10 +206,27 @@ final class GameSession {
     init() {
         let engine = try! Engine.bundled()
         let seed = UInt64.random(in: 1...99_999)
+        classic = engine
         self.engine = engine
         self.seed = seed
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         saved = SaveStore.load(for: engine)
+    }
+
+    /// Picks the world for the next game (nil: the classic board), shown behind the title.
+    func chooseWorld(_ seed: UInt64?) {
+        guard !started else { return }
+        world = seed
+        engine = Self.engine(on: seed, classic)
+        state = try! engine.newGame(seed: self.seed, civilizations: Self.order(engine, self.seed))
+    }
+
+    /// A new world number, for a game on a fresh random map.
+    static func freshWorld() -> UInt64 { UInt64.random(in: 1...999_999) }
+
+    private static func engine(on world: UInt64?, _ classic: Engine) -> Engine {
+        guard let world else { return classic }
+        return classic.on(try! WorldGenerator.generate(seed: world, template: classic.map))
     }
 
     private static func order(_ engine: Engine, _ seed: UInt64) -> [CivilizationID] {
@@ -215,6 +236,8 @@ final class GameSession {
     /// Starts a game as `civ`, or as a spectator when nil.
     func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil, guided: Bool = false) {
         playing = false
+        // Scenarios are set on the classic board.
+        if scenario != nil, world != nil { chooseWorld(nil) }
         seed = UInt64.random(in: 1...99_999)
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         human = civ
@@ -250,6 +273,8 @@ final class GameSession {
     func resume() {
         guard let game = saved else { return }
         playing = false
+        world = game.map?.worldSeed
+        engine = game.map.map { classic.on($0) } ?? classic
         seed = game.seed
         human = game.human
         state = game.state
@@ -278,7 +303,8 @@ final class GameSession {
             return
         }
         let game = SavedGame(human: human, seed: seed, state: state, log: Array(log.prefix(150)),
-                             battles: Array(battles.prefix(30)), savedAt: .now, history: history, statsHistory: statsHistory)
+                             battles: Array(battles.prefix(30)), savedAt: .now, history: history, statsHistory: statsHistory,
+                             map: engine.map.worldSeed == nil ? nil : engine.map)
         SaveStore.save(game)
         saved = game
     }
@@ -829,7 +855,7 @@ final class GameSession {
         func place(_ t: TerritoryID?) -> String { t.flatMap { engine.map.territory($0)?.name ?? engine.map.sea($0)?.name } ?? "?" }
         func peopleName(_ t: TerritoryID) -> String {
             engine.people(at: t, in: after)?.name ?? engine.people(at: t, in: before)?.name
-                ?? engine.rules.minors.peoples[t]?.name ?? "The people of \(place(t))"
+                ?? engine.people(from: t)?.name ?? "The people of \(place(t))"
         }
         /// Land next to the player's: news of it matters to them.
         func isNeighbour(_ t: TerritoryID) -> Bool {

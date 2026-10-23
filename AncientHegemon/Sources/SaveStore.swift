@@ -17,6 +17,8 @@ struct SavedGame: Codable {
     var history: [[TerritoryID: CivilizationID]]?
     /// Each empire's numbers at the start of each round, for the graphs.
     var statsHistory: [[CivilizationID: RoundStats]]?
+    /// A generated world, saved whole so the game reloads on the same map (nil: the classic board).
+    var map: GameMap?
 }
 
 /// One autosave slot in Application Support.
@@ -42,7 +44,7 @@ enum SaveStore {
         guard let data = try? Data(contentsOf: url),
               let game = try? JSONDecoder().decode(SavedGame.self, from: data),
               game.version == SavedGame.currentVersion,
-              game.state.mapVersion == engine.map.version,
+              game.state.mapVersion == (game.map?.version ?? engine.map.version),
               game.state.rulesVersion == engine.rules.version,
               game.state.winner == nil else { return nil }
         return game

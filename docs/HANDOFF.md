@@ -154,6 +154,13 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     forced peace, 20% of its gold income as tribute, 25 prestige to the overlord, no war on the
     overlord's allies; free again once it outgrows its overlord or the overlord falls. AI demands
     and answers; people answer in an audience. 301 tests.
+  - **Random worlds** (DESIGN.md, "Random worlds"): `Map/WorldGenerator.swift` makes a new map
+    from a seed (land and seas, rivers, terrain, goods, fair coastal starts on each civ's classic
+    capital, kingdoms with peoples and rulers, chokepoints, and the art). The title screen's map
+    button picks Classic Mediterranean or a random world (fresh each game, or by number). Saves
+    store the generated map; `GameState.worldSeed` names it. `hegemon-sim --random-map` balances
+    on random worlds; `hegemon-sim world --seed S --json PATH` dumps one for
+    `tools/validate_map.py`. Debug launch argument `-demoWorld N` (with `-demoAs civ`).
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

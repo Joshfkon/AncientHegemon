@@ -6,6 +6,10 @@ import HegemonCore
 //   hegemon-sim [--games N] [--turns T] [--seed S] [--personality NAME] [--fixed-order]
 //       N games (default 20) of at most T turns (default 150), seeds S, S+1, ...
 //       --personality gives every civ the same temperament, so differences come from the map.
+//       --random-map plays each game on a freshly generated world (seeded by the game's seed);
+//       --world W plays every game on generated world W.
+//   hegemon-sim world [--seed S] [--count N] [--json PATH]
+//       Generates and describes random worlds; --json writes the first as map JSON.
 //       Turn order is shuffled per game (seeded) unless --fixed-order.
 //   hegemon-sim --trace [--seed S] [--turns T]
 //       One game, printing every civ's land, units, population, gold and grain each round.
@@ -60,6 +64,33 @@ func makeEngine() throws -> Engine {
     return Engine(map: bundled.map, rules: rules)
 }
 let engine = try makeEngine()
+
+if CommandLine.arguments.dropFirst().first == "world" {
+    // hegemon-sim world [--seed S] [--count N] [--json PATH]: generate random worlds and describe
+    // them; with --json, write the first as map JSON (checkable with tools/validate_map.py).
+    let first = UInt64(option("--seed") ?? "1") ?? 1
+    let count = Int(option("--count") ?? "1") ?? 1
+    let start = Date()
+    for k in 0..<count {
+        let map = try WorldGenerator.generate(seed: first + UInt64(k), template: engine.map)
+        let islands = map.islands.count
+        let terrain = Dictionary(grouping: map.territories, by: \.terrain).mapValues(\.count)
+        let goods = Resource.allCases.filter { $0 != .grain }.map { r in "\(r.rawValue) \(map.territories.reduce(0) { $0 + ($1.resources[r] ?? 0) })" }
+        print("seed \(first + UInt64(k)): \(map.territories.count) lands, \(map.seas.count) seas, \(map.landLinks.count) links "
+              + "(\(map.landLinks.filter { $0.crossing == .river }.count) river, \(map.landLinks.filter { $0.crossing == .strait }.count) strait), "
+              + "\(islands) islands, \(map.chokepoints.count) chokepoints, kingdoms \(map.peoples?.count ?? 0)")
+        print("   terrain " + Terrain.allCases.map { "\($0.rawValue) \(terrain[$0] ?? 0)" }.joined(separator: ", ")
+              + "; grain \(map.territories.reduce(0) { $0 + $1.grain }); " + goods.joined(separator: ", "))
+        print("   capitals " + map.civilizations.map { c in "\(c.id): \(map.landNeighbors(of: c.capital).count) land nbrs, seas \(map.seas(bordering: c.capital).count)" }.joined(separator: "; "))
+        if k == 0, let path = option("--json") {
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.sortedKeys]
+            try enc.encode(map).write(to: URL(fileURLWithPath: path))
+        }
+    }
+    print(String(format: "%.2fs", Date().timeIntervalSince(start)))
+    exit(0)
+}
 
 if CommandLine.arguments.dropFirst().first == "formations" {
     let seeds = Int(option("--seeds") ?? "100") ?? 100
@@ -153,7 +184,10 @@ for g in 0..<games {
     let seed = firstSeed + UInt64(g)
     let civsInOrder = engine.map.civilizations.map(\.id)
     let order = CommandLine.arguments.contains("--fixed-order") ? civsInOrder : shuffledTurnOrder(civsInOrder, seed: seed)
-    let record = try playAIMatch(engine: engine, seed: seed, personalities: personalities,
+    // --random-map: a fresh generated world each game (its seed the game's); --world S: one world.
+    let world: UInt64? = CommandLine.arguments.contains("--random-map") ? seed : option("--world").flatMap { UInt64($0) }
+    let gameEngine = try world.map { engine.on(try WorldGenerator.generate(seed: $0, template: engine.map)) } ?? engine
+    let record = try playAIMatch(engine: gameEngine, seed: seed, personalities: personalities,
                                  civilizations: order, maxTurns: maxTurns)
     records.append(record)
     let land = record.finalState.players
@@ -283,7 +317,7 @@ for civ in civs {
 
 // The minor kingdoms: how far they spread, and how much they took from the empires.
 let kingdomLands = records.map { r in
-    engine.map.territories.filter { engine.kingdom(at: $0.id, in: r.finalState) != nil }.count
+    r.finalState.land.keys.filter { engine.kingdom(at: $0, in: r.finalState) != nil }.count
 }
 print("")
 print("kingdoms: \(String(format: "%.1f", Double(kingdomLands.reduce(0, +)) / Double(max(1, records.count)))) lands held at the end; "

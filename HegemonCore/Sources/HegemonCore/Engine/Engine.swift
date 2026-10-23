@@ -14,6 +14,15 @@ public struct Engine: Sendable {
         try Engine(map: .bundled(), rules: .bundled())
     }
 
+    /// An engine on a freshly generated world (DESIGN.md, "Random worlds").
+    public static func randomWorld(seed: UInt64, rules: Rules? = nil) throws -> Engine {
+        let rules = try rules ?? Rules.bundled()
+        return try Engine(map: WorldGenerator.generate(seed: seed, template: .bundled()), rules: rules)
+    }
+
+    /// The same rules on another map.
+    public func on(_ map: GameMap) -> Engine { Engine(map: map, rules: rules) }
+
     public func newGame(seed: UInt64, civilizations: [CivilizationID]? = nil) throws -> GameState {
         try GameState(map: map, rules: rules, seed: seed, civilizations: civilizations)
     }

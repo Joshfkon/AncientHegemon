@@ -60,7 +60,7 @@ struct CivPickerView: View {
                         Button { session.resume() } label: {
                             VStack(spacing: 1) {
                                 Text("Continue as \(Palette.name(game.human, game.state))").font(.headline).lineLimit(1).fixedSize()
-                                Text("Round \(game.state.turn) · saved \(game.savedAt.formatted(date: .abbreviated, time: .shortened))")
+                                Text("Round \(game.state.turn)\(game.map?.worldSeed.map { " · World \($0)" } ?? "") · saved \(game.savedAt.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption2)
                             }
                             .padding(.horizontal, 18).padding(.vertical, 8)
@@ -79,6 +79,7 @@ struct CivPickerView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
                     .symbolEffect(.bounce, options: .repeat(walkthroughSeen ? 0 : 3), value: appeared)
+                    mapMenu
                     Button { session.start(as: nil) } label: {
                         Label("Watch", systemImage: "eye").lineLimit(1).fixedSize()
                             .font(.callout.bold())
@@ -99,10 +100,24 @@ struct CivPickerView: View {
             Text("Your council can walk you through the first few turns, while the world leaves you in peace until round \(Engine.quietRounds). You can change this later with the Guided switch.")
         }
         .sheet(isPresented: $showScenarios) {
-            ScenarioPicker(engine: engine, state: session.state) { picked in
+            ScenarioPicker(engine: session.classic, state: session.state) { picked in
                 scenario = picked
                 showScenarios = false
+                // Scenarios are fought on the classic board.
+                if picked != nil, randomWorld {
+                    randomWorld = false
+                    session.chooseWorld(nil)
+                }
             }
+        }
+        .alert("Which world?", isPresented: $askingWorld) {
+            TextField("World number", text: $worldEntry).keyboardType(.numberPad)
+            Button("Play this world") {
+                if let n = UInt64(worldEntry.filter(\.isNumber).prefix(9)), n > 0 { pickWorld(n) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every world has a number. Enter one to play that world again, or share it with a friend.")
         }
         .fullScreenCover(isPresented: $showWalkthrough) {
             WalkthroughView {
@@ -111,6 +126,8 @@ struct CivPickerView: View {
             }
         }
         .onAppear {
+            // A fresh random world for each new game, unless the last one was picked by number.
+            if randomWorld, session.world == nil || !worldPinned { pickWorld(GameSession.freshWorld(), pinned: false) }
             withAnimation(.easeOut(duration: 0.8)) { appeared = true }
             MusicDirector.shared.set(.title)
             drift = true
@@ -121,6 +138,8 @@ struct CivPickerView: View {
                 session.playing = true
             }
             // Launch with -demoThrone egypt to walk into that realm's finished throne room.
+            // Launch with -demoWorld 1234 to play on that generated world (with -demoAs).
+            if let n = UserDefaults.standard.string(forKey: "demoWorld").flatMap({ UInt64($0) }) { pickWorld(n) }
             if let civ = UserDefaults.standard.string(forKey: "demoThrone") ?? UserDefaults.standard.string(forKey: "demoAs") {
                 session.start(as: civ, guided: UserDefaults.standard.bool(forKey: "demoGuided"))
             }
@@ -163,6 +182,43 @@ struct CivPickerView: View {
     @State private var askingFor: CivilizationID?
     @State private var showScenarios = false
     private var difficulty: Difficulty { Difficulty(rawValue: difficultyRaw) ?? .medium }
+
+    /// Play on a generated world rather than the classic board (remembered), and whether this
+    /// world was picked by number (kept until changed) rather than drawn fresh.
+    @AppStorage("randomWorld") private var randomWorld = false
+    @State private var worldPinned = false
+    @State private var askingWorld = false
+    @State private var worldEntry = ""
+
+    private func pickWorld(_ n: UInt64?, pinned: Bool = true) {
+        worldPinned = pinned
+        randomWorld = n != nil
+        if n != nil { scenario = nil }
+        session.chooseWorld(n)
+    }
+
+    /// The map: the classic Mediterranean, or a random world (a new one, or one by number).
+    private var mapMenu: some View {
+        Menu {
+            Button { pickWorld(nil); Feedback.select() } label: {
+                Label("Classic Mediterranean", systemImage: randomWorld ? "map" : "checkmark")
+            }
+            Button { pickWorld(GameSession.freshWorld(), pinned: false); Feedback.select() } label: {
+                Label(randomWorld ? "Another random world" : "Random world", systemImage: "dice")
+            }
+            Button { worldEntry = session.world.map(String.init) ?? ""; askingWorld = true } label: {
+                Label("World by number…", systemImage: "number")
+            }
+        } label: {
+            Label(session.world.map { "World \($0)" } ?? "Classic map", systemImage: session.world == nil ? "map" : "globe.europe.africa")
+                .lineLimit(1).fixedSize()
+                .font(.callout.bold())
+                .padding(.horizontal, 16).padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().stroke(Bronze.gradient, lineWidth: session.world == nil ? 0 : 1.5))
+        }
+        .foregroundStyle(.white)
+    }
 
     private var setupRow: some View {
         HStack(spacing: 10) {

@@ -130,7 +130,7 @@ struct MapView: View {
 
     private func seen(_ t: TerritoryID) -> Bool { sight?.contains(t) ?? true }
     @State private var viewSize: CGSize = .zero
-    private let art = BoardArt.shared
+    private var art: BoardArt { BoardArt.of(map) }
 
     /// Pinch to zoom (about the pinch), drag to pan.
     @State private var zoom: CGFloat = 1
@@ -375,10 +375,12 @@ struct MapView: View {
         }
 
         // The seam between the board's two halves.
-        var seam = Path()
-        seam.move(to: t.point([BoardArt.seamX, f.minY]))
-        seam.addLine(to: t.point([BoardArt.seamX, f.maxY]))
-        context.stroke(seam, with: .color(.black.opacity(0.75)), lineWidth: 1.6)
+        if let seamX = art.seam {
+            var seam = Path()
+            seam.move(to: t.point([seamX, f.minY]))
+            seam.addLine(to: t.point([seamX, f.maxY]))
+            context.stroke(seam, with: .color(.black.opacity(0.75)), lineWidth: 1.6)
+        }
 
         drawWorks(&context, t)
 

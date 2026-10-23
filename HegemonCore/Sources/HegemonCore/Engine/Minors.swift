@@ -138,7 +138,12 @@ extension Engine {
     }
 
     public func people(of kingdom: CivilizationID, in state: GameState) -> People? {
-        state.kingdoms[kingdom].flatMap { rules.minors.peoples[$0.homeland] }
+        state.kingdoms[kingdom].flatMap { people(from: $0.homeland) }
+    }
+
+    /// The named people whose homeland a territory is: a generated world's own, else the rules'.
+    public func people(from homeland: TerritoryID) -> People? {
+        map.peoples.map { $0[homeland] } ?? rules.minors.peoples[homeland]
     }
 
     /// The people of the kingdom holding a territory, if one does.

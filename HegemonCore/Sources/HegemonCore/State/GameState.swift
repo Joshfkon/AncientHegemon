@@ -230,6 +230,9 @@ public struct Fleet: Codable, Sendable, Equatable {
 /// iterating whenever order affects the result.
 public struct GameState: Codable, Sendable, Equatable {
     public var mapVersion: Int
+    /// The seed of a generated world (nil: the classic map). The app saves the world itself
+    /// beside the state; this says which one it is.
+    public var worldSeed: UInt64?
     public var rulesVersion: Int
     public var seed: UInt64
     public var turn: Int
@@ -342,7 +345,7 @@ public struct GameState: Codable, Sendable, Equatable {
                 throw MapError.invalid("unknown civilization '\(id)'")
             }
             land[civ.capital]!.owner = civ.id
-            for t in rules.start.realms[civ.id] ?? [] {
+            for t in map.worldSeed == nil ? rules.start.realms[civ.id] ?? [] : [] {
                 guard land[t] != nil else { throw MapError.unknownTerritory(t, context: "start realm of '\(civ.id)'") }
                 land[t]!.owner = civ.id
             }
@@ -364,10 +367,12 @@ public struct GameState: Codable, Sendable, Equatable {
                 armies[civ.capital] = Army(owner: civ.id, units: army)
             }
             if let fleet = rules.start.fleets?[civ.id] {
-                guard map.seas(bordering: civ.capital).contains(fleet.sea) else {
+                // On a generated world the rules' sea isn't there: the first sea off the capital.
+                let seas = map.seas(bordering: civ.capital)
+                guard let sea = seas.contains(fleet.sea) ? fleet.sea : (map.worldSeed != nil ? seas.first : nil) else {
                     throw MapError.invalid("starting fleet of '\(civ.id)' must be in a sea next to its capital")
                 }
-                startingFleets.append(Fleet(sea: fleet.sea, owner: civ.id, ships: fleet.ships))
+                startingFleets.append(Fleet(sea: sea, owner: civ.id, ships: fleet.ships))
             }
             if let g = rules.start.generals[civ.id] {
                 let gid = "\(civ.id)-1"
@@ -383,7 +388,7 @@ public struct GameState: Codable, Sendable, Equatable {
         }
         // Each named people's warriors carry their own banner.
         var kingdoms: [CivilizationID: Kingdom] = [:]
-        for (t, people) in rules.minors.peoples {
+        for (t, people) in map.peoples ?? rules.minors.peoples {
             guard let army = armies[t], army.owner == nativesID else { continue }
             let k = kingdomID(t)
             kingdoms[k] = Kingdom(homeland: t, name: people.name, ruler: people.ruler)
@@ -391,6 +396,7 @@ public struct GameState: Codable, Sendable, Equatable {
         }
 
         self.mapVersion = map.version
+        self.worldSeed = map.worldSeed
         self.rulesVersion = rules.version
         self.seed = seed
         self.turn = 1
