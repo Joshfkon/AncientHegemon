@@ -1,5 +1,5 @@
 {
-  "version": 34,
+  "version": 35,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -186,7 +186,10 @@
   "trade": {
     "goldPerRoute": 2,
     "chokepointToll": 1,
-    "shareDivisor": 2,
+    "sharePercent": 50,
+    "shareFullSteps": 3,
+    "shareLossPerStep": 10,
+    "shareMinPercent": 10,
     "grainPerRoute": 2,
     "grainPrice": 3,
     "grainPerCoast": 1,
@@ -257,6 +260,16 @@
     "stormSeafaringRelief": 1,
     "stormMinPercent": 2,
     "stormLossPercent": 34
+  },
+  "kingdomTrade": {
+    "minAttitude": { "warlike": 20, "proud": 10, "mercantile": -10, "peaceable": 0 },
+    "price": { "timber": 2, "stone": 2, "copper": 3, "tin": 4, "horses": 3, "iron": 4, "wine": 2, "luxuries": 3 },
+    "mercantileDiscountPercent": 25,
+    "rounds": 10,
+    "maxSteps": 5,
+    "stepPrice": 1,
+    "paidAttitude": 1,
+    "brokenAttitude": -15
   },
   "minors": {
     "baseAttitude": { "warlike": -10, "proud": 0, "mercantile": 10, "peaceable": 20 },

@@ -230,13 +230,27 @@ extension Engine {
         // Iron ore is just rock until a civilization learns ironworking.
         if resource == .iron, !ironWorked(civ, state) { return 0 }
         // Bargains move yields between courts: what comes in, less what goes out.
-        let own = max(0, yield(of: resource, in: homeNetwork(of: civ, in: state), state) + bargainYield(resource, for: civ, in: state))
+        let own = max(0, yield(of: resource, in: homeNetwork(of: civ, in: state), state) + bargainYield(resource, for: civ, in: state)
+                          + kingdomTradeYield(resource, for: civ, in: state))
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {
             let partner = $1.partner(of: civ)
-            return $0 + yield(of: resource, in: homeNetwork(of: partner, in: state), state) / rules.trade.shareDivisor
+            return $0 + shared(yield(of: resource, in: homeNetwork(of: partner, in: state), state), along: $1)
         }
         return own + shared
+    }
+
+    /// The share, in percent, of a partner's goods that reaches the other end of a route: the
+    /// full share along a short route, less with every step beyond.
+    public func sharePercent(of route: TradeRoute) -> Int {
+        let t = rules.trade
+        let steps = max(0, route.path.count - 1)
+        return max(t.shareMinPercent, t.sharePercent - max(0, steps - t.shareFullSteps) * t.shareLossPerStep)
+    }
+
+    /// How much of `amount` reaches the other end of a route.
+    public func shared(_ amount: Int, along route: TradeRoute) -> Int {
+        amount * sharePercent(of: route) / 100
     }
 
     /// What flows along a route: for each partner, the resources it receives from the other
@@ -249,7 +263,7 @@ extension Engine {
             var received: [Resource: Int] = [:]
             for r in Resource.allCases where r != .grain && r != .wine {
                 if r == .iron, !ironWorked(to, state) { continue }
-                let n = yield(of: r, in: theirs, state) / rules.trade.shareDivisor
+                let n = shared(yield(of: r, in: theirs, state), along: route)
                 if n > 0 { received[r] = n }
             }
             let wine = yield(of: .wine, in: theirs, state)

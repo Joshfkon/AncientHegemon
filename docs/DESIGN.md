@@ -2286,3 +2286,35 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   only the old terms (twice the warriors, a certain yes) restore it, so the cost belongs to this
   rule. A balance pass should give the opportunist another road, for example conquering what
   won't swear. Random worlds: Greece 17%, Egypt 17%, Italia 32%, Mesopotamia 32%.
+
+### Trade with the kingdoms, and distance on every trade (Josh: "we need to be able to trade with the other AI regions… my neighbour has timber, but the only way I can get it is to conquer them… I should get less / [pay] more the farther away it is")
+- **Kingdom trade.** Any kingdom sells a share of what its lands yield to an empire it trusts:
+  timber, stone, copper, tin, horses, iron, wine or luxuries. The goods arrive every turn as if
+  from the empire's own land (`effectiveYield`). The empire pays gold every turn for 10 rounds,
+  with the first payment made on agreement.
+  - Price per unit: timber, stone and wine 2; copper, horses and luxuries 3; tin and iron 4.
+    Mercantile peoples ask 25% less.
+  - Trust needed (regard): warlike 20, proud 10, peaceable 0, mercantile −10. A vassal always
+    trades with its overlord, and only with it.
+  - A kingdom can't sell more than its lands yield, less what it has already promised.
+  - The trade lapses when the gold runs out (−15 regard), when the kingdom loses the land, or
+    when the empire attacks the kingdom. Each turn's payment adds +1 regard.
+  - Made in the kingdom's audience (a Trade section lists their goods, price and reach), and
+    shown in the Resources screen's income.
+- **Distance.**
+  - *Kingdom trade:* reach is counted in land and sea steps from the kingdom's lands to the
+    empire's nearest land. Next door is one step; coast to coast across a sea is two. Goods
+    don't pass through the land of an empire at war with the buyer. Kingdoms trade up to 5
+    steps away, and every step beyond the first adds 1 gold a unit for carriage.
+  - *Rival trade routes:* a peaceful route no longer shares a flat half of the partner's goods.
+    It shares 50% along a route of up to 3 steps, 10 points less for each step beyond, down to
+    10%. Neighbours trade richly; the far ends of the world, a trickle.
+- The AI buys tin and copper it lacks, and timber and stone when its stores run low, keeping
+  gold for at least four payments.
+- Saves: from 1.0 on, new `GameState` fields carry `@SinceRelease` (or are optional), so a save
+  from an older version still loads after an update. `kingdomTrades` is the first.
+- Rules version 35.
+- Balance (80 games each). Classic map, seeds 1: Greece 21%, Egypt 33%, Italia 18%, Mesopotamia 25%.
+  Seeds 101: Greece 13%, Egypt 31%, Italia 36%, Mesopotamia 18%. Random worlds: Greece 16%, Egypt 23%,
+  Italia 30%, Mesopotamia 30%. Trade with the kingdoms gave Mesopotamia back what harder oaths took
+  (it was at 16% and 10%), and Egypt fell from about 41%.

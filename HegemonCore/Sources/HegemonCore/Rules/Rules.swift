@@ -136,8 +136,13 @@ public struct TradeRules: Codable, Sendable, Equatable {
     public let goldPerRoute: Int
     /// Gold a third-party chokepoint holder takes from each side of a route crossing it.
     public let chokepointToll: Int
-    /// A trade partner shares `yield / shareDivisor` of each non-grain resource.
-    public let shareDivisor: Int
+    /// A trade partner shares `sharePercent` of each non-grain resource along a route of up to
+    /// `shareFullSteps` land and sea steps; each step beyond loses `shareLossPerStep` points,
+    /// down to `shareMinPercent`. Goods wear, spoil and pay their way: distance costs.
+    public let sharePercent: Int
+    public let shareFullSteps: Int
+    public let shareLossPerStep: Int
+    public let shareMinPercent: Int
     /// When the home harvest and granary fall short, grain is bought from trade partners:
     /// up to this much per active route each turn, at `grainPrice` gold each.
     public let grainPerRoute: Int
@@ -229,6 +234,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let ships: ShipRules
     public let pirates: PirateRules
     public let minors: MinorRules
+    public let kingdomTrade: KingdomTradeRules
     public let submission: SubmissionRules
     public let battle: BattleRules
     public let naval: NavalRules
@@ -252,7 +258,7 @@ public struct Rules: Codable, Sendable, Equatable {
             throw MapError.invalid("rules.json has no stats for unit '\(type.rawValue)'")
         }
         if economy.populationPerGold < 1 || economy.populationPerGrain < 1 || economy.populationCapPerGrain < 1
-            || trade.shareDivisor < 1 || supply.overlandStepsPerExtraGrain < 1 {
+            || trade.sharePercent < 0 || supply.overlandStepsPerExtraGrain < 1 {
             throw MapError.invalid("rules.json economy divisors must be at least 1")
         }
         guard battle.formation(battle.defaultFormation) != nil else {

@@ -8,6 +8,8 @@ public enum Command: Codable, Sendable, Equatable {
     case levy(territory: TerritoryID, to: TerritoryID)
     /// Make a loyal vassal's land your own, peacefully.
     case annex(territory: TerritoryID)
+    /// Buy `amount` of a good every turn from the kingdom holding a territory.
+    case tradeWithKingdom(territory: TerritoryID, resource: Resource, amount: Int)
     /// How a fleet fights at sea.
     case setFleetPlan(sea: SeaZoneID, plan: BattlePlan)
     /// Alliances: offer, accept, leave; ask an ally to join a war; answer an ally's call.
@@ -127,6 +129,9 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case levied(civ: CivilizationID, territory: TerritoryID, to: TerritoryID, warriors: Int)
     /// A vassal would not answer the levy.
     case levyRefused(civ: CivilizationID, territory: TerritoryID)
+    /// A kingdom (by a land of its) agreed to sell an empire goods each turn, or the trade lapsed.
+    case kingdomTradeMade(civ: CivilizationID, territory: TerritoryID, goods: Goods, gold: Int)
+    case kingdomTradeEnded(civ: CivilizationID, territory: TerritoryID)
     /// A vassal swore again to a new ruler on its overlord's throne.
     case oathRenewed(civ: CivilizationID, territory: TerritoryID)
     case annexed(civ: CivilizationID, territory: TerritoryID)
@@ -248,6 +253,7 @@ public struct EventReport: Codable, Sendable, Equatable {
 
 public enum GameError: Error, Equatable, Sendable {
     case notVassal(TerritoryID)
+    case tradeRefused(TerritoryID, TradeRefusal)
     case cannotAfford
     case alreadyMarried(CivilizationID)
     case alreadyProposed(CivilizationID)

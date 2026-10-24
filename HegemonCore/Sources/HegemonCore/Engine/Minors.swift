@@ -415,6 +415,7 @@ extension Engine {
     func notePeopleAttacked(_ territory: TerritoryID, by civ: CivilizationID, _ state: inout GameState) {
         guard let k = kingdom(at: territory, in: state), state.isPlayer(civ) else { return }
         changeAttitude(of: k, toward: civ, by: rules.minors.attackedAttitude, &state)
+        endKingdomTrades(k, with: civ, &state)
         let near = Set(map.landNeighbors(of: territory).compactMap { kingdom(at: $0, in: state) }).subtracting([k])
         for n in near.sorted() { changeAttitude(of: n, toward: civ, by: rules.minors.fearAttitude, &state) }
     }

@@ -60,6 +60,8 @@ public struct Engine: Sendable {
             return try levy(territory, to: to, &state)
         case let .annex(territory):
             return try annex(territory, &state)
+        case let .tradeWithKingdom(territory, resource, amount):
+            return try tradeWithKingdom(territory, resource, amount, &state)
         case let .setFleetPlan(sea, plan):
             return try setFleetPlan(sea, plan, &state)
         case let .offerAlliance(to):
@@ -361,6 +363,7 @@ public struct Engine: Sendable {
             if !state.civs[civ]!.eliminated {
                 events += harvest(civ, &state)
                 events += keepBargains(civ, &state)
+                events += keepKingdomTrades(civ, &state)
                 events += pressSieges(civ, &state)
                 events += governmentPhase(civ, &state)
                 events += updateSplendour(civ, &state)

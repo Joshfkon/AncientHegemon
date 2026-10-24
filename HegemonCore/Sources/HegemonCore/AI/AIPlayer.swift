@@ -36,6 +36,7 @@ public struct AIPlayer: Sendable {
         let campaign = seaCampaign(civ, state)
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         courtPeoples(civ, &state, &turn)
+        buyFromKingdoms(civ, &state, &turn)
         recruit(civ, &state, &turn)
         sally(civ, &state, &turn)
         attack(civ, &state, &turn)

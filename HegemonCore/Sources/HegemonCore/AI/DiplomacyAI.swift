@@ -72,3 +72,22 @@ extension AIPlayer {
         return engine.regard(of: civ, toward: other, in: state) >= 40 && edge < 2
     }
 }
+
+extension AIPlayer {
+    /// Buys from the kingdoms what the court lacks: tin and copper for bronze, timber and stone
+    /// when its stores run low. One new trade a turn, and only with gold to spare for the rounds.
+    func buyFromKingdoms(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+        guard state.turn >= 2, let cs = state.civs[civ] else { return }
+        var wants: [Resource] = [.tin, .copper].filter { engine.effectiveYield(of: $0, for: civ, in: state) == 0 }
+        wants += [Resource.timber, .stone].filter { (cs.stock[$0] ?? 0) < 3 && engine.effectiveYield(of: $0, for: civ, in: state) == 0 }
+        for want in wants {
+            for k in state.kingdoms.keys.sorted() {
+                guard engine.forSale(want, from: k, in: state) >= 1,
+                      engine.tradeRefusal(want, 1, from: k, to: civ, in: state) == nil,
+                      cs.gold >= engine.tradePrice(want, 1, from: k, to: civ, in: state) * 4,
+                      let t = engine.lands(of: k, in: state).first else { continue }
+                if attempt(.tradeWithKingdom(territory: t, resource: want, amount: 1), &state, &turn) { return }
+            }
+        }
+    }
+}

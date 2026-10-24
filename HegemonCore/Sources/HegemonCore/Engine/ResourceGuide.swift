@@ -57,9 +57,12 @@ extension Engine {
         let own = yield(of: resource, in: homeNetwork(of: civ, in: state), state)
         let trade = tradeRoutes(in: state).filter { $0.involves(civ) }.compactMap { route -> (CivilizationID, Int)? in
             let partner = route.partner(of: civ)
-            let n = yield(of: resource, in: homeNetwork(of: partner, in: state), state) / rules.trade.shareDivisor
+            let n = shared(yield(of: resource, in: homeNetwork(of: partner, in: state), state), along: route)
             return n > 0 ? (partner, n) : nil
         }
-        return (own, trade.map { (partner: $0.0, amount: $0.1) })
+        // Kingdoms selling goods each turn count as partners too.
+        let kingdoms = state.kingdomTrades.filter { $0.civ == civ && $0.until >= state.turn && $0.goods.resource == resource }
+            .map { (partner: $0.kingdom, amount: $0.goods.amount) }
+        return (own, trade.map { (partner: $0.0, amount: $0.1) } + kingdoms)
     }
 }

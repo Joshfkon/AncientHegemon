@@ -140,7 +140,9 @@ struct KingdomAudienceView: View {
                  + (vassal ? " · your vassal" : kingdom.overlord.map { " · vassal of \(Palette.name($0, state))" } ?? " · \(PeopleText.mood(attitude))"))
                 .font(.caption).foregroundStyle(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
-            Spacer()
+            ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+            trade(human, k)
             if canTalk {
                 let cost = engine.giftCost(at: territory, in: state)
                 let gold = state.civs[human]?.gold ?? 0
@@ -149,7 +151,8 @@ struct KingdomAudienceView: View {
                 Text(TribeTalks.likelihood(engine.giftChance(at: territory, for: human, in: state)).capitalizedFirst
                      + ". Even refused, gifts are remembered kindly.")
                     .font(.caption2).foregroundStyle(.white.opacity(0.6))
-                Button(engine.wouldSwear(territory, to: human, in: state) ? "Offer protection: they will swear" : "Offer protection") { act(.vassalage) }
+                let swear = engine.swearChance(territory, to: human, in: state)
+                Button(swear > 0 ? "Offer protection: \(swear)% they swear" : "Offer protection") { act(.vassalage) }
                     .font(.callout.bold())
                 Button(engine.demandWorks(at: territory, for: human, in: state) ? "Demand they submit: they will bow" : "Demand they submit") { act(.demand) }
                     .font(.callout.bold())
@@ -159,8 +162,67 @@ struct KingdomAudienceView: View {
                     .font(.caption).foregroundStyle(.white.opacity(0.6))
             }
             Button("Take your leave", action: close).font(.callout.bold()).padding(.top, 4)
+            }
+            }
         }
         .padding(20)
+    }
+
+    /// What their lands yield that they'd sell, and what we already buy from them.
+    @ViewBuilder private func trade(_ human: CivilizationID, _ k: CivilizationID) -> some View {
+        let ours = engine.trades(with: k, in: state).filter { $0.civ == human }
+        let goods = engine.kingdomYield(k, in: state).sorted { $0.key.rawValue < $1.key.rawValue }
+        if !goods.isEmpty || !ours.isEmpty {
+            Text("TRADE").font(.caption2.bold()).tracking(1).foregroundStyle(Bronze.gradient)
+            ForEach(ours, id: \.self) { t in
+                let left = t.until - state.turn + 1
+                Text("You buy \(DealText.goods(t.goods)) a turn for \(t.gold) gold · \(left) round\(left == 1 ? "" : "s") left")
+                    .font(.caption).foregroundStyle(.green)
+            }
+            let steps = engine.tradeSteps(from: k, to: human, in: state)
+            ForEach(goods, id: \.key) { r, _ in
+                let left = engine.forSale(r, from: k, in: state)
+                let why = engine.tradeRefusal(r, 1, from: k, to: human, in: state)
+                let price = engine.tradePrice(r, 1, from: k, to: human, in: state)
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(DealText.name(r).capitalizedFirst) · \(left) to sell").font(.callout.bold()).foregroundStyle(.white)
+                        Text(why.map(refusal) ?? "\(price) gold a turn for 1, \(engine.rules.kingdomTrade.rounds) rounds")
+                            .font(.caption2).foregroundStyle(why == nil ? .white.opacity(0.65) : .orange)
+                    }
+                    Spacer()
+                    if why == nil, session.isHumanTurn {
+                        Button("Buy") { buy(r) }.buttonStyle(.bordered).controlSize(.small)
+                    }
+                }
+            }
+            if let steps {
+                Text(steps <= 1 ? "Next door: no carriage to pay." : "\(steps) steps away by land and sea: carriage adds \((steps - 1) * engine.rules.kingdomTrade.stepPrice) gold a unit.")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.55))
+            }
+        }
+    }
+
+    private func refusal(_ why: TradeRefusal) -> String {
+        let k = engine.kingdom(at: territory, in: state)
+        let regard = k.flatMap { k in session.human.map { engine.attitude(of: k, toward: $0, in: state) } } ?? 0
+        let need = k.flatMap { engine.people(of: $0, in: state) }.flatMap { engine.rules.kingdomTrade.minAttitude[$0.temperament] } ?? 0
+        switch why {
+        case .gone: "They are gone"
+        case let .answersTo(lord): "They trade only with \(Palette.name(lord, state)), their overlord"
+        case .outOfReach: "Too far for their merchants (more than \(engine.rules.kingdomTrade.maxSteps) steps, or through enemy land)"
+        case .alreadyTrading: "You already buy this from them"
+        case .notEnoughGoods: "All they have is promised"
+        case .distrust: "They won't trade until they trust you (regard \(regard), need \(need)). Gifts help"
+        case .notEnoughGold: "Not enough gold for the first payment"
+        }
+    }
+
+    private func buy(_ r: Resource) {
+        if session.order(.tradeWithKingdom(territory: territory, resource: r, amount: 1)) {
+            spoken += 1
+            SoundBoard.shared.play(.coins, volume: 0.5)
+        }
     }
 
     private func act(_ kind: Parley) {

@@ -318,6 +318,8 @@ public struct GameState: Codable, Sendable, Equatable {
     public var access: Set<PeaceOffer> = []
     public var embargoes: [Embargo] = []
     public var bargains: [Bargain] = []
+    /// Kingdoms selling empires goods each turn (added after 1.0: older saves have none).
+    @SinceRelease public var kingdomTrades: [KingdomTrade] = []
     public var casusBelli: [PeaceOffer: Int] = [:]
     public var proposals: [Proposal] = []
     public var lastProposal: [PeaceOffer: Int] = [:]
