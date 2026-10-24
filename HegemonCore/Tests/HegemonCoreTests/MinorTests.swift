@@ -87,6 +87,11 @@ private let thrace = kingdomID("thrace")
         var s = try greeceBesideThrace(troops: 8)
         s.armies["thrace"]!.units = UnitCounts(infantry: 4)
         try engine.apply(.parley(territory: "thrace", .vassalage), to: &s)
+        // Newly sworn, they aren't called up at once.
+        #expect(throws: GameError.tooSoon("thrace")) {
+            try engine.apply(.levy(territory: "thrace", to: "macedonia"), to: &s)
+        }
+        s.kingdoms[thrace]!.lastLevy = s.turn - engine.rules.minors.levyRounds
         let events = try engine.apply(.levy(territory: "thrace", to: "macedonia"), to: &s)
         #expect(events == [.levied(civ: "greece", territory: "thrace", to: "macedonia", warriors: 2)])
         #expect(s.armies["macedonia"]!.units.infantry == 10)
@@ -394,5 +399,137 @@ private let thrace = kingdomID("thrace")
         s.land["thrace"]!.improvements.insert(.road)
         let after = try #require(engine.supplySteps(of: "greece", to: "anatolia", in: s))
         #expect(after < before)
+    }
+}
+
+/// Oaths that can fail: peoples who won't bow, levies unanswered, vassals who rise.
+@Suite struct UnreliableVassalTests {
+    let engine = try! Engine.calm()
+
+    func greeceBesideThrace(troops: Int = 8) throws -> GameState {
+        var s = try engine.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: troops))
+        s.armies["thrace"] = Army(owner: thrace, units: UnitCounts(infantry: 3))
+        s.civs["greece"]!.gold = 100
+        return s
+    }
+
+    func sworn(_ e: Engine, troops: Int = 8) throws -> GameState {
+        var s = try greeceBesideThrace(troops: troops)
+        try e.apply(.parley(territory: "thrace", .vassalage), to: &s)
+        #expect(e.overlord(of: "thrace", in: s) == "greece")
+        return s
+    }
+
+    @Test func theRealRulesAskMoreOfTheWarlike() throws {
+        let real = try Engine.bundled()
+        var s = try real.newGame(seed: 1, civilizations: ["greece", "egypt"])
+        s.land["macedonia"]!.owner = "greece"
+        s.armies["thrace"] = Army(owner: thrace, units: UnitCounts(infantry: 2))
+        // Two Thracian warriors and the men they can raise: a warlike people bows only to 4× that.
+        let need = real.troopsToCow(thrace, in: s)
+        #expect(need == 4 * (2 + real.rules.minors.vassalMuster))
+        s.armies["macedonia"] = Army(owner: "greece", units: UnitCounts(infantry: need - 1))
+        #expect(real.swearChance("thrace", to: "greece", in: s) == 0)
+        s.armies["macedonia"]!.units.infantry = need
+        #expect(real.swearChance("thrace", to: "greece", in: s) == real.rules.minors.swearChance[.warlike])
+        // Overwhelming force makes it likelier, never certain.
+        s.armies["macedonia"]!.units.infantry = need * 10
+        #expect(real.swearChance("thrace", to: "greece", in: s) == real.rules.minors.swearChanceMax)
+    }
+
+    @Test func aRefusalMakesThemDefiant() throws {
+        let proud = try engine.modified { json in
+            var m = json["minors"] as! [String: Any]
+            m["swearChance"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
+            m["swearChanceStep"] = 0
+            json["minors"] = m
+        }
+        var s = try greeceBesideThrace()
+        let events = try proud.apply(.parley(territory: "thrace", .vassalage), to: &s)
+        #expect(events == [.tribeRefused(civ: "greece", territory: "thrace", parley: .vassalage)])
+        #expect(proud.defiance("thrace", in: s) == proud.rules.minors.defiantRounds)
+        // However willing they might grow, they won't hear terms again for a while.
+        #expect(engine.swearChance("thrace", to: "greece", in: s) == 0)
+        s.turn += proud.rules.minors.defiantRounds
+        #expect(engine.swearChance("thrace", to: "greece", in: s) == 100)
+    }
+
+    @Test func aLevyMayGoUnanswered() throws {
+        let sullen = try engine.modified { json in
+            var m = json["minors"] as! [String: Any]
+            m["levyBaseChance"] = 0
+            m["levyPartialPercent"] = 0
+            m["levyAttitude"] = -10
+            json["minors"] = m
+        }
+        var s = try sworn(sullen)
+        s.kingdoms[thrace]!.attitude["greece"] = 0
+        s.armies["macedonia"] = nil
+        s.kingdoms[thrace]!.lastLevy = nil
+        let events = try sullen.apply(.levy(territory: "thrace", to: "macedonia"), to: &s)
+        #expect(events == [.levyRefused(civ: "greece", territory: "thrace")])
+        #expect(s.armies["thrace"]!.units.infantry == 3)
+        #expect(sullen.attitude(of: thrace, toward: "greece", in: s) == -10)
+        #expect(sullen.levyWait("thrace", in: s) == sullen.rules.minors.levyRounds)
+    }
+
+    @Test func aNewRulerMustWinTheOathAgain() throws {
+        let faithless = try engine.modified { json in
+            var m = json["minors"] as! [String: Any]
+            m["renewChance"] = -100
+            json["minors"] = m
+        }
+        var s = try sworn(faithless)
+        #expect(s.kingdoms[thrace]!.swornTo == s.civs["greece"]!.ruler.name)
+        // The same ruler: they stay.
+        var same = s
+        #expect(!faithless.minorsRound(&same).contains(.vassalFreed(civ: "greece", territory: "thrace")))
+        s.civs["greece"]!.ruler.name = "Someone New"
+        #expect(faithless.minorsRound(&s).contains(.vassalFreed(civ: "greece", territory: "thrace")))
+        #expect(faithless.overlord(of: "thrace", in: s) == nil)
+    }
+
+    @Test func aLoyalVassalRenewsItsOath() throws {
+        var s = try sworn(engine)
+        s.civs["greece"]!.ruler.name = "Someone New"
+        #expect(engine.minorsRound(&s).contains(.oathRenewed(civ: "greece", territory: "thrace")))
+        #expect(s.kingdoms[thrace]!.swornTo == "Someone New")
+        #expect(engine.overlord(of: "thrace", in: s) == "greece")
+    }
+
+    @Test func aWeakThroneInvitesRevolt() throws {
+        let real = try Engine.bundled()
+        var s = try sworn(engine)
+        s.kingdoms[thrace]!.attitude["greece"] = 50
+        s.civs["greece"]!.legitimacy = 60
+        #expect(real.revoltChance(of: thrace, in: s) == 0)
+        s.civs["greece"]!.legitimacy = 10
+        let weak = real.revoltChance(of: thrace, in: s)
+        #expect(weak == (real.rules.minors.rebelLegitimacy - 10) / real.rules.minors.rebelLegitimacyStep)
+        // Hated, the more so; left unwatched, more still.
+        s.kingdoms[thrace]!.attitude["greece"] = -50
+        #expect(real.revoltChance(of: thrace, in: s) > weak)
+        let hated = real.revoltChance(of: thrace, in: s)
+        s.armies["macedonia"] = nil
+        #expect(real.revoltChance(of: thrace, in: s) == hated + real.rules.minors.breakFreePercent)
+    }
+
+    @Test func aGarrisonThatOutnumbersTheRisingTakesTheLand() throws {
+        let faithless = try engine.modified { json in
+            var m = json["minors"] as! [String: Any]
+            m["renewChance"] = -100
+            json["minors"] = m
+        }
+        var s = try sworn(faithless)
+        try faithless.apply(.move(from: "macedonia", to: "thrace", units: UnitCounts(infantry: 5)), to: &s)
+        #expect(faithless.garrisoned("thrace", in: s))
+        s.civs["greece"]!.ruler.name = "Someone New"
+        _ = faithless.minorsRound(&s)
+        // Five against three: the garrison prevails, loses three, and holds Thrace outright.
+        #expect(s.owner(of: "thrace") == "greece")
+        #expect(s.armies["thrace"]?.units.total == 2)
+        #expect(s.stationed["thrace"] == nil)
     }
 }

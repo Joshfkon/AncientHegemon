@@ -310,7 +310,7 @@ struct GameScreen: View {
                 selected = .sea(sea)
             }
             // Launch with -demoTown YES to walk into the capital.
-            if UserDefaults.standard.bool(forKey: "demoTown"), let human = session.human, let seat = engine.seat(of: human, in: state) {
+            if UserDefaults.standard.string(forKey: "demoTown") != nil, let human = session.human, let seat = engine.seat(of: human, in: state) {
                 if UserDefaults.standard.string(forKey: "demoTown") == "full" { session.demoBuildAll(seat) }
                 cityShown = CityPick(id: seat)
             }
@@ -469,7 +469,7 @@ struct GameScreen: View {
                         if offers.count > 2 { notice("🕊️ +\(offers.count - 2) more", "View") { open(.diplomacy) } }
                     }
                     if !session.report.isEmpty, !session.report.contains(where: { $0.mine == true }) {
-                        notice("📜 \(session.report.count) events elsewhere", "Read") { session.showReport = true }
+                        notice("📜 \(session.report.count) event\(session.report.count == 1 ? "" : "s") elsewhere", "Read") { session.showReport = true }
                     }
                 }
             }

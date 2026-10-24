@@ -5,7 +5,10 @@
 **Category:** Games › Strategy (secondary: Games › Board)
 **Copyright:** 2026 Joshua Konstantinos
 **Age rating:** 9+ (Infrequent/Mild Cartoon or Fantasy Violence; nothing else)
-**Price:** Josh to decide (Free, or a one-time price)
+**Price:** Free (paid expansions to come later, like Polytopia)
+**Marketing URL:** https://ancienthegemon.com/
+**Support URL:** https://ancienthegemon.com/support/
+**Privacy Policy URL:** https://ancienthegemon.com/privacy/
 
 ## Promotional text (170)
 1200 BC. Four empires, dozens of proud kingdoms, and a world that is never the same twice. Build, bargain, marry and march your way to hegemony.

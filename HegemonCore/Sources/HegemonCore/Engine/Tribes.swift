@@ -103,8 +103,12 @@ extension Engine {
         case .vassalage:
             // Only a kingdom can swear fealty; a tribe without a name just joins or doesn't.
             guard let k else { throw GameError.noTribe(territory) }
-            guard wouldSwear(territory, to: civ, in: state) else {
+            // Even cowed or friendly, a people may refuse to bow; refused, they won't hear
+            // terms again for a while.
+            let chance = swearChance(territory, to: civ, in: state)
+            guard chance > 0, Int(state.rng.next() % 100) < chance else {
                 changeAttitude(of: k, toward: civ, by: rules.minors.vassalRefusedAttitude, &state)
+                if defiance(territory, in: state) == 0 { state.kingdoms[k]!.defiantUntil = state.turn + rules.minors.defiantRounds }
                 return [.tribeRefused(civ: civ, territory: territory, parley: kind)]
             }
             return swear(territory, to: civ, &state)

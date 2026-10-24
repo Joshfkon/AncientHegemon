@@ -827,6 +827,7 @@ final class GameSession {
         case let .navalBattle(_, r): return r.attacker == me || r.defender == me
         case let .storm(civ, _, _, _), let .piratesPlundered(civ, _, _), let .bountyPaid(civ, _): return civ == me
         case let .vassalSworn(civ, _), let .vassalFreed(civ, _), let .levied(civ, _, _, _), let .annexed(civ, _),
+             let .levyRefused(civ, _), let .oathRenewed(civ, _),
              let .peopleJoined(civ, _, _), let .peopleRaided(_, _, civ, _, _): return civ == me
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
@@ -958,7 +959,11 @@ final class GameSession {
                     add(civ, "\(peopleName(t).capitalizedFirst) swear\(peopleName(t).hasPrefix("the ") ? "" : "s") fealty to \(name(civ))", at: t)
                 }
             case let .vassalFreed(civ, t) where civ == human:
-                add(civ, "\(peopleName(t).capitalizedFirst) no longer serve\(peopleName(t).hasPrefix("the ") ? "" : "s") you", at: t)
+                add(civ, "\(peopleName(t).capitalizedFirst) rise\(peopleName(t).hasPrefix("the ") ? "" : "s") and no longer serve\(peopleName(t).hasPrefix("the ") ? "" : "s") you", at: t)
+            case let .levyRefused(civ, t) where civ == human:
+                add(civ, "\(peopleName(t).capitalizedFirst) send\(peopleName(t).hasPrefix("the ") ? "" : "s") no warriors: the levy goes unanswered", at: t)
+            case let .oathRenewed(civ, t) where civ == human:
+                add(civ, "\(peopleName(t).capitalizedFirst) swear\(peopleName(t).hasPrefix("the ") ? "" : "s") fealty anew to your new ruler", at: t)
             case let .levied(civ, t, to, warriors) where civ == human:
                 add(civ, "\(warriors) warriors of \(peopleName(t)) join your army in \(place(to))", at: to)
             case let .annexed(civ, t):

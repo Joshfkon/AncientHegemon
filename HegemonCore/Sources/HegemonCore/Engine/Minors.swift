@@ -69,10 +69,28 @@ public struct MinorRules: Codable, Sendable, Equatable {
     /// A kingdom this fond of a neighbouring empire may come over, with this chance a round.
     public let joinAttitude: Int
     public let joinPercent: Int
-    /// They swear as vassals when your troops next to their lands outnumber all their warriors
-    /// this many times, or when they like you this much.
-    public let vassalRatio: Int
+    /// They hear terms only when your troops next to their lands outnumber all their fighting
+    /// men (their warriors, plus `vassalMuster` more every people can raise) this many times,
+    /// by temperament; even then they swear only by chance (`swearChance`, rising by
+    /// `swearChanceStep` for each further multiple, to `swearChanceMax`). Friends (this
+    /// fond of you) swear with `friendSwearChance`. Refused, they won't hear terms again for
+    /// `defiantRounds`: take the land by force, or wait.
+    public let vassalRatio: [Temperament: Int]
+    public let vassalMuster: Int
+    public let swearChance: [Temperament: Int]
+    public let swearChanceStep: Int
+    public let swearChanceMax: Int
     public let vassalAttitude: Int
+    public let friendSwearChance: Int
+    public let defiantRounds: Int
+    /// A levy is answered in full with this chance, plus half their regard for the overlord,
+    /// plus `levyWatchedBonus` with the overlord's troops at hand (capped at `levyChanceMax`);
+    /// in part with `levyPartialPercent` more; otherwise not at all. Every levy is resented.
+    public let levyBaseChance: Int
+    public let levyWatchedBonus: Int
+    public let levyChanceMax: Int
+    public let levyPartialPercent: Int
+    public let levyAttitude: Int
     /// Tribute a turn: base, plus one gold for every so much of the kingdom's grain.
     public let tributeBase: Int
     public let tributeGrainPerGold: Int
@@ -84,8 +102,20 @@ public struct MinorRules: Codable, Sendable, Equatable {
     public let annexGoldPerLand: Int
     public let annexGoldPerWarrior: Int
     public let annexRatio: Int
-    /// Chance a round that a vassal with none of its overlord's troops nearby breaks free.
+    /// Chance a round that a vassal rises: `breakFreePercent` with none of its overlord's
+    /// troops nearby, plus one for every `rebelLegitimacyStep` the overlord's legitimacy is
+    /// below `rebelLegitimacy`, plus one for every `rebelAttitudeStep` of ill will; halved
+    /// with a garrison in its land.
     public let breakFreePercent: Int
+    public let rebelLegitimacy: Int
+    public let rebelLegitimacyStep: Int
+    public let rebelAttitudeStep: Int
+    /// An oath binds the vassal to the ruler it swore to. When a new ruler takes the throne,
+    /// it renews its oath with `renewChance`, plus half its regard, plus `renewWatchedBonus`
+    /// with troops at hand, less the overlord's missing legitimacy (below `rebelLegitimacy`);
+    /// otherwise it rises.
+    public let renewChance: Int
+    public let renewWatchedBonus: Int
     public let vassalPrestige: Int
 }
 
@@ -100,6 +130,10 @@ public struct Kingdom: Codable, Sendable, Equatable {
     public var overlord: CivilizationID?
     public var vassalSince: Int?
     public var lastLevy: Int?
+    /// The ruler the vassal swore to: a new one on the overlord's throne must win its oath again.
+    public var swornTo: String?
+    /// Having refused terms, it won't hear them again until this round.
+    public var defiantUntil: Int?
 
     public init(homeland: TerritoryID, name: String, ruler: String) {
         self.homeland = homeland
@@ -214,12 +248,73 @@ extension Engine {
         }
     }
 
-    /// Whether the kingdom holding a territory would swear to `civ` as vassals now.
-    public func wouldSwear(_ territory: TerritoryID, to civ: CivilizationID, in state: GameState) -> Bool {
-        guard let k = kingdom(at: territory, in: state) else { return false }
+    /// The troops `civ` needs next to a kingdom's lands before it will hear terms.
+    public func troopsToCow(_ kingdom: CivilizationID, in state: GameState) -> Int {
         let m = rules.minors
-        return troopsNextTo(kingdom: k, for: civ, in: state) >= m.vassalRatio * max(1, warriors(of: k, in: state))
-            || attitude(of: k, toward: civ, in: state) >= m.vassalAttitude
+        let ratio = people(of: kingdom, in: state).flatMap { m.vassalRatio[$0.temperament] } ?? 2
+        return ratio * (warriors(of: kingdom, in: state) + m.vassalMuster)
+    }
+
+    /// Rounds the kingdom holding a territory still refuses to hear terms from anyone.
+    public func defiance(_ territory: TerritoryID, in state: GameState) -> Int {
+        guard let k = kingdom(at: territory, in: state), let until = state.kingdoms[k]?.defiantUntil else { return 0 }
+        return max(0, until - state.turn)
+    }
+
+    /// The chance, in percent, that the kingdom holding a territory swears to `civ` if asked now.
+    public func swearChance(_ territory: TerritoryID, to civ: CivilizationID, in state: GameState) -> Int {
+        guard let k = kingdom(at: territory, in: state), state.kingdoms[k]?.overlord == nil,
+              let people = people(of: k, in: state), defiance(territory, in: state) == 0 else { return 0 }
+        let m = rules.minors
+        if attitude(of: k, toward: civ, in: state) >= m.vassalAttitude { return m.friendSwearChance }
+        let need = troopsToCow(k, in: state)
+        let troops = troopsNextTo(kingdom: k, for: civ, in: state)
+        guard need > 0, troops >= need else { return 0 }
+        return min(m.swearChanceMax, (m.swearChance[people.temperament] ?? 50) + (troops / need - 1) * m.swearChanceStep)
+    }
+
+    /// Whether the kingdom holding a territory might swear to `civ` now (at some chance).
+    public func wouldSwear(_ territory: TerritoryID, to civ: CivilizationID, in state: GameState) -> Bool {
+        swearChance(territory, to: civ, in: state) > 0
+    }
+
+    /// The chance, in percent, that a vassal answers a levy in full now.
+    public func levyChance(_ territory: TerritoryID, in state: GameState) -> Int {
+        guard let k = kingdom(at: territory, in: state), let lord = state.kingdoms[k]?.overlord else { return 0 }
+        let m = rules.minors
+        let chance = m.levyBaseChance + attitude(of: k, toward: lord, in: state) / 2 + (watched(k, by: lord, in: state) ? m.levyWatchedBonus : 0)
+        return max(0, min(m.levyChanceMax, chance))
+    }
+
+    /// Whether the overlord's troops stand in or beside a vassal's lands.
+    func watched(_ kingdom: CivilizationID, by lord: CivilizationID, in state: GameState) -> Bool {
+        troopsNextTo(kingdom: kingdom, for: lord, in: state) > 0 || lands(of: kingdom, in: state).contains { garrisoned($0, in: state) }
+    }
+
+    /// How much the overlord's legitimacy falls short of what keeps vassals in awe.
+    private func legitimacyShortfall(_ lord: CivilizationID, in state: GameState) -> Int {
+        max(0, rules.minors.rebelLegitimacy - (state.civs[lord]?.legitimacy ?? 0))
+    }
+
+    /// The chance, in percent, that a vassal kingdom rises this round.
+    public func revoltChance(of kingdom: CivilizationID, in state: GameState) -> Int {
+        guard let lord = state.kingdoms[kingdom]?.overlord else { return 0 }
+        let m = rules.minors
+        let held = lands(of: kingdom, in: state)
+        var chance = watched(kingdom, by: lord, in: state) ? 0 : m.breakFreePercent
+        chance += legitimacyShortfall(lord, in: state) / max(1, m.rebelLegitimacyStep)
+        chance += max(0, -attitude(of: kingdom, toward: lord, in: state)) / max(1, m.rebelAttitudeStep)
+        if held.contains(where: { garrisoned($0, in: state) }) { chance /= 2 }
+        return min(100, chance)
+    }
+
+    /// The chance, in percent, that a vassal renews its oath to a new ruler on its overlord's throne.
+    public func renewChance(of kingdom: CivilizationID, in state: GameState) -> Int {
+        guard let lord = state.kingdoms[kingdom]?.overlord else { return 0 }
+        let m = rules.minors
+        let chance = m.renewChance + attitude(of: kingdom, toward: lord, in: state) / 2
+            + (watched(kingdom, by: lord, in: state) ? m.renewWatchedBonus : 0) - legitimacyShortfall(lord, in: state)
+        return max(5, min(95, chance))
     }
 
     /// Tribute a vassal kingdom pays a turn.
@@ -331,7 +426,10 @@ extension Engine {
         guard let k = kingdom(at: territory, in: state) else { return [] }
         state.kingdoms[k]!.overlord = civ
         state.kingdoms[k]!.vassalSince = state.turn
-        state.kingdoms[k]!.lastLevy = nil
+        // Newly sworn, they aren't called up at once.
+        state.kingdoms[k]!.lastLevy = state.turn
+        state.kingdoms[k]!.swornTo = state.civs[civ]?.ruler.name
+        state.kingdoms[k]!.defiantUntil = nil
         state.kingdoms[k]!.attitude[civ] = max(attitude(of: k, toward: civ, in: state), 50)
         return [.vassalSworn(civ: civ, territory: territory)]
     }
@@ -358,7 +456,7 @@ extension Engine {
     }
 
     /// Calls up half the vassal's warriors in one land into neighbouring land of the overlord's.
-    /// They arrive having marched.
+    /// They arrive having marched: all of them, some, or none, as loyal as the vassal is.
     func levy(_ territory: TerritoryID, to: TerritoryID, _ state: inout GameState) throws -> [GameEvent] {
         let civ = state.activePlayer
         guard overlord(of: territory, in: state) == civ, let k = kingdom(at: territory, in: state) else {
@@ -367,8 +465,15 @@ extension Engine {
         guard map.areLandAdjacent(territory, to), state.owner(of: to) == civ,
               state.armies[to].map({ $0.owner == civ }) ?? true else { throw GameError.notAdjacent(territory, to) }
         guard levyWait(territory, in: state) == 0 else { throw GameError.tooSoon(territory) }
-        let called = warriors(at: territory, in: state) / 2
-        guard called > 0 else { throw GameError.insufficientUnits(territory) }
+        let asked = warriors(at: territory, in: state) / 2
+        guard asked > 0 else { throw GameError.insufficientUnits(territory) }
+        let m = rules.minors
+        let full = levyChance(territory, in: state)
+        let roll = Int(state.rng.next() % 100)
+        let called = roll < full ? asked : roll < full + m.levyPartialPercent ? max(1, asked / 2) : 0
+        state.kingdoms[k]!.lastLevy = state.turn
+        changeAttitude(of: k, toward: civ, by: m.levyAttitude, &state)
+        guard called > 0 else { return [.levyRefused(civ: civ, territory: territory)] }
         if state.stationed[territory] != nil {
             state.stationed[territory]!.warriors -= called
         } else {
@@ -377,7 +482,6 @@ extension Engine {
         let units = UnitCounts(infantry: called)
         join(units, battles: 0, to: to, owner: civ, &state)
         state.moved[to, default: .zero] += units
-        state.kingdoms[k]!.lastLevy = state.turn
         return [.levied(civ: civ, territory: territory, to: to, warriors: called)]
     }
 
@@ -454,15 +558,25 @@ extension Engine {
                 }
             }
             if let lord = kingdom.overlord {
-                // A vassal with none of its overlord's troops at hand, or whose overlord has
-                // fallen, may throw off the yoke.
-                let fallen = state.civs[lord]?.eliminated ?? true
-                let watched = troopsNextTo(kingdom: k, for: lord, in: state) > 0 || held.contains { garrisoned($0, in: state) }
-                if fallen || (!watched && Int(state.rng.next() % 100) < m.breakFreePercent) {
+                // A vassal whose overlord has fallen is free; one sworn to a ruler who is gone
+                // must be won again; any may rise against a weak, distant or hated overlord.
+                if state.civs[lord]?.eliminated ?? true {
                     state.kingdoms[k]!.overlord = nil
                     state.kingdoms[k]!.vassalSince = nil
-                    if !fallen { changeAttitude(of: k, toward: lord, by: -30, &state) }
                     events.append(.vassalFreed(civ: lord, territory: kingdom.homeland))
+                    continue
+                }
+                let ruler = state.civs[lord]?.ruler.name
+                if kingdom.swornTo == nil { state.kingdoms[k]!.swornTo = ruler }
+                if let sworn = kingdom.swornTo, sworn != ruler {
+                    if Int(state.rng.next() % 100) < renewChance(of: k, in: state) {
+                        state.kingdoms[k]!.swornTo = ruler
+                        events.append(.oathRenewed(civ: lord, territory: kingdom.homeland))
+                    } else {
+                        events += rise(k, against: lord, &state)
+                    }
+                } else if Int(state.rng.next() % 100) < revoltChance(of: k, in: state) {
+                    events += rise(k, against: lord, &state)
                 }
                 continue
             }
@@ -471,6 +585,36 @@ extension Engine {
             events += comeOver(k, &state)
         }
         return events
+    }
+
+    /// A vassal throws off its overlord. Where a garrison stands, the people fall on it: the
+    /// stronger side holds the land, and a garrison that prevails takes it outright.
+    private func rise(_ k: CivilizationID, against lord: CivilizationID, _ state: inout GameState) -> [GameEvent] {
+        guard let homeland = state.kingdoms[k]?.homeland else { return [] }
+        for t in lands(of: k, in: state) where garrisoned(t, in: state) {
+            let warriors = state.stationed[t]!.warriors
+            var garrison = state.armies[t]!.units
+            state.stationed[t] = nil
+            if garrison.total > warriors {
+                var losses = warriors
+                for type in [UnitType.infantry, .archers, .cavalry] {
+                    let lost = min(losses, garrison[type])
+                    garrison[type] -= lost
+                    losses -= lost
+                }
+                state.armies[t]!.units = garrison
+                state.land[t]!.owner = lord
+                taken(t, &state)
+            } else {
+                let left = warriors - garrison.total
+                state.armies[t] = left > 0 ? Army(owner: k, units: UnitCounts(infantry: left)) : nil
+            }
+        }
+        state.kingdoms[k]?.overlord = nil
+        state.kingdoms[k]?.vassalSince = nil
+        state.kingdoms[k]?.swornTo = nil
+        changeAttitude(of: k, toward: lord, by: -30, &state)
+        return [.vassalFreed(civ: lord, territory: homeland)]
     }
 
     /// How many warriors a land supports on its own (as at the start of the game).

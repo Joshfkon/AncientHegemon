@@ -372,7 +372,7 @@ public struct AIPlayer: Sendable {
             let grain = lands.map { map.territory($0)!.grain }.max() ?? 0
             let swear = personality.aggression < 1.3 && (grain <= 3 || (grain < 5 && personality.aggression < 1))
             guard swear, let t = lands.first(where: { engine.tribe(at: $0, for: civ, in: state) != nil && !state.parleyed.contains($0) }),
-                  engine.wouldSwear(t, to: civ, in: state) else { continue }
+                  engine.swearChance(t, to: civ, in: state) >= 40 else { continue }
             attempt(.parley(territory: t, .vassalage), &state, &turn)
         }
     }

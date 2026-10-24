@@ -2257,3 +2257,32 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   Games end sooner than on the classic board, and trade victories happen (about a quarter of
   games): random worlds have more coasts and seas between the empires, so trade routes form.
   Defences hold 38–55% (classic 39–90%).
+
+### Vassals who refuse, shirk and rise (Josh: "I can basically turn any region with 2 people into a vassal immediately… they should (sometimes) refuse to submit without a fight… sometimes fail to provide troops for levy… you should be concerned that they'll rebel if your power is weak / after successions")
+- **Submission is a gamble, priced by temperament.** A people hears terms only when your troops
+  next to its lands outnumber its fighting men (its warriors plus 2 more any people can raise)
+  4× if warlike, 3× if proud, 2× if mercantile or peaceable. Even then it swears only by
+  chance: 25% / 40% / 60% / 70%, plus 15% for each further multiple, at most 90%. Friends
+  (regard 40+) swear 80% of the time. A refusal sours them, and they won't hear terms again for
+  5 rounds. Then the choice is to take the land by force, or to wait. So two Thracians now need
+  16 troops at the border, and even then mostly say no. The "Make vassal" tile shows the odds.
+- **Levies are answered as loyally as the vassal is.** It sends all the warriors asked for with
+  30% + half its regard for you + 15% with your troops at hand (at most 90%). Otherwise it sends
+  some (25%) or none. Every levy costs 10 regard, answered or not. A newly sworn vassal can't be
+  levied until the levy interval has passed, so you can't swear one in and levy it the same turn.
+- **Oaths are personal.** A vassal swears to your ruler, not your throne. When a new ruler takes
+  the throne (succession, election, usurpation), each vassal renews its oath with 45% + half its
+  regard + 20% with your troops at hand, less your legitimacy's shortfall below 40. Otherwise
+  it rises.
+- **Revolt.** Each round a vassal rises with 8% if none of your troops are near, +1% per 2 points
+  of legitimacy below 40, +1% per 5 points of ill will; a garrison halves it. The vassal panel
+  shows the odds. Where a garrison stands, the people fall on it. The stronger side holds the
+  land, and a garrison that prevails takes the land outright, with the unrest of a conquest.
+- The AI asks for oaths only at 40%+ odds.
+- Rules version 34.
+- Balance (classic map, 80 games on each of two seed sets, before → after): Mesopotamia
+  28% → 16% and 23% → 10%; Egypt 37% → 42% and 37% → 41%; Greece 17% → 23% and 12% → 26%; Italia about
+  even. Mesopotamia won through cheap vassals: the same exploit the player found. Tests show that
+  only the old terms (twice the warriors, a certain yes) restore it, so the cost belongs to this
+  rule. A balance pass should give the opportunist another road, for example conquering what
+  won't swear. Random worlds: Greece 17%, Egypt 17%, Italia 32%, Mesopotamia 32%.

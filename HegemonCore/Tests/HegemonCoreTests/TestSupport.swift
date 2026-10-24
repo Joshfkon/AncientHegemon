@@ -32,6 +32,13 @@ extension Engine {
             minors["baseAttitude"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
             for key in ["growthCap", "raidPercent", "joinPercent", "breakFreePercent"] { minors[key] = 0 }
             minors["expandPercent"] = ["warlike": 0, "proud": 0, "mercantile": 0, "peaceable": 0]
+            // Vassals as sure as tests written before oaths could fail expect: they swear at
+            // twice their warriors, answer every levy and never rise unless left unwatched.
+            minors["vassalRatio"] = ["warlike": 2, "proud": 2, "mercantile": 2, "peaceable": 2]
+            minors["swearChance"] = ["warlike": 100, "proud": 100, "mercantile": 100, "peaceable": 100]
+            for (key, value) in ["vassalMuster": 0, "swearChanceMax": 100, "friendSwearChance": 100, "levyBaseChance": 100,
+                                 "levyChanceMax": 100, "levyAttitude": 0, "rebelLegitimacy": 0, "rebelAttitudeStep": 1000,
+                                 "renewChance": 100] { minors[key] = value }
             json["minors"] = minors
             // The empires start at war, as tests written before peaceful starts expect.
             var start = json["start"] as! [String: Any]

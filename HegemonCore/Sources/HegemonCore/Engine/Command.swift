@@ -125,6 +125,10 @@ public enum GameEvent: Codable, Sendable, Equatable {
     /// A vassal threw off its overlord, or was conquered by someone else.
     case vassalFreed(civ: CivilizationID, territory: TerritoryID)
     case levied(civ: CivilizationID, territory: TerritoryID, to: TerritoryID, warriors: Int)
+    /// A vassal would not answer the levy.
+    case levyRefused(civ: CivilizationID, territory: TerritoryID)
+    /// A vassal swore again to a new ruler on its overlord's throne.
+    case oathRenewed(civ: CivilizationID, territory: TerritoryID)
     case annexed(civ: CivilizationID, territory: TerritoryID)
     /// Vassal empires: a demand waiting for a person's answer, a submission, a refusal, the
     /// turn's tribute, and a vassal going free (outgrown its overlord, or the overlord fell).

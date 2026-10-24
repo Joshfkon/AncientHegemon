@@ -465,10 +465,14 @@ struct CommandBar: View {
                     session.order(.parley(territory: id, .demand))
                 }
                 if engine.people(at: id, in: state) != nil {
-                    let swears = engine.wouldSwear(id, to: human, in: state)
+                    let chance = engine.swearChance(id, to: human, in: state)
+                    let defiant = engine.defiance(id, in: state)
+                    let need = engine.kingdom(at: id, in: state).map { engine.troopsToCow($0, in: state) } ?? 0
                     Tile(symbol: "crown", title: "Make vassal",
-                         detail: swears ? "They'll swear to you: tribute, levies, no unrest" : "They'd refuse: you need \(engine.rules.minors.vassalRatio)× their warriors nearby, or their friendship",
-                         cost: Text(swears ? "+\(engine.tribute(at: id, in: state)) gold a turn" : "Sours them if refused"), enabled: true) {
+                         detail: defiant > 0 ? "Defiant: no terms for \(defiant) round\(defiant == 1 ? "" : "s")"
+                             : chance > 0 ? "\(chance)% they swear; refused, they turn defiant"
+                             : "Needs \(need) troops next door, or their friendship",
+                         cost: Text(chance > 0 ? "+\(engine.tribute(at: id, in: state)) gold a turn" : "Sours them if refused"), enabled: defiant == 0) {
                         session.order(.parley(territory: id, .vassalage))
                     }
                 }
@@ -480,6 +484,13 @@ struct CommandBar: View {
     /// Your vassal: what it pays, and calling on it.
     @ViewBuilder private func vassalSection(_ id: TerritoryID, _ human: CivilizationID, _ warriors: Int) -> some View {
         section("Vassal") {
+            if let k = engine.kingdom(at: id, in: state) {
+                let risk = engine.revoltChance(of: k, in: state)
+                let regard = engine.attitude(of: k, toward: human, in: state)
+                Tile(symbol: risk >= 10 ? "flame.fill" : "hand.raised.fill", title: "Loyalty",
+                     detail: "A new ruler must win their oath again",
+                     cost: Text("\(risk)% revolt · regard \(regard)").foregroundColor(risk >= 10 ? .orange : nil), enabled: false) {}
+            }
             Tile(symbol: "dollarsign.circle.fill", title: "Tribute", detail: "Paid every turn; no garrison needed, no unrest",
                  cost: Text("+\(engine.tribute(at: id, in: state)) gold a turn"), enabled: false) {}
             // Levies march to the neighbouring land of yours with the biggest army.
@@ -487,8 +498,9 @@ struct CommandBar: View {
                 state.owner(of: t) == human && (state.armies[t].map { $0.owner == human } ?? true)
             }.sorted { (state.armies[$0]?.units.total ?? 0, $1) > (state.armies[$1]?.units.total ?? 0, $0) }
             let wait = engine.levyWait(id, in: state)
+            let answer = engine.levyChance(id, in: state)
             Tile(symbol: "person.3.sequence.fill", title: "Levy",
-                 detail: fronts.first.map { "Half their warriors (\(warriors / 2)) join your army in \(engine.map.territory($0)?.name ?? $0)" }
+                 detail: fronts.first.map { "\(answer)% they send \(warriors / 2) to \(engine.map.territory($0)?.name ?? $0); resented" }
                     ?? "Needs land of yours next door",
                  cost: Text(wait > 0 ? "Again in \(wait) round\(wait == 1 ? "" : "s")" : "Every \(engine.rules.minors.levyRounds) rounds"),
                  enabled: wait == 0 && warriors >= 2 && fronts.first != nil) {
