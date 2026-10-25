@@ -513,7 +513,8 @@ struct TerritoryPanel: View {
             let grain = engine.rules.upkeep(of: army.units)
                 + army.units.total * (engine.haul(of: human, to: territory, in: state)?.extraGrain ?? 0)
             let per = engine.rules.economy.soldiersPerGold
-            Text("Upkeep: \(grain) 🌾 a turn, and 1 gold a turn for every \(per) soldiers in your realm (your army costs \(engine.armyPay(of: human, in: state)) gold a turn in all).")
+            let standing = engine.standingArmy(of: human, in: state)
+            Text("Upkeep: \(grain) 🌾 a turn, and 1 gold a turn for every \(per) soldiers; your people keep \(standing) soldiers at that wage, and each beyond costs more (your army costs \(engine.armyPay(of: human, in: state)) gold a turn in all).")
                 .font(.caption).foregroundStyle(.secondary)
         }
         if home {

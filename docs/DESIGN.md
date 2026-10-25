@@ -2318,3 +2318,88 @@ After the Amarna letters, in which the great kings bargained, married, gifted an
   Seeds 101: Greece 13%, Egypt 31%, Italia 36%, Mesopotamia 18%. Random worlds: Greece 16%, Egypt 23%,
   Italia 30%, Mesopotamia 30%. Trade with the kingdoms gave Mesopotamia back what harder oaths took
   (it was at 16% and 10%), and Egypt fell from about 41%.
+
+### War costs the realm; building makes it great (Josh: "it's too easy to turn all your population into troops and then march through the neighboring regions… Maybe they should have the opportunity to levy their population as troops for defense? Maybe soldiers should cost more to keep? It should be more like CIV where there is a trade off to expansion vs building your own infrastructure. You should be able to be fairly powerful without expansion. It's not Risk where territory is everything.")
+
+The sims showed the problem plainly. AI empires kept more soldiers than people: on random
+worlds 115–158 soldiers for every 100 people at the end of a game, and in one traced game Egypt
+had 20 soldiers on 7 people. A recruit cost 2 gold and one person, and that person paid only
+half a gold in tax. So the people were worth more as soldiers than as subjects, and realms never
+grew. Each rule below is something an ancient state really had to bear.
+
+- **The standing army and full pay.** Each realm keeps a guard of 3 soldiers plus 1 for every 2
+  people at the old wage (1 gold a turn for every 4 soldiers). Every soldier beyond that is a man
+  taken from his household and must be paid in full: 1 more gold for every 4 (`realm` in
+  rules.json). For example, 12 people keep 9 soldiers cheaply, and a 20-man host on those 12
+  people costs 5 + 2 = 7 gold a turn instead of 5.
+- **The war footing.** With more soldiers than the guard plus 3 for every 2 people, nobody
+  marries and the people stop growing. We first set this at 1 soldier per person. Warlike AIs
+  sat right on that line, so their realms never grew: classic-map empires ended with 1–2 lands
+  and kingdoms held 22 of the 40. At 150% it marks only real mass conscription.
+- **Famine hits an oversized army first.** When the grain runs short, soldiers beyond the
+  standing army slip home before the people starve.
+- **The people defend their land.** The levy is now 1 militiaman per 2 people, up to 6. It was 1
+  per 3, up to 3. Kingdoms raise half of that, as before. A peopled land is now a hard target, and
+  every militiaman who falls is one of its people.
+- **Conquest pays little at first.** Newly won land pays half its taxes for 5 rounds while it
+  settles, and still needs a garrison. Taxes also thin out with distance: they arrive in full from
+  lands up to 2 supply steps from the capital, then 10% less for each step beyond, down to half.
+  Roads shorten the steps. The town view shows how much of a land's tax arrives.
+- **Building grows the realm.** A land holds one person per grain it yields, and that now counts
+  farms and irrigation. So a farm raises the harvest and the people too, and with them taxes, the
+  levy and prestige. Each finished building gives +1 legitimacy.
+- **Building counts toward the legacy.** Prestige gains 2 for each building (each wall level
+  above the first counts) and 5 for each empire you trade with. Great works count as before. In the
+  sims, lowering these to 1 and 3 changed almost nothing.
+- **Tried and dropped: fields that need hands.** Each person would work 3 grain of fields, and
+  untended fields would give half. With realms of only 1–5 people, every recruit cut the harvest.
+  Expansion stopped even at 4 grain a worker with untended fields giving 75%, and Mesopotamia fell
+  to 3% of wins. The tax a recruit no longer pays already carries the point.
+- **AI.** Builders (turtle, merchant) keep their standing army. Warlike rulers go part of the way
+  toward the war footing: a conqueror halfway, an opportunist a tenth. Any of them goes all the way
+  when a land's garrison and levy are outnumbered at its border. Builders also leave grain for
+  their people to grow on, both when recruiting and when building ships. With no sea campaign
+  afoot, they disband idle crews that eat that grain. (Egypt used to keep 4 idle ships eating 4 of
+  its 8 grain, so its capital never grew past 2 people.) Every AI builds farms where people press on
+  what the land can feed, lays roads toward far peopled lands, and pays patrons of learning
+  with spare gold.
+- **App.** The gold explainer gives the standing army, full pay and the war footing. The steward
+  warns when the army is beyond what the people can spare and when the people stop growing. The
+  town view gives each land's tax reach. The army card's pay is its share of the realm's. The
+  walkthrough and the codex ("War and the realm") give the new rules.
+- **Sim.** `hegemon-sim` prints "the realm at the end": each empire's land, people, buildings,
+  great works, soldiers per 100 people, trade partners, land when winning, and how often the
+  winner held no more land than the average survivor ("tall wins"). `--trace --civ NAME` shows
+  that realm's grain, gold and lands each round.
+- **Saves.** The app used to drop an autosave whose rules version differed from the game's, so
+  any rules bump (35 for kingdom trade, 36 here) would have thrown away a 1.0 player's game in
+  progress. It now accepts saves from rules 34 (1.0) up to the current version and carries them
+  on under the current rules. This change adds no saved fields.
+- Rules version 36.
+- **Balance** (80 games each; before = rules 35, after = rules 36):
+
+  | | Greece | Egypt | Italia | Mesopotamia | tall wins | soldiers per 100 people |
+  |---|---|---|---|---|---|---|
+  | Classic, seeds 501, before | 22% | 29% | 30% | 19% | 23% | 115–185 |
+  | Classic, seeds 501, after | 35% | 19% | 20% | 26% | 21% | 84–118 |
+  | Classic, seeds 1001, before | 20% | 34% | 30% | 16% | 16% | 123–192 |
+  | Classic, seeds 1001, after | 35% | 28% | 6% | 31% | 21% | 86–130 |
+  | Random worlds, before | 11% | 28% | 30% | 31% | 7% | 115–152 |
+  | Random worlds, after | 14% | 34% | 16% | 36% | 13% | 64–85 |
+
+  - Land held at the end, Greece / Egypt / Italia / Mesopotamia:
+    - Classic: 1.1–1.3 / 3.5–3.6 / 2.9–3.4 / 3.9–4.2 before; 1.1 / 1.9–2.3 / 1.3–1.4 /
+      2.0–2.4 after.
+    - Random worlds: 2.7 / 6.9 / 6.9 / 7.9 before; 1.9 / 4.7 / 3.6 / 6.1 after.
+  - On the classic board Mesopotamia now wins holding 3.3–4.5 lands (8.9–9.5 before), and Egypt 2.5–2.7 (5.3–5.9).
+  - People per empire are steady or higher although land roughly halved. Egypt on random worlds
+    ends with 17.5 people on 4.7 lands, against 14.5 on 6.9 before.
+  - Every game is still decided by round 50, a third of them by a major legacy.
+  - Builders win: the merchant (Greece) and the turtle (Egypt) take about half the wins between
+    them, Greece on its great works and trade with one or two lands.
+  - **Open.** Italia, the conqueror, wins only 6% on seeds 1001; it is attacked about 600 times a
+    game and can no longer outnumber its raiders by stripping its people. Giving it a sixth
+    starting infantryman or a 30-grain chest changed little (9–10%). Warlike AIs mobilising less
+    eagerly didn't help either: a conqueror at a quarter of the war footing scored 8%, and one
+    keeping only its standing army also 8%. Greece is at the top of the range on the classic
+    board. Both are for a balance pass.

@@ -26,7 +26,7 @@ import Testing
 
     @Test func peopleCannotOverfillTheLand() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
-        let cap = engine.populationCap(of: "egypt")
+        let cap = engine.populationCap(of: "egypt", in: s)
         s.land["egypt"]!.population = cap - 1
         s.armies["egypt"]!.units = UnitCounts(infantry: 5)
         try engine.apply(.disband(territory: "egypt", units: UnitCounts(infantry: 5)), to: &s)

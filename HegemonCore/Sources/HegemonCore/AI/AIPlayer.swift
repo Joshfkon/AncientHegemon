@@ -37,13 +37,20 @@ public struct AIPlayer: Sendable {
         if let campaign { buildTransports(civ, for: campaign, &state, &turn) }
         courtPeoples(civ, &state, &turn)
         buyFromKingdoms(civ, &state, &turn)
-        recruit(civ, &state, &turn)
+        // Grain for the crews a sea campaign still lacks is not spent on soldiers.
+        let crews = campaign.map { c in
+            max(0, transportsWanted(civ, for: c, state) - state.fleets(of: civ).reduce(0) { $0 + $1.ships }) * rules.ships.upkeep
+        } ?? 0
+        recruit(civ, keeping: crews, &state, &turn)
         sally(civ, &state, &turn)
         attack(civ, &state, &turn)
         besiege(civ, &state, &turn)
         invest(civ, &state, &turn)
         huntPirates(civ, &state, &turn)
-        if let campaign { sail(civ, toward: campaign, &state, &turn) } else { shelterFleets(civ, &state, &turn) }
+        if let campaign { sail(civ, toward: campaign, &state, &turn) } else {
+            trimFleets(civ, &state, &turn)
+            shelterFleets(civ, &state, &turn)
+        }
         fortify(civ, &state, &turn)
         chooseDefensiveFormations(civ, &state, &turn)
         issue(.endTurn, &state, &turn)
@@ -250,15 +257,29 @@ public struct AIPlayer: Sendable {
 
     // MARK: Recruitment
 
-    func recruit(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
+    func recruit(_ civ: CivilizationID, keeping crews: Int = 0, _ state: inout GameState, _ turn: inout AITurn) {
         let cheapest = UnitType.allCases.map { rules.stats($0).cost }.min()!
         let income = engine.economy(of: civ, in: state).income
+        // In danger, the realm goes on a war footing; otherwise it keeps an army by temperament,
+        // and leaves the rest of its people to work and grow.
+        let pressed = engine.homeNetwork(of: civ, in: state).contains { t in
+            threat(to: t, for: civ, state) > (state.armies[t].map { $0.owner == civ ? $0.units.total : 0 } ?? 0)
+                + engine.levy(at: t, state)
+        }
         for _ in 0..<60 {
             guard state.civs[civ]!.gold >= cheapest else { return }
             // Only raise soldiers the treasury can keep paying: income, or savings for a while.
-            let soldiers = state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total }
-            let pay = engine.armyPay(soldiers: soldiers + 1)
+            let soldiers = engine.soldiers(of: civ, in: state)
+            let people = state.totalPopulation(of: civ) - 1
+            let pay = engine.armyPay(soldiers: soldiers + 1, people: people)
             guard pay <= income + max(0, state.civs[civ]!.gold - cheapest) / 6 else { return }
+            // Warlike rulers keep more than the people can spare, as far as they can pay full wages;
+            // builders keep their standing army.
+            // The more warlike, the nearer the war footing: a conqueror goes halfway.
+            let standing = engine.standingArmy(people: people)
+            let eager = min(1, max(0, personality.aggression - 1))
+            let calm = standing + Int(Double(engine.warFooting(people: people) - standing) * eager)
+            guard soldiers + 1 <= (pressed ? max(calm, engine.warFooting(people: people)) : calm) else { return }
             let home = engine.homeNetwork(of: civ, in: state)
             // Don't raise more mouths than the home granary can carry for a few turns.
             let production = engine.yield(of: .grain, in: home, state)
@@ -269,7 +290,9 @@ public struct AIPlayer: Sendable {
             let spare = max(0, state.civs[civ]!.gold - investmentReserve(civ, state))
             let imports = min(engine.grainImportCap(of: civ, in: state),
                               spare / (max(1, rules.trade.grainPrice) * importTurns))
-            guard eaten + 1 + margin <= production + state.civs[civ]!.granary / 4 + imports else { return }
+            // Out of danger, a builder leaves the people grain to grow on.
+            let growth = pressed ? 0 : growthReserve(civ, state)
+            guard eaten + 1 + margin + growth + crews <= production + state.civs[civ]!.granary / 4 + imports else { return }
 
             let spots = home.filter { t in
                 state.population(of: t) - 1 >= rules.economy.minPopulation
@@ -287,6 +310,14 @@ public struct AIPlayer: Sendable {
             guard attempt(.recruit(territory: spot, unit: preferred, count: 1), &state, &turn)
                     || issue(.recruit(territory: spot, unit: .infantry, count: 1), &state, &turn) else { return }
         }
+    }
+
+    /// Grain a builder keeps back for its people to grow on: one for each home land below its cap.
+    /// Warlike rulers keep none.
+    func growthReserve(_ civ: CivilizationID, _ state: GameState) -> Int {
+        guard personality.aggression <= 1 else { return 0 }
+        return engine.homeNetwork(of: civ, in: state).filter { state.population(of: $0) < engine.populationCap(of: $0, in: state) }.count
+            * rules.economy.growthPerTerritory
     }
 
     /// Turns of grain imports the treasury must be able to pay for before the AI raises troops on them.

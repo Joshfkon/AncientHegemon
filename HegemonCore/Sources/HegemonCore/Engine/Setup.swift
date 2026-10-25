@@ -90,7 +90,7 @@ public struct Scenario: Sendable, Identifiable {
             let near = engine.map.landNeighbors(of: capital).filter { s.owner(of: $0) == nil }.sorted().prefix(3)
             own(&s, civ, Array(near))
             for t in [capital] + near {
-                s.land[t]!.population = max(s.population(of: t), engine.populationCap(of: t) * 2 / 3)
+                s.land[t]!.population = max(s.population(of: t), engine.populationCap(of: t, in: s) * 2 / 3)
             }
             s.armies[capital] = Army(owner: civ, units: UnitCounts(infantry: 5, archers: 2, cavalry: 1))
             s.civs[civ]!.gold += 25

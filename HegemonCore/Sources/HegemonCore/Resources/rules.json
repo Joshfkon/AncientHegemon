@@ -1,5 +1,5 @@
 {
-  "version": 35,
+  "version": 36,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -27,7 +27,9 @@
       "perPopulation": 1,
       "goldDivisor": 2,
       "legitimacyDivisor": 2,
-      "capitalHeld": 20
+      "capitalHeld": 20,
+      "perBuilding": 2,
+      "perTradePartner": 5
     }
   },
   "economy": {
@@ -47,6 +49,17 @@
     "luxuriesPerLegitimacy": 2,
     "luxuryLegitimacyCap": 2,
     "queueLength": 3
+  },
+  "realm": {
+    "standingBase": 3,
+    "standingPercent": 50,
+    "overSoldiersPerGold": 4,
+    "noGrowthPercent": 150,
+    "newLandTaxPercent": 50,
+    "fullTaxSteps": 2,
+    "taxLossPerStep": 10,
+    "minTaxPercent": 50,
+    "buildingLegitimacy": 1
   },
   "projects": {
     "road": {
@@ -631,8 +644,8 @@
     ],
     "defaultFormation": "phalanx",
     "levy": {
-      "populationPerUnit": 3,
-      "maxUnits": 3,
+      "populationPerUnit": 2,
+      "maxUnits": 6,
       "minPopulation": 2,
       "damagePercent": 50,
       "moralePenalty": 30

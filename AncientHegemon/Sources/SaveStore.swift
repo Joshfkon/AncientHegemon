@@ -5,6 +5,9 @@ import HegemonCore
 struct SavedGame: Codable {
     /// Bumped when this format changes; older saves are ignored rather than misread.
     static let currentVersion = 1
+    /// The rules of the first release (1.0). Games saved under them or any later rules carry on
+    /// under the current rules after an update; new saved fields decode as empty (`SinceRelease`).
+    static let oldestRules = 34
 
     var version = SavedGame.currentVersion
     var human: CivilizationID
@@ -42,11 +45,12 @@ enum SaveStore {
     /// The saved game, if there is one this version of the game can still play.
     static func load(for engine: Engine) -> SavedGame? {
         guard let data = try? Data(contentsOf: url),
-              let game = try? JSONDecoder().decode(SavedGame.self, from: data),
+              var game = try? JSONDecoder().decode(SavedGame.self, from: data),
               game.version == SavedGame.currentVersion,
               game.state.mapVersion == (game.map?.version ?? engine.map.version),
-              game.state.rulesVersion == engine.rules.version,
+              (SavedGame.oldestRules...engine.rules.version).contains(game.state.rulesVersion),
               game.state.winner == nil else { return nil }
+        game.state.rulesVersion = engine.rules.version
         return game
     }
 

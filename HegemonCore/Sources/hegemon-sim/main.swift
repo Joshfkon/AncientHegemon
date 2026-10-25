@@ -173,6 +173,17 @@ if CommandLine.arguments.contains("--trace") {
                     + pad(String(cs.gold), 5) + pad(String(cs.granary), 8)).padding(toLength: 28, withPad: " ", startingAt: 0)
         }
         print(pad(String(s.turn), 5) + "  " + cols.joined())
+        // --civ NAME: that realm's grain and gold, land by land.
+        if let civ = option("--civ"), s.civs[civ].map({ !$0.eliminated }) ?? false {
+            let e = engine.economy(of: civ, in: s)
+            print("       \(civ): grain +\(e.grainProduced) people -\(e.eatenByPeople) armies -\(e.eatenByArmies) haul -\(e.eatenByDistance) "
+                  + "sea -\(e.eatenAtSea) store \(e.granary)/\(e.granaryCap); gold +\(e.income) pay -\(e.pay); tax \(e.taxRate)% "
+                  + "growth \(e.growthPercent)%; soldiers \(engine.soldiers(of: civ, in: s)) standing \(engine.standingArmy(of: civ, in: s))")
+            for t in s.territories(of: civ) {
+                let r = engine.territoryReport(t, for: civ, in: s)
+                print("         \(t): people \(r.people)/\(r.peopleCap) grain \(r.grain) taxes \(r.taxes) (\(r.taxPercent)%) army \(s.armies[t].map { $0.owner == civ ? $0.units.total : 0 } ?? 0)")
+            }
+        }
     }
     print("winner: \(record.winner ?? "none") after \(record.turns) turns")
     exit(0)
@@ -180,6 +191,7 @@ if CommandLine.arguments.contains("--trace") {
 
 let started = Date()
 var records: [MatchRecord] = []
+var partnersAtEnd: [[CivilizationID: Int]] = []
 for g in 0..<games {
     let seed = firstSeed + UInt64(g)
     let civsInOrder = engine.map.civilizations.map(\.id)
@@ -190,6 +202,9 @@ for g in 0..<games {
     let record = try playAIMatch(engine: gameEngine, seed: seed, personalities: personalities,
                                  civilizations: order, maxTurns: maxTurns)
     records.append(record)
+    let routes = gameEngine.tradeRoutes(in: record.finalState)
+    partnersAtEnd.append(Dictionary(uniqueKeysWithValues: civsInOrder.map { c in
+        (c, Set(routes.filter { $0.involves(c) }.map { $0.partner(of: c) }).count) }))
     let land = record.finalState.players
         .map { "\($0) \(record.finalState.territories(of: $0).count)" }.joined(separator: ", ")
     let how = record.finalState.victory.map { " by \($0.grade.rawValue) \($0.kind.rawValue)" } ?? ""
@@ -378,3 +393,41 @@ print("odds         " + labels.map { pad($0, 11) }.joined())
 print("battles      " + odds.battles.map { pad(String($0), 11) }.joined())
 print("attacker won " + odds.battles.indices.map { pad(pct(odds.attackerWins[$0], odds.battles[$0]), 11) }.joined())
 
+
+// Tall or wide: what each empire had at the end, and how much land its wins took.
+func buildings(_ civ: CivilizationID, _ s: GameState) -> Int {
+    s.territories(of: civ).reduce(0) { total, t in
+        let land = s.land[t]!
+        return total + land.improvements.count + max(0, (land.improvements.contains(.walls) ? (land.wallLevel ?? 1) : 0) - 1)
+    }
+}
+print("")
+print("the realm at the end (survivors; averages)")
+print("civ          land  people  buildings  great works  soldiers  soldiers per 100 people  trade partners  land when winning")
+for civ in civs {
+    let alive = records.filter { $0.finalState.civs[civ].map { !$0.eliminated } ?? false }
+    let n = Double(max(1, alive.count))
+    func avg(_ f: (MatchRecord) -> Int) -> String { String(format: "%.1f", Double(alive.map(f).reduce(0, +)) / n) }
+    let people = alive.map { $0.finalState.totalPopulation(of: civ) }.reduce(0, +)
+    let soldiers = alive.map { $0.finalState.totalUnits(of: civ).total }.reduce(0, +)
+    let won = records.filter { $0.winner == civ }
+    let wonLand = won.isEmpty ? "-" : String(format: "%.1f", Double(won.map { $0.finalState.territories(of: civ).count }.reduce(0, +)) / Double(won.count))
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + pad(avg { $0.finalState.territories(of: civ).count }, 4)
+          + pad(avg { $0.finalState.totalPopulation(of: civ) }, 8)
+          + pad(avg { buildings(civ, $0.finalState) }, 11)
+          + pad(avg { engine.monumentPrestige(of: civ, in: $0.finalState) > 0 ? engine.monuments(of: civ, in: $0.finalState).count : 0 }, 13)
+          + pad(avg { $0.finalState.totalUnits(of: civ).total }, 10)
+          + pad(String(people == 0 ? 0 : soldiers * 100 / people), 25)
+          + pad(String(format: "%.1f", Double(records.indices.filter { !(records[$0].finalState.civs[civ]?.eliminated ?? true) }
+              .map { partnersAtEnd[$0][civ] ?? 0 }.reduce(0, +)) / n), 16)
+          + pad(wonLand, 19))
+}
+// A win is "tall" when the winner held no more land than the average survivor of that game.
+let tallWins = decided.filter { r in
+    guard let w = r.winner else { return false }
+    let alive = r.finalState.players.filter { !(r.finalState.civs[$0]?.eliminated ?? true) }
+    let mean = Double(alive.map { r.finalState.territories(of: $0).count }.reduce(0, +)) / Double(max(1, alive.count))
+    return Double(r.finalState.territories(of: w).count) <= mean
+}.count
+print("tall wins (winner held no more land than the average survivor): \(pct(tallWins, decided.count)) of decided games")

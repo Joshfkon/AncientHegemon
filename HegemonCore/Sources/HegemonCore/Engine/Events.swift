@@ -51,7 +51,7 @@ extension Engine {
         let owned = state.territories(of: civ)
         let river = !riverValleys(civ, state).isEmpty
         let population = owned.reduce(0) { $0 + state.population(of: $1) }
-        let cap = owned.reduce(0) { $0 + populationCap(of: $1) }
+        let cap = owned.reduce(0) { $0 + populationCap(of: $1, in: state) }
         let crowded = population * 10 >= cap * 9
         let routes = tradeRoutes(in: state).filter { $0.involves(civ) }.count
         let rugged = owned.filter { [.hills, .mountains].contains(map.territory($0)!.terrain) }.count

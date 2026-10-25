@@ -31,8 +31,8 @@ struct WalkthroughView: View {
         ]),
         Page(title: "Raising troops", picture: AnyView(Picture.recruit), steps: [
             "Tap one of your territories and use Raise infantry, archers or cavalry.",
-            "Each soldier costs gold and one of that land's people. Cavalry also need horses.",
-            "After that each soldier eats 1 🌾 grain a turn, and every 4 soldiers cost 1 gold a turn in pay. Run out of gold and some go home.",
+            "Each soldier costs gold and one of that land's people, who no longer pays taxes. Cavalry also need horses.",
+            "Each soldier eats 1 🌾 grain a turn. A guard of 3 and 1 soldier for every 2 people cost 1 gold per 4 in pay; every soldier beyond that is paid in full. Field half again as many soldiers as you have people and your people stop growing. Run out of gold and some go home.",
         ]),
         Page(title: "Grain and supply", picture: AnyView(Picture.grain), steps: [
             "Land grows 🌾 grain. People and soldiers eat it; run short and they starve or desert.",

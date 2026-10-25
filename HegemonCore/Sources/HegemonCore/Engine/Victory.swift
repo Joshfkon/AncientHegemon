@@ -21,6 +21,13 @@ extension Engine {
             + objectivePrestige(of: civ, in: state)
             + vassals(of: civ, in: state).count * rules.minors.vassalPrestige
             + vassalEmpires(of: civ, in: state).count * rules.submission.prestige
+            + buildings(of: civ, in: state) * p.perBuilding
+            + tradePartners(of: civ, in: state) * p.perTradePartner
+    }
+
+    /// Empires a civ trades with.
+    public func tradePartners(of civ: CivilizationID, in state: GameState) -> Int {
+        Set(tradeRoutes(in: state).filter { $0.involves(civ) }.map { $0.partner(of: civ) }).count
     }
 
     /// Where a civilization's prestige comes from, part by part (they sum to `prestige`).
@@ -41,6 +48,8 @@ extension Engine {
             ("Prizes held", objectivePrestige(of: civ, in: state)),
             ("Vassals", vassals(of: civ, in: state).count * rules.minors.vassalPrestige),
             ("Vassal empires", vassalEmpires(of: civ, in: state).count * rules.submission.prestige),
+            ("\(buildings(of: civ, in: state)) buildings", buildings(of: civ, in: state) * p.perBuilding),
+            ("Trade with \(tradePartners(of: civ, in: state))", tradePartners(of: civ, in: state) * p.perTradePartner),
         ].filter { $0.1 != 0 }
     }
 

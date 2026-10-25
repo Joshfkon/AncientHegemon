@@ -182,7 +182,11 @@ struct StatExplainer: View {
                     Divider()
                     row("Each turn", e.netIncome, bold: true)
                 }
-                Text("Spend it on troops, ships, generals and buildings. Every \(session.engine.rules.economy.soldiersPerGold) soldiers draw 1 gold a turn in pay; if the treasury can't pay, some go home. Higher taxes bring more but slow growth and cost legitimacy.")
+                if let e = econ {
+                    Text("Soldiers \(e.soldiers): your people keep \(e.standingArmy) at the base wage of 1 gold per \(session.engine.rules.economy.soldiersPerGold); each beyond costs more\(e.soldiers > e.warFooting ? ", and with so many under arms your people have stopped growing" : "").")
+                        .font(.caption).foregroundStyle(e.soldiers > e.standingArmy ? .orange : .secondary)
+                }
+                Text("Spend it on troops, ships, generals and buildings. If the treasury can't pay the army, some go home. Taxes come in full only from lands near the capital (roads bring far ones closer), and newly won land pays half. Higher taxes bring more but slow growth and cost legitimacy.")
                     .font(.caption).foregroundStyle(.secondary)
             case .grain:
                 Text("Grain").font(.headline)
@@ -205,19 +209,19 @@ struct StatExplainer: View {
                 if let human = session.human {
                     let state = session.state, engine = session.engine
                     let land = state.territories(of: human).sorted { state.population(of: $0) > state.population(of: $1) }
-                    let cap = land.reduce(0) { $0 + engine.populationCap(of: $1) }
+                    let cap = land.reduce(0) { $0 + engine.populationCap(of: $1, in: state) }
                     row("In your realm", state.totalPopulation(of: human), bold: true)
                     Text("Room for \(cap) on the land you hold.").font(.caption)
                     ForEach(land.prefix(5), id: \.self) { t in
                         HStack {
                             Text(engine.map.territory(t)?.name ?? t)
                             Spacer()
-                            Text("\(state.population(of: t)) of \(engine.populationCap(of: t))").monospacedDigit()
+                            Text("\(state.population(of: t)) of \(engine.populationCap(of: t, in: state))").monospacedDigit()
                         }
                         .font(.caption)
                     }
                 }
-                Text("People pay taxes, eat grain and become soldiers (each recruit takes one). They grow when there's grain to spare and taxes aren't too high.")
+                Text("People pay taxes, defend their land as militia, and become soldiers (each recruit takes one). They grow when there's grain to spare, taxes aren't too high and the young men aren't all under arms. A land holds one person per grain it yields, so farms make room for more.")
                     .font(.caption).foregroundStyle(.secondary)
             case .legitimacy:
                 Text("Legitimacy").font(.headline)
@@ -291,15 +295,17 @@ struct TipBanner: View {
 struct CodexView: View {
     private let sections: [(String, String, String)] = [
         ("flag.fill", "Winning",
-         "Hold 60% of the land for a domination victory, dominate trade for a trade victory, or have the most prestige when the age ends at round 50. Wins come in decisive, major and minor grades."),
+         "Hold 60% of the land for a domination victory, dominate trade for a trade victory, or have the most prestige when the age ends at round 50 (land, people, gold, legitimacy, buildings, trade partners, great works and vassals all count). Wins come in decisive, major and minor grades."),
         ("arrow.triangle.turn.up.right.diamond.fill", "A turn",
          "Your turn starts with events and the harvest. Then move armies (each unit once), recruit, build, sail and make peace or war. End the turn and every rival moves in turn."),
         ("leaf.fill", "Grain and supply",
-         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn, and every 4 soldiers draw 1 gold a turn in pay. Roads let troops march twice a turn through your land. Carting grain overland eats it: armies 3+ land steps from the capital eat more, unless roads or ships carry the supply. Keep supply lines open: land cut off from the capital can't recruit, pays no taxes, and its armies waste away a unit a turn."),
+         "Land grows grain; people and soldiers eat it: each soldier and each ship's crew 1 grain a turn. Roads let troops march twice a turn through your land. Carting grain overland eats it: armies 3+ land steps from the capital eat more, unless roads or ships carry the supply. Keep supply lines open: land cut off from the capital can't recruit, pays no taxes, and its armies waste away a unit a turn."),
         ("arrow.left.arrow.right", "Trade and resources",
          "Empires at peace that can reach each other trade automatically, sharing ore, horses, timber and more. Copper and tin make bronze, which arms your troops; it wears out without fresh tin. Iron needs Ironworking."),
         ("shield.lefthalf.filled", "Battles",
          "Battles are fought on a 5×5 field. Your formation, line depth and stratagem matter, as do terrain, rivers, walls, generals and equipment. Defenders have the edge in even fights."),
+        ("building.columns.fill", "War and the realm",
+         "Every soldier is one of your people taken from his fields. Your people keep a guard of 3 and 1 soldier for every 2 of them at the base wage; every soldier beyond that is paid in full, and with half again as many soldiers as people nobody marries and the realm stops growing. When attacked, a land's people rise as militia, 1 for every 2 of them, up to 6, so peopled land is hard to take. Conquered land pays half its taxes while it settles and needs a garrison; land far from the capital pays less unless roads bring it closer. Farms let more people live on a land, and every building and every trading partner adds prestige: a small realm, well built, can win the age."),
         ("sailboat.fill", "The sea",
          "Ships sail up to two seas a turn, but never past an enemy fleet: sail into it to fight. Storms can sink a third of a fleet that isn't off a harbour of its own; your own coasts, Seafaring and the Lighthouse make them rarer. Pirates (☠) appear from round 4: they plunder unwalled coasts with none of the owner's ships in that sea or the next, and close the sea they sit on to trade and supply. A fleet of 3 or more patrols its sea and the seas next to it: pirates won't appear or sail there, and soon break up. Sinking them pays a bounty."),
         ("person.3.fill", "Peoples and vassals",

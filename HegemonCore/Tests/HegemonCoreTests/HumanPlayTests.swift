@@ -153,8 +153,8 @@ import Testing
             // And play continues identically from the restored game.
             if state.winner == nil {
                 var a = state, b = restored
-                _ = AIPlayer(engine: engine, personality: .turtle).playTurn(&a)
-                _ = AIPlayer(engine: engine, personality: .turtle).playTurn(&b)
+                _ = AIPlayer(engine: engine, personality: .turtle).play(&a)
+                _ = AIPlayer(engine: engine, personality: .turtle).play(&b)
                 #expect(a == b)
             }
         }

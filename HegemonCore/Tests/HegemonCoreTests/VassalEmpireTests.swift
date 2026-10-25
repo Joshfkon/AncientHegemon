@@ -128,9 +128,14 @@ import Testing
 
     @Test func theOverlordGainsPrestige() throws {
         var s = try world(egypt: 3, meso: 10)
-        let before = engine.prestige(of: "mesopotamia", in: s)
+        // Peace may open trade too, which is worth prestige of its own.
+        func prestige() -> Int {
+            engine.prestige(of: "mesopotamia", in: s)
+                - engine.tradePartners(of: "mesopotamia", in: s) * engine.rules.victory.prestige.perTradePartner
+        }
+        let before = prestige()
         _ = try engine.apply(.demandSubmission(of: "egypt"), to: &s)
-        #expect(engine.prestige(of: "mesopotamia", in: s) == before + engine.rules.submission.prestige)
+        #expect(prestige() == before + engine.rules.submission.prestige)
         #expect(engine.prestigeBreakdown(of: "mesopotamia", in: s).contains {
             $0.source == "Vassal empires" && $0.points == engine.rules.submission.prestige
         })
@@ -197,7 +202,7 @@ import Testing
     @Test func anAIOverlordDemandsSubmissionFromABeatenRival() throws {
         var s = try world(egypt: 2, meso: 12)
         let ai = AIPlayer(engine: engine, personality: .conqueror)
-        let turn = ai.playTurn(&s)
+        let turn = ai.play(&s)
         #expect(turn.events.contains(.submitted(vassal: "egypt", overlord: "mesopotamia")))
         #expect(engine.liege(of: "egypt", in: s) == "mesopotamia")
         #expect(turn.rejected.isEmpty)
@@ -207,7 +212,7 @@ import Testing
         var s = try world(egypt: 2, meso: 12)
         s.civs["egypt"]!.isHuman = true
         let ai = AIPlayer(engine: engine, personality: .conqueror)
-        let turn = ai.playTurn(&s)
+        let turn = ai.play(&s)
         #expect(turn.events.contains(.submissionDemanded(from: "mesopotamia", to: "egypt")))
         #expect(!turn.events.contains(.peaceOffered(from: "mesopotamia", to: "egypt")))
         #expect(s.submissionDemands.contains(PeaceOffer(from: "mesopotamia", to: "egypt")))
@@ -222,7 +227,7 @@ import Testing
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         for _ in 0..<6 where s.winner == nil {
             if s.activePlayer == "egypt" {
-                let turn = ai.playTurn(&s)
+                let turn = ai.play(&s)
                 #expect(turn.rejected.isEmpty)
             } else {
                 _ = try passTurn(&s)

@@ -29,8 +29,9 @@ import Testing
         var s = try engine.newGame(seed: 3, civilizations: ["mesopotamia"])
         let start = s.territories(of: "mesopotamia").count
         let ai = AIPlayer(engine: engine, personality: .conqueror)
-        for _ in 0..<8 { _ = ai.playTurn(&s) }
-        #expect(s.territories(of: "mesopotamia").count > start + 2)
+        for _ in 0..<8 { _ = ai.play(&s) }
+        // Slower than it was: soldiers beyond what the people can spare are paid in full.
+        #expect(s.territories(of: "mesopotamia").count > start + 1, "held \(s.territories(of: "mesopotamia").count)")
     }
 
     @Test func aiSailsToCoastsItCannotWalkTo() throws {
@@ -39,12 +40,16 @@ import Testing
         var s = try engine.newGame(seed: 4, civilizations: ["greece"])
         // Kingdoms are tough now: a weakly held island worth an expedition.
         s.armies["crete"]!.units.infantry = 1
+        // Greece's own fields can't feed a fleet and an expedition (soldiers are no longer raised by
+        // starving the people): give it the troops, and a treasury that buys grain abroad.
+        s.civs["greece"]!.gold = 80
+        s.armies["greece"]!.units.infantry = 9
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         var built = 0
         var seaborneCaptures = 0
         for _ in 0..<25 where s.winner == nil {
             var landedOn: Set<TerritoryID> = []
-            for event in ai.playTurn(&s).events {
+            for event in ai.play(&s).events {
                 if case let .shipsBuilt(_, _, n) = event { built += n }
                 if case let .landed(_, _, t, _) = event { landedOn.insert(t) }
                 if case let .captured(_, t, _) = event, landedOn.contains(t) { seaborneCaptures += 1 }
@@ -59,7 +64,7 @@ import Testing
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         for _ in 0..<40 where s.winner == nil {
             if s.activePlayer == "mesopotamia" {
-                _ = ai.playTurn(&s)
+                _ = ai.play(&s)
             } else {
                 try engine.apply(.endTurn, to: &s)
             }
@@ -98,7 +103,7 @@ import Testing
         s.armies = s.armies.filter { !isNative($0.value.owner) }  // nothing to fight
         var passive = s
         try engine.apply(.endTurn, to: &passive)
-        let turn = AIPlayer(engine: engine, personality: .turtle).playTurn(&s)
+        let turn = AIPlayer(engine: engine, personality: .turtle).play(&s)
         #expect(!turn.events.contains { if case .battle = $0 { true } else { false } })
         #expect(s.rng == passive.rng)
     }

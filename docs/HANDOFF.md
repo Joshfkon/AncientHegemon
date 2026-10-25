@@ -161,6 +161,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     store the generated map; `GameState.worldSeed` names it. `hegemon-sim --random-map` balances
     on random worlds; `hegemon-sim world --seed S --json PATH` dumps one for
     `tools/validate_map.py`. Debug launch argument `-demoWorld N` (with `-demoAs civ`).
+  - **War costs the realm** (DESIGN.md, "War costs the realm; building makes it great"; rules
+    version 36; `Engine/Realm.swift`): a standing army of 3 + 1 per 2 people at the old wage and
+    full pay beyond it, no growth past 3 soldiers per 2 people, a levy of 1 per 2 people (up to
+    6), half taxes from new land and less from far land, farms that raise a land's people, and
+    prestige for buildings and trade partners. AI builders keep their standing army; warlike AIs
+    go partway to a war footing. `hegemon-sim` reports "the realm at the end" and tall wins.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

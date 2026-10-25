@@ -6,12 +6,23 @@ import Testing
 
     @Test func everyFourSoldiersDrawAGold() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        // 12 people keep a standing army of 3 + 6 = 9 at the base wage.
+        s.land["egypt"]!.population = 12
         s.armies["egypt"]!.units = UnitCounts(infantry: 9)
         #expect(engine.armyPay(of: "egypt", in: s) == 2)
         s.civs["egypt"]!.gold = 20
         let events = engine.payArmy("egypt", &s)
         #expect(s.civs["egypt"]!.gold == 18)
         #expect(events == [.armyPaid(civ: "egypt", gold: 2, deserted: 0)])
+    }
+
+    @Test func soldiersBeyondTheStandingArmyArePaidInFull() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        s.land["egypt"]!.population = 4
+        // Standing army 3 + 2 = 5; 13 soldiers: 13 / 4 = 3, plus 8 beyond / 4 = 2.
+        s.armies["egypt"]!.units = UnitCounts(infantry: 13)
+        #expect(engine.standingArmy(of: "egypt", in: s) == 5)
+        #expect(engine.armyPay(of: "egypt", in: s) == 5)
     }
 
     @Test func aSmallGuardIsFree() throws {
@@ -23,6 +34,7 @@ import Testing
 
     @Test func unpaidSoldiersGoHome() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        s.land["egypt"]!.population = 20
         s.armies["egypt"]!.units = UnitCounts(infantry: 12)
         s.civs["egypt"]!.gold = 1
         let events = engine.payArmy("egypt", &s)

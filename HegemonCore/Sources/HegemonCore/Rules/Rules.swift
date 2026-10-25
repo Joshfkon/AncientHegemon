@@ -22,6 +22,10 @@ public struct PrestigeRules: Codable, Sendable, Equatable {
     public let legitimacyDivisor: Int
     /// Bonus for still holding your own capital.
     public let capitalHeld: Int
+    /// For each building standing in the realm (each level of walls above the first counts too).
+    public let perBuilding: Int
+    /// For each empire the realm trades with.
+    public let perTradePartner: Int
 }
 
 public struct VictoryRules: Codable, Sendable, Equatable {
@@ -73,6 +77,29 @@ public struct EconomyRules: Codable, Sendable, Equatable {
     public let unpaidDesertPercent: Int
     /// Projects a territory can have waiting in line.
     public let queueLength: Int
+}
+
+/// What war costs a realm and what peace builds (Josh: "it should be more like CIV where there is
+/// a trade off to expansion vs building your own infrastructure").
+public struct RealmRules: Codable, Sendable, Equatable {
+    /// Soldiers the realm keeps at the base wage: a guard of `standingBase` plus this many per 100
+    /// people. Beyond that, men are taken from the fields and households and must be paid in full.
+    public let standingBase: Int
+    public let standingPercent: Int
+    /// Soldiers beyond the standing share cost 1 more gold a turn for every this many.
+    public let overSoldiersPerGold: Int
+    /// With more soldiers than the guard plus this many per 100 people, nobody marries and the
+    /// people don't grow.
+    public let noGrowthPercent: Int
+    /// Land taken within `unrest.recentRounds` pays this share (percent) of its taxes.
+    public let newLandTaxPercent: Int
+    /// Taxes reach the treasury in full from lands up to this many supply steps from the
+    /// capital; beyond, each step loses `taxLossPerStep` percent, to at least `minTaxPercent`.
+    public let fullTaxSteps: Int
+    public let taxLossPerStep: Int
+    public let minTaxPercent: Int
+    /// Legitimacy when a building is finished: the people see the ruler's works.
+    public let buildingLegitimacy: Int
 }
 
 /// Building projects in territories: the "industrializing" side of the economy.
@@ -209,6 +236,7 @@ public struct Rules: Codable, Sendable, Equatable {
     public let units: [UnitType: UnitStats]
     public let victory: VictoryRules
     public let economy: EconomyRules
+    public let realm: RealmRules
     public let projects: [ProjectKind: ProjectCost]
     public let projectEffects: ProjectEffects
     public let knowledge: KnowledgeRules

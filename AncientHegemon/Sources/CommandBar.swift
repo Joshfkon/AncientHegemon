@@ -596,8 +596,8 @@ struct CommandBar: View {
         let steps = engine.supplySteps(of: human, to: id, in: state)
         let base = engine.rules.upkeep(of: army.units)
         let extra = men * (haul?.extraGrain ?? 0)
-        let per = engine.rules.economy.soldiersPerGold
-        let pay = Double(men) / Double(per)
+        // Its share of the realm's pay (soldiers beyond the standing army cost full pay).
+        let pay = Double(engine.armyPay(of: human, in: state) * men) / Double(max(1, engine.soldiers(of: human, in: state)))
         let (status, color): (String, Color) = switch (steps, extra) {
         case (nil, _): ("Cut off", .red)
         case (_, 0): ("Well supplied", .green)

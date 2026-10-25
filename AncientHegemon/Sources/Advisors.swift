@@ -139,6 +139,17 @@ enum Advisors {
                 go: .realm, cooldown: 3))
         }
 
+        // The army against the people who must feed, pay and spare it.
+        if e.soldiers > e.warFooting {
+            alarms.append(say("footing", .steward, .warning,
+                "\(s(e.soldiers, "man")) under arms and only \(state.totalPopulation(of: civ)) people at home: nobody marries, and our people have stopped growing. Send some soldiers home when the danger passes.",
+                go: .realm, cooldown: 6))
+        } else if e.soldiers > e.standingArmy {
+            reminders.append(say("standing", .steward, .calm,
+                "Our people can spare \(e.standingArmy) soldiers at the old wage; the other \(e.soldiers - e.standingArmy) are paid in full and cost us dear. A smaller army and more farms would make us richer.",
+                go: .realm, cooldown: 8))
+        }
+
         // Our towns under siege.
         for (town, siege) in state.sieges.sorted(by: { $0.key < $1.key }) where state.owner(of: town) == civ && siege.civ != civ {
             // The first time, how sieges work; after that, a reminder (memory picks which).

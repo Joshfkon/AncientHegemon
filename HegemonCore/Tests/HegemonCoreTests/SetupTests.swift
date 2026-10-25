@@ -42,7 +42,7 @@ import Testing
         let ais = Dictionary(uniqueKeysWithValues: s.players.map { ($0, AIPlayer(engine: engine, personality: .default(for: $0))) })
         var guardRounds = 0
         while s.winner == nil, guardRounds < 2000 {
-            _ = ais[s.activePlayer]!.playTurn(&s)
+            _ = ais[s.activePlayer]!.play(&s)
             guardRounds += 1
         }
         #expect(s.victory != nil)
@@ -82,7 +82,7 @@ import Testing
         #expect(engine.inQuietOpening("greece", s))
         #expect(!engine.inQuietOpening("mesopotamia", s))
         let ai = AIPlayer(engine: engine, personality: .conqueror)
-        let turn = ai.playTurn(&s)
+        let turn = ai.play(&s)
         #expect(!turn.events.contains { if case let .battle(r) = $0 { r.setup.defender.civ == "greece" } else { false } })
         #expect(s.owner(of: "macedonia") == "greece")
     }
@@ -92,7 +92,7 @@ import Testing
         s.turn = s.quietUntil! + 1
         #expect(!engine.inQuietOpening("greece", s))
         let ai = AIPlayer(engine: engine, personality: .conqueror)
-        _ = ai.playTurn(&s)
+        _ = ai.play(&s)
         #expect(s.owner(of: "macedonia") == "mesopotamia")
     }
 

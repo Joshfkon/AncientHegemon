@@ -65,6 +65,10 @@ struct CityView: View {
                         Label("Calm while its garrison stays: withdraw every soldier and it grows restless.",
                               systemImage: "shield.lefthalf.filled").font(.caption).foregroundStyle(.secondary)
                     }
+                    if r.taxPercent > 0, r.taxPercent < 100 {
+                        Label("Only \(r.taxPercent)% of its taxes reach the treasury: \(r.supplySteps.map { $0 > engine.rules.realm.fullTaxSteps ? "it lies \($0) steps from the capital (a road would bring it closer)" : "newly won land pays half while it settles" } ?? "").",
+                              systemImage: "scroll").font(.caption).foregroundStyle(.secondary)
+                    }
                     if r.supplySteps == nil {
                         Label("Cut off from the capital: no taxes, no recruits, and its garrison wastes away.",
                               systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)

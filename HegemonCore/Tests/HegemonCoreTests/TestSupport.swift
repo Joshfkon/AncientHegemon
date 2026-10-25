@@ -73,3 +73,42 @@ extension Engine {
         return Engine(map: map, rules: try Rules(json: JSONSerialization.data(withJSONObject: json)))
     }
 }
+
+/// Runs `body` on a thread with a large stack. Swift Testing runs tests on small worker stacks,
+/// and a whole AI game in a debug build (each turn forecasting the harvest on a copy of the
+/// state) can run past them.
+final class ResultBox<T>: @unchecked Sendable { var result: Result<T, Error>? }
+
+func onLargeStack<T>(_ body: @escaping () throws -> T) throws -> T {
+    let box = ResultBox<T>()
+    let done = DispatchSemaphore(value: 0)
+    let run = { box.result = Result { try body() }; done.signal() }
+    let thread = Thread { run() }
+    thread.stackSize = 64 << 20
+    thread.start()
+    done.wait()
+    return try box.result!.get()
+}
+
+/// The engine's `playAIMatch`, on a large stack (this module's name shadows the library's).
+func playAIMatch(engine: Engine, seed: UInt64, personalities: [CivilizationID: Personality],
+                 civilizations: [CivilizationID]? = nil, maxTurns: Int) throws -> MatchRecord {
+    try onLargeStack {
+        try HegemonCore.playAIMatch(engine: engine, seed: seed, personalities: personalities,
+                                    civilizations: civilizations, maxTurns: maxTurns)
+    }
+}
+
+extension AIPlayer {
+    /// `playTurn` on a large stack.
+    func play(_ state: inout GameState) -> AITurn {
+        let start = state
+        let (turn, end) = try! onLargeStack { () -> (AITurn, GameState) in
+            var s = start
+            let turn = self.playTurn(&s)
+            return (turn, s)
+        }
+        state = end
+        return turn
+    }
+}

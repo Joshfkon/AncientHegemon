@@ -146,7 +146,7 @@ private func play(_ s: inout GameState, as civ: CivilizationID) {
         // Egypt's turn: the AI goes out to meet the camp.
         s.civs["egypt"]!.isHuman = false
         while s.activePlayer != "egypt" { try engine.apply(.endTurn, to: &s) }
-        let turn = AIPlayer(engine: engine, personality: .turtle).playTurn(&s)
+        let turn = AIPlayer(engine: engine, personality: .turtle).play(&s)
         #expect(turn.events.contains { if case let .moved(civ, from, to, _) = $0 { civ == "egypt" && from == "egypt" && to == "petraea" } else { false } })
     }
 

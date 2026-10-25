@@ -159,7 +159,8 @@ import Testing
     @Test func populationStopsAtCap() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         for _ in 0..<20 { try engine.apply(.endTurn, to: &s) }
-        #expect(s.population(of: "mesopotamia") == 9)
+        // One person per grain the land yields (irrigation, once learned, counts).
+        #expect(s.population(of: "mesopotamia") == engine.populationCap(of: "mesopotamia", in: s))
     }
 
     @Test func deficitDrawsOnGranaryFirst() throws {
@@ -175,16 +176,29 @@ import Testing
         var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
         s.civs["mesopotamia"]!.granary = 0
         s.civs["mesopotamia"]!.gold = 0  // nothing to buy grain with
-        s.armies["mesopotamia"]!.units.infantry = 10
-        // Production 9; eaten ceil(5/2)=3 + 10 = 13. Population falls to the floor of 1
-        // (eaten 1 + 10 = 11), then 2 infantry desert (1 + 8 = 9).
+        s.armies["mesopotamia"]!.units.infantry = 2
+        s.harvestPercent["mesopotamia"] = 30
+        // Production 9 × 30% = 2; eaten ceil(5/2)=3 + 2 = 5. Population falls to the floor of 1
+        // (eaten 1 + 2 = 3), then 1 infantryman deserts (1 + 1 = 2).
         let events = try engine.apply(.endTurn, to: &s)
-        #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 4, unitsLost: 2)))
+        #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 4, unitsLost: 1)))
         #expect(s.population(of: "mesopotamia") == 1)
-        // With an empty treasury, some of the 8 left can't be paid either and go home.
-        let unpaid = events.reduce(0) { if case let .armyPaid(_, _, n) = $1 { $0 + n } else { $0 } }
-        #expect(s.armies["mesopotamia"]!.units.infantry == 8 - unpaid)
+        #expect(s.armies["mesopotamia"]!.units.infantry == 1)
         #expect(s.civs["mesopotamia"]!.granary == 0)
+    }
+
+    @Test func aHungryArmyBeyondTheStandingShareDesertsFirst() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["mesopotamia"])
+        s.civs["mesopotamia"]!.granary = 0
+        s.civs["mesopotamia"]!.gold = 0
+        s.armies["mesopotamia"]!.units.infantry = 10
+        // Production 9; eaten ceil(5/2)=3 + 10 = 13. The standing army is 3 + 5/2 = 5, so
+        // soldiers slip away first: 4 go (3 + 6 = 9) and the people are spared.
+        let events = try engine.apply(.endTurn, to: &s)
+        #expect(events.contains(.starvation(civ: "mesopotamia", populationLost: 0, unitsLost: 4)))
+        #expect(s.population(of: "mesopotamia") == 5)
+        let unpaid = events.reduce(0) { if case let .armyPaid(_, _, n) = $1 { $0 + n } else { $0 } }
+        #expect(s.armies["mesopotamia"]!.units.infantry == 6 - unpaid)
     }
 
     @Test func sameCommandsSameResult() throws {

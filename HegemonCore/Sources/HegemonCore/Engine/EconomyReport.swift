@@ -25,6 +25,11 @@ public struct EconomyReport: Sendable, Equatable {
     public let income: Int
     /// Gold owed to the soldiers each turn.
     public let pay: Int
+    /// Soldiers under arms (on land and aboard ship); how many the realm keeps at the base wage;
+    /// and how many it can field before its people stop growing.
+    public let soldiers: Int
+    public let standingArmy: Int
+    public let warFooting: Int
     /// Vassal empires: tribute this realm pays its overlord from next harvest's income, and
     /// tribute its own vassal empires paid at their last harvest.
     public let tributePaid: Int
@@ -91,6 +96,8 @@ extension Engine {
             grainImportCap: grainImportCap(of: civ, in: state, routes: routes),
             taxes: gold.taxes, mines: gold.mines, trade: gold.trade, peoples: gold.peoples, income: gold.total,
             pay: armyPay(of: civ, in: state),
+            soldiers: soldiers(of: civ, in: state), standingArmy: standingArmy(of: civ, in: state),
+            warFooting: warFooting(people: state.totalPopulation(of: civ)),
             tributePaid: state.vassalage[civ] != nil ? tribute(fromIncome: gold.total) : 0,
             tributeReceived: vassalEmpires(of: civ, in: state).reduce(0) { $0 + (state.vassalage[$1]?.lastTribute ?? 0) },
             bronze: cs.bronze, bronzePerTurn: cast, bronzeWear: cs.bronze - worn.civs[civ]!.bronze,

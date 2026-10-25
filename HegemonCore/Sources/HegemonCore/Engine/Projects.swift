@@ -129,6 +129,7 @@ extension Engine {
                 state.land[t]!.improvements.insert(site.kind)
                 state.land[t]!.construction = nil
                 addExperience(civ, .construction, 4, &state)
+                adjustLegitimacy(civ, rules.realm.buildingLegitimacy, &state)
                 if site.kind == .farm { addExperience(civ, .agriculture, 3, &state) }
                 if site.kind == .mine { addExperience(civ, .metallurgy, 2, &state) }
                 events.append(.projectCompleted(civ: civ, territory: t, project: site.kind))

@@ -17,17 +17,20 @@ public struct UnrestRules: Codable, Sendable, Equatable {
 extension Engine {
     /// Whether a territory of `civ` is restless: newly taken or far from the capital, and not
     /// held by a garrison. The capital is never restless.
-    public func restless(_ territory: TerritoryID, of civ: CivilizationID, in state: GameState) -> Bool {
+    /// `distances` are supply steps from the capital (pass them when asking for many lands).
+    public func restless(_ territory: TerritoryID, of civ: CivilizationID, in state: GameState,
+                         distances: [TerritoryID: Int]? = nil) -> Bool {
         let garrison = state.armies[territory].map { $0.owner == civ ? $0.units.total : 0 } ?? 0
-        return garrison < rules.unrest.garrisonToCalm && needsGarrison(territory, of: civ, in: state)
+        return garrison < rules.unrest.garrisonToCalm && needsGarrison(territory, of: civ, in: state, distances: distances)
     }
 
     /// Land that is restless unless garrisoned: newly taken or far from the capital.
-    public func needsGarrison(_ territory: TerritoryID, of civ: CivilizationID, in state: GameState) -> Bool {
+    public func needsGarrison(_ territory: TerritoryID, of civ: CivilizationID, in state: GameState,
+                              distances: [TerritoryID: Int]? = nil) -> Bool {
         guard state.owner(of: territory) == civ, seat(of: civ, in: state) != territory else { return false }
         let u = rules.unrest
         let recent = state.land[territory]?.takenOnRound.map { state.turn - $0 < u.recentRounds } ?? false
-        let far = (supplyDistances(of: civ, in: state)[territory] ?? .max) >= rules.events.revoltDistance
+        let far = ((distances ?? supplyDistances(of: civ, in: state))[territory] ?? .max) >= rules.events.revoltDistance
         return recent || far
     }
 

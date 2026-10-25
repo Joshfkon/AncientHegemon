@@ -42,6 +42,15 @@ extension AIPlayer {
                 }
             }
         }
+        // Gold beyond any need pays masters of the craft the realm most lacks; a thin treasury
+        // stops paying them.
+        let gold = state.civs[civ]!.gold
+        if gold >= 3 * reserve + 20 {
+            let field = patronField(civ, state)
+            if state.civs[civ]!.patronage != field { _ = attempt(.setPatronage(field), &state, &turn) }
+        } else if gold < reserve, state.civs[civ]!.patronage != nil {
+            _ = attempt(.setPatronage(nil), &state, &turn)
+        }
         // A rich court adorns its hall: only gold well beyond any need, one piece a turn.
         let cs = state.civs[civ]!
         if let d = rules.throneRoom.decorations.first(where: { d in
@@ -53,6 +62,15 @@ extension AIPlayer {
     }
 
     var maxProjectsPerTurn: Int { 4 }
+
+    /// The field to patronise: the least advanced of those that make a realm rich and strong,
+    /// farming and government first.
+    func patronField(_ civ: CivilizationID, _ state: GameState) -> KnowledgeField? {
+        var fields: [KnowledgeField] = [.agriculture, .administration, .construction, .metallurgy, .warfare]
+        if engine.homeNetwork(of: civ, in: state).contains(where: { map.territory($0)!.isCoastal }) { fields.append(.seafaring) }
+        let open = fields.enumerated().filter { engine.level($0.element, of: civ, in: state) < 3 }
+        return open.min { (engine.level($0.element, of: civ, in: state), $0.offset) < (engine.level($1.element, of: civ, in: state), $1.offset) }?.element
+    }
 
     /// The most needed project the civ can start now (gold aside), or nil.
     func nextProject(_ civ: CivilizationID, _ state: GameState) -> (ProjectKind, TerritoryID)? {
@@ -79,6 +97,12 @@ extension AIPlayer {
             let wanted = danger <= 0 ? 0 : danger < 6 ? 1 : danger < 12 ? 2 : 3
             if engine.wallLevel(at: capital, state) < wanted { plan.append((.walls, cheapest(.walls, [capital]))) }
         }
+        // Farms where the people press on what the land can feed: more grain, more people.
+        let crowded = home.filter { t in
+            !(state.land[t]?.improvements.contains(.farm) ?? false)
+                && state.population(of: t) + 1 >= engine.populationCap(of: t, in: state)
+        }.sorted { (state.population(of: $0), $1) > (state.population(of: $1), $0) }
+        plan.append((.farm, cheapest(.farm, crowded)))
         // Then the border posts facing the most enemy troops, where a garrison stands to use them.
         let threatened = home.filter { !walled($0) && state.armies[$0]?.owner == civ && threat(to: $0, for: civ, state) > 0 }
             .sorted { (threat(to: $0, for: civ, state), $1) > (threat(to: $1, for: civ, state), $0) }
@@ -103,6 +127,14 @@ extension AIPlayer {
             let stops = route.compactMap { node -> TerritoryID? in if case .land(let t) = node { t } else { nil } }
             plan.append((.road, cheapest(.road, Array(stops.dropFirst()))))
         }
+        // Roads toward peopled land too far away to pay its taxes in full.
+        let distances = engine.supplyDistances(of: civ, in: state)
+        if let far = home.filter({ state.population(of: $0) >= 3 && (distances[$0] ?? 0) > rules.realm.fullTaxSteps })
+            .max(by: { (state.population(of: $0), $1) < (state.population(of: $1), $0) }),
+           let route = engine.supplyRoute(of: civ, to: far, in: state) {
+            let stops = route.compactMap { node -> TerritoryID? in if case .land(let t) = node { t } else { nil } }
+            plan.append((.road, cheapest(.road, Array(stops.dropFirst()))))
+        }
         // Harbors once there's trade to handle.
         if !econ.tradePartners.isEmpty {
             plan.append((.harbor, cheapest(.harbor, home.filter { map.territory($0)!.isCoastal })))
@@ -111,7 +143,7 @@ extension AIPlayer {
         let valleys = home.filter { map.territory($0)!.has(.riverValley) }
             .sorted { (map.territory($0)!.grain, $1) > (map.territory($1)!.grain, $0) }
         plan.append((.levee, cheapest(.levee, valleys)))
-        if !econ.tradePartners.isEmpty {
+        do {
             let crowded = home.filter { state.population(of: $0) >= 4 }.sorted { (state.population(of: $0), $1) > (state.population(of: $1), $0) }
             plan.append((.drains, cheapest(.drains, crowded)))
         }

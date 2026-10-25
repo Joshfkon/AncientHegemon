@@ -207,7 +207,7 @@ struct KingdomAudienceView: View {
         let k = engine.kingdom(at: territory, in: state)
         let regard = k.flatMap { k in session.human.map { engine.attitude(of: k, toward: $0, in: state) } } ?? 0
         let need = k.flatMap { engine.people(of: $0, in: state) }.flatMap { engine.rules.kingdomTrade.minAttitude[$0.temperament] } ?? 0
-        switch why {
+        return switch why {
         case .gone: "They are gone"
         case let .answersTo(lord): "They trade only with \(Palette.name(lord, state)), their overlord"
         case .outOfReach: "Too far for their merchants (more than \(engine.rules.kingdomTrade.maxSteps) steps, or through enemy land)"

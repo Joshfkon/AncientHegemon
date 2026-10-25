@@ -178,7 +178,7 @@ struct MomentBanner: View {
                          color: Color(red: 0.55, green: 0.08, blue: 0.08), stamp: true)
         case let .unpaid(n):
             return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
-                         subtitle: "Every \(engine.rules.economy.soldiersPerGold) soldiers need 1 gold a turn",
+                         subtitle: "An army beyond what your people can spare costs full pay",
                          color: Color(red: 0.5, green: 0.35, blue: 0.08), stamp: false)
         case let .disaster(kind, t):
             let (icon, title): (String, String) = switch kind {

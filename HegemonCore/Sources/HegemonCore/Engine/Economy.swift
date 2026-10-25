@@ -25,8 +25,9 @@ extension Engine {
             var grown = 0
 
             if production >= consumption {
-                // High taxes leave less for families to grow on.
-                let forGrowth = (production - consumption) * growthPercent(civ, state) / 100
+                // High taxes leave less for families to grow on, and nobody marries while the
+                // young men are all under arms.
+                let forGrowth = overMobilized(civ, in: state) ? 0 : (production - consumption) * growthPercent(civ, state) / 100
                 grown = grow(pocket, surplus: forGrowth, &state)
                 granary = min(granary + production - consumption - grown,
                               granaryCap(civ, production: production, state))
@@ -96,11 +97,14 @@ extension Engine {
 
     /// Gold owed each turn to the civilization's soldiers, on land and aboard ship.
     public func armyPay(of civ: CivilizationID, in state: GameState) -> Int {
-        armyPay(soldiers: state.totalUnits(of: civ).total + state.fleets(of: civ).reduce(0) { $0 + $1.cargo.total })
+        armyPay(soldiers: soldiers(of: civ, in: state), people: state.totalPopulation(of: civ))
     }
 
-    public func armyPay(soldiers: Int) -> Int {
+    /// The base wage for every soldier, and full pay for those beyond the standing share of the
+    /// people: men taken from their fields and households.
+    public func armyPay(soldiers: Int, people: Int) -> Int {
         soldiers / max(1, rules.economy.soldiersPerGold)
+            + max(0, soldiers - standingArmy(people: people)) / max(1, rules.realm.overSoldiersPerGold)
     }
 
     /// Pays the army from the treasury. What can't be paid sends some of the unpaid home, from
@@ -112,7 +116,7 @@ extension Engine {
         state.civs[civ]!.gold -= paid
         var deserted = 0
         if paid < owed {
-            let unpaid = (owed - paid) * rules.economy.soldiersPerGold
+            let unpaid = (owed - paid) * soldiers(of: civ, in: state) / owed
             var leaving = max(1, unpaid * rules.economy.unpaidDesertPercent / 100)
             while leaving > 0, let stack = state.armies(of: civ).max(by: { a, b in
                 a.units.total != b.units.total ? a.units.total < b.units.total : a.territory > b.territory
@@ -129,11 +133,11 @@ extension Engine {
     func income(of civ: CivilizationID, _ homeNet: [TerritoryID], _ routes: [TradeRoute], _ state: GameState)
         -> (taxes: Int, mines: Int, trade: Int, peoples: Int, total: Int) {
         let e = rules.economy
-        // Restless land pays nothing.
-        let population = homeNet.filter { !restless($0, of: civ, in: state) && state.sieges[$0] == nil }
-            .reduce(0) { $0 + state.population(of: $1) }
+        // Restless land pays nothing, new land half, far land less (`taxPercent`).
+        let distances = supplyDistances(of: civ, in: state)
+        let taxed = homeNet.reduce(0) { $0 + state.population(of: $1) * taxPercent($1, of: civ, in: state, distances: distances) }
         let coinage = level(.administration, of: civ, in: state) >= 2 ? rules.knowledge.effects.coinagePercent : 0
-        let taxes = population * state.civs[civ]!.taxRate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100)
+        let taxes = taxed * state.civs[civ]!.taxRate * (100 + coinage) / max(1, e.populationPerGold * e.defaultTax * 100 * 100)
         let mines = yield(of: .gold, in: homeNet, state) + homeNet.reduce(0) { $0 + (state.bonusGold[$1] ?? 0) }
         let administration = rules.rulerTraits[state.civs[civ]!.ruler.trait]?.incomePercent ?? 0
         let trade = tradeGold(for: civ, routes) + wineGold(civ, homeNet, routes, state)
@@ -153,10 +157,6 @@ extension Engine {
         return (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.count * rules.trade.grainPerRoute
             + coasts.count * rules.trade.grainPerCoast + harbors.count * rules.trade.grainPerHarbor
             + (holds("lighthouse", civ, in: state) ? 2 : 0)
-    }
-
-    public func populationCap(of territory: TerritoryID) -> Int {
-        rules.populationCap(grain: map.territory(territory)!.grain)
     }
 
     /// Grain eaten per turn by the population of `territories` and the civilization's armies in them.
@@ -197,14 +197,14 @@ extension Engine {
         var surplus = surplus
         var grown = 0
         let candidates = pocket
-            .filter { state.population(of: $0) < populationCap(of: $0) }
+            .filter { state.population(of: $0) < populationCap(of: $0, in: state) }
             .sorted { a, b in
                 let pa = state.population(of: a) * map.territory(b)!.grain
                 let pb = state.population(of: b) * map.territory(a)!.grain
                 return pa != pb ? pa < pb : a < b
             }
         for id in candidates where surplus > 0 {
-            let room = populationCap(of: id) - state.population(of: id)
+            let room = populationCap(of: id, in: state) - state.population(of: id)
             let n = min(rules.economy.growthPerTerritory, room, surplus)
             state.land[id]!.population += n
             surplus -= n
@@ -215,6 +215,8 @@ extension Engine {
 
     /// Removes mouths until consumption fits in `available` grain: population first, from the
     /// territories most over their local grain; then army units desert, from the largest stack.
+    /// An army beyond the standing share goes hungry first: its men slip away before the
+    /// people who work the fields starve.
     private func starve(_ civ: CivilizationID, _ pocket: [TerritoryID], toFit available: Int,
                         _ state: inout GameState) -> (population: Int, units: Int) {
         let floor = rules.economy.minPopulation
@@ -223,6 +225,15 @@ extension Engine {
         var unitsLost = 0
 
         while grainConsumption(of: civ, in: pocket, state) > available {
+            let stacks = state.armies(of: civ).filter { set.contains($0.territory) }
+            let largest = stacks.max(by: { a, b in
+                a.units.total != b.units.total ? a.units.total < b.units.total : a.territory > b.territory
+            })
+            if let largest, soldiers(of: civ, in: state) > standingArmy(of: civ, in: state) {
+                removeUnits(1, from: largest.territory, &state)
+                unitsLost += 1
+                continue
+            }
             let victim = pocket
                 .filter { state.population(of: $0) > floor }
                 .max { a, b in
@@ -235,10 +246,7 @@ extension Engine {
                 popLost += 1
                 continue
             }
-            let stacks = state.armies(of: civ).filter { set.contains($0.territory) }
-            guard let stack = stacks.max(by: { a, b in
-                a.units.total != b.units.total ? a.units.total < b.units.total : a.territory > b.territory
-            }) else { break }
+            guard let stack = largest else { break }
             removeUnits(1, from: stack.territory, &state)
             unitsLost += 1
         }

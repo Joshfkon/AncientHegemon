@@ -189,7 +189,7 @@ public struct Engine: Sendable {
         }
         var rejoined = 0
         if state.owner(of: territory) == civ {
-            let room = max(0, populationCap(of: territory) - state.population(of: territory))
+            let room = max(0, populationCap(of: territory, in: state) - state.population(of: territory))
             rejoined = min(units.total, room)
             state.land[territory]!.population += rejoined
         }
