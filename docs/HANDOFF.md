@@ -167,6 +167,12 @@ Context for a new Claude Code session on the Mac mini. Read this, then `docs/DES
     6), half taxes from new land and less from far land, farms that raise a land's people, and
     prestige for buildings and trade partners. AI builders keep their standing army; warlike AIs
     go partway to a war footing. `hegemon-sim` reports "the realm at the end" and tall wins.
+  - **Balance after the war economy** (DESIGN.md, same name; rules version 37): the conqueror
+    leaves its people grain to grow on beyond its standing army and fits out only the ships it can
+    feed; every AI pays off idle crews; only 2 raiders' shields count toward magnificence; the
+    merchant wins neighbours over with gifts. Wins on classic seeds 501 / 1001 and random worlds:
+    Greece 28 / 21 / 17%, Egypt 28 / 32 / 35%, Italia 18 / 22 / 17%, Mesopotamia 23 / 23 / 30%.
+    `hegemon-sim` also reports prestige by source, lands lost to whom, and who attacked whom.
   - `docs/DESIGN.md`: game design doc. Sections 11 (MVP scope) and 12 (AI) are the build spec.
   - `HegemonCore/Sources/HegemonCore/Resources/map.json`: the map as data. 40 territories,
     land links (with `river` / `strait` crossings), 12 sea zones, 7 chokepoints, 4 civs.

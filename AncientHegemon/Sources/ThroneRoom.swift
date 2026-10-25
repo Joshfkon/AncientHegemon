@@ -67,7 +67,7 @@ struct ThroneRoomView: View {
                                     .font(.caption)
                             }
                         } else {
-                            Text("Trophies come from every territory you take, a rival's capital, beating off raiders, and winning tribes over.")
+                            Text("Trophies come from every territory you take, a rival's capital, beating off raiders (up to \(engine.rules.throneRoom.raiderShieldCap) shields count), and winning tribes over.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }

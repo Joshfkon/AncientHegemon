@@ -86,7 +86,7 @@ extension AIPlayer {
         // Grain bought abroad counts, as far as the treasury could keep paying for it.
         let imports = min(engine.grainImportCap(of: civ, in: state),
                           max(0, spare - rules.ships.cost) / (max(1, rules.trade.grainPrice) * importTurns))
-        let fed = max(0, engine.economy(of: civ, in: state).grainBalance - growthReserve(civ, state) + imports)
+        let fed = max(0, engine.economy(of: civ, in: state).grainBalance - growthReserve(civ, state, warlikeToo: planner) + imports)
             / max(1, rules.ships.upkeep)
         let count = min(want - have, spare / rules.ships.cost, fed)
         if count > 0 {
@@ -164,10 +164,10 @@ extension AIPlayer {
     }
 
     /// With no campaign afoot, idle crews that eat the grain the people need to grow are sent
-    /// home, one ship a turn, down to a single ship.
+    /// home, one ship a turn, down to a single ship. Every ruler does this, the warlike too.
     func trimFleets(_ civ: CivilizationID, _ state: inout GameState, _ turn: inout AITurn) {
         let ships = state.fleets(of: civ).reduce(0) { $0 + $1.ships }
-        guard ships > 1, growthReserve(civ, state) > 0, engine.economy(of: civ, in: state).grainBalance < growthReserve(civ, state),
+        guard ships > 1, engine.economy(of: civ, in: state).grainBalance < max(1, growthReserve(civ, state, warlikeToo: planner)),
               let fleet = state.fleets(of: civ).filter({ $0.cargo.isEmpty && $0.movedShips == 0 })
                 .max(by: { ($0.ships, $1.sea) < ($1.ships, $0.sea) }) else { return }
         _ = attempt(.disbandShips(sea: fleet.sea, ships: 1), &state, &turn)

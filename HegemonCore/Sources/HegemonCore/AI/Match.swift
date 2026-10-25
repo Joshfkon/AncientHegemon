@@ -15,6 +15,10 @@ public struct CivRecord: Sendable, Equatable {
     /// Of those, defences against another civilization (not natives, barbarians or rebels in revolt).
     public var defencesVsCivsWon = 0
     public var defencesVsCivsLost = 0
+    /// Battles this civ defended, by attacker.
+    public var attackedBy: [String: Int] = [:]
+    /// Lands this civ lost, by who held them next ("rebels", "natives" or a civ) and whether it was the capital.
+    public var landsLostTo: [String: Int] = [:]
     public var rejectedCommands = 0
     public var shipsBuilt = 0
     public var landings = 0
@@ -158,8 +162,16 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
             let atTop = sizes.filter { $0.1 == top }
             leaders.append(atTop.count == 1 ? atTop[0].0 : nil)
         }
+        let owners = state.land.mapValues(\.owner)
         let turn = ais[civ]!.playTurn(&state)
         civs[civ]?.rejectedCommands += turn.rejected.count
+        for (t, was) in owners {
+            guard let was, civs[was] != nil, state.land[t]?.owner != was else { continue }
+            let now = state.land[t]?.owner ?? state.armies[t]?.owner ?? "empty"
+            let who = now.contains("-rebels-") ? "rebels" : now
+            let capital = engine.map.civilization(was)?.capital == t ? " (capital)" : ""
+            civs[was]!.landsLostTo[who + capital, default: 0] += 1
+        }
         for event in turn.events {
             switch event {
             case let .starvation(c, pop, units):
@@ -216,6 +228,7 @@ public func playAIMatch(engine: Engine, seed: UInt64, personalities: [Civilizati
                 let a = report.setup.attacker, d = report.setup.defender
                 let attackerWon = report.winner == .attacker
                 let byCiv = state.isPlayer(a.civ)
+                civs[d.civ]?.attackedBy[a.civ, default: 0] += 1
                 if attackerWon {
                     civs[a.civ]?.attacksWon += 1
                     civs[d.civ]?.defencesLost += 1

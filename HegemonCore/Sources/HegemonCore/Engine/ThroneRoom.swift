@@ -24,6 +24,9 @@ public struct ThroneRoomRules: Codable, Sendable, Equatable {
     /// Spoils of a conquered territory are worth this much, up to `spoilsCap` in all.
     public let spoilsMagnificence: Int
     public let spoilsCap: Int
+    /// Raiders' shields hung in the hall count up to this many; beating off the same raiders yet
+    /// again adds no new renown.
+    public let raiderShieldCap: Int
     /// Legitimacy +1 a turn per this many magnificence, up to the cap: a splendid court awes.
     public let magnificencePerLegitimacy: Int
     public let legitimacyCap: Int
@@ -57,8 +60,9 @@ extension Engine {
         guard let cs = state.civs[civ] else { return 0 }
         let r = rules.throneRoom
         let spoils = cs.trophies.filter { if case .spoils = $0.kind { true } else { false } }.count
+        let shields = cs.trophies.filter { $0.kind == .raiderShield }.count
         return cs.decorations.reduce(0) { $0 + (r.decoration($1)?.magnificence ?? 0) }
-            + (cs.trophies.count - spoils) * r.trophyMagnificence
+            + (cs.trophies.count - spoils - shields + min(shields, r.raiderShieldCap)) * r.trophyMagnificence
             + min(r.spoilsCap, spoils * r.spoilsMagnificence)
     }
 

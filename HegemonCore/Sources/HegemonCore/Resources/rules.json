@@ -1,5 +1,5 @@
 {
-  "version": 36,
+  "version": 37,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -798,6 +798,7 @@
     "successionEaseCap": 10,
     "spoilsMagnificence": 1,
     "spoilsCap": 8,
+    "raiderShieldCap": 2,
     "magnificencePerLegitimacy": 5,
     "legitimacyCap": 2,
     "magnificencePerGiftPercent": 1,

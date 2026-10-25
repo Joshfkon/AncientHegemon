@@ -44,7 +44,10 @@ import Testing
         // starving the people): give it the troops, and a treasury that buys grain abroad.
         s.civs["greece"]!.gold = 80
         s.armies["greece"]!.units.infantry = 9
-        let ai = AIPlayer(engine: engine, personality: .conqueror)
+        // As bold as a conqueror, but spending every grain on soldiers and ships: a conqueror now
+        // leaves its people grain to grow on, and this treasury can't feed both.
+        let raider = Personality(name: "raider", aggression: 1.5, caution: 0.6, trade: 0.2, opportunism: 1)
+        let ai = AIPlayer(engine: engine, personality: raider)
         var built = 0
         var seaborneCaptures = 0
         for _ in 0..<25 where s.winner == nil {

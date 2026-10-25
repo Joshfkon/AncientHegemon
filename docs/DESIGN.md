@@ -2402,4 +2402,63 @@ grew. Each rule below is something an ancient state really had to bear.
     starting infantryman or a 30-grain chest changed little (9–10%). Warlike AIs mobilising less
     eagerly didn't help either: a conqueror at a quarter of the war footing scored 8%, and one
     keeping only its standing army also 8%. Greece is at the top of the range on the classic
-    board. Both are for a balance pass.
+    board. Both are for a balance pass. (Done: see "Balance after the war economy" below.)
+
+### Balance after the war economy: a conqueror that feeds its people, capped shields, merchant gifts
+
+After rules 36, Italia (the conqueror) won 6–20% on the classic board, and Greece (the merchant,
+meant to be the hardest empire) won 35%. New sim reports showed why. `hegemon-sim` now prints
+"prestige at the end, by source", "lands lost to" and "attacked by".
+
+- **Italia was not over-raided.** It defended about 8 battles a game (the "600" was a total over
+  80 games), nearly all against barbarians, as did Greece. Kingdoms' raids were a fraction of a
+  battle a game. Its homeland neighbours (the Raeti, proud; the Sicels, peaceable) are no threat.
+- **Italia starved its own growth.** Traced games showed 3 idle ships eating 3 of the capital's
+  9 grain all game, and recruiting eating the rest. The granary sat at 0 and the people never grew
+  past 3. Builders already left grain for growth and paid off idle crews, but warlike rulers did
+  neither. Now:
+  - **A conqueror plans the long war.** Once its standing army is raised, it recruits only with
+    grain to spare beyond what its people need to grow, since legions come from a growing
+    citizenry. It also fits out only the ships the harvest can feed beside that growth, and pays
+    off idle crews. Only the opportunist (Mesopotamia) still spends every grain on the soldiers
+    of the moment. Holding the reserve back before the standing army was raised as well stopped a
+    lone conqueror expanding at all, and exempting sea campaigns put Italia back at 6–11%: the
+    ships were the heart of it.
+  - Every AI pays off idle crews when no campaign is afoot.
+- **Raiders' shields are capped.** Each barbarian or pirate band beaten off hung a shield in
+  the hall: 2 magnificence, 4 prestige, with no limit. Greece beat off about 9 a game on its
+  steppe frontier and Egypt about 1, so the court was Greece's largest single source of prestige
+  (61–67 points). Now only 2 shields count (`throneRoom.raiderShieldCap`), like the cap on spoils;
+  beating off the same raiders again brings no new renown. A cap of 3 left Greece at 45% on
+  seeds 501.
+- **The merchant buys with silver what others take by the sword.** On random worlds Greece's
+  poor, rocky capital boxed it into 2 lands with 37 gold unspent at round 30, and it won 8%. The
+  rules have always let gifts win a tribe or kingdom over, but no AI used them. Now the merchant
+  sends gifts once a turn to a people next door worth having, when they would likely accept (65%
+  or better) and the treasury keeps twice its reserve. At 50% Greece won 41% on seeds 501; at 70%
+  with three times the reserve it still led there (30%).
+- **Tried and dropped:**
+  - A palace guard of 2 always kept in the capital (Sea Peoples took bare capitals): Egypt rose
+    to 60–65%, as warlike AIs lost their expansion troops, and capitals fell about as often.
+  - Land worth 7 or 8 prestige instead of 10: almost no change.
+- **App.** The throne room's trophy note gives the shield cap.
+- Rules version 37. No new saved fields.
+- **Balance** (80 games each; before = rules 36, after = rules 37):
+
+  | | Greece | Egypt | Italia | Mesopotamia |
+  |---|---|---|---|---|
+  | Classic, seeds 501, before | 35% | 19% | 20% | 26% |
+  | Classic, seeds 501, after | 28% | 28% | 18% | 23% |
+  | Classic, seeds 1001, before | 35% | 28% | 6% | 31% |
+  | Classic, seeds 1001, after | 21% | 32% | 22% | 23% |
+  | Random worlds, before | 14% | 34% | 16% | 36% |
+  | Random worlds, after | 17% | 35% | 17% | 30% |
+
+  - Italia's people at the end rose from 2.4 to 4.5–4.8 on the classic board, and its buildings
+    from 4.5 to 6.8–7.1.
+  - Greece ends with 1.5–1.7 lands on the classic board (1.1 before) and 3.3 on random worlds
+    (1.9). Its court is worth 35–36 prestige, against 61–67 before.
+  - Greece ties Egypt for the most wins on seeds 501 (28%), within the noise of 80 games. It is
+    in the middle on seeds 1001 and random worlds.
+  - Every game is still decided by round 50; tall wins are 15–17% on the classic board and 7% on
+    random worlds.

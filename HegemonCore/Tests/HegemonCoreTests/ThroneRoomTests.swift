@@ -48,6 +48,16 @@ import Testing
         #expect(engine.magnificence(of: "egypt", in: s) == engine.rules.throneRoom.spoilsCap)
     }
 
+    @Test func raidersShieldsCountOnlyUpToTheCap() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
+        let r = engine.rules.throneRoom
+        for _ in 0..<(r.raiderShieldCap + 4) { s.civs["egypt"]!.trophies.append(Trophy(kind: .raiderShield, round: 1)) }
+        #expect(engine.magnificence(of: "egypt", in: s) == r.raiderShieldCap * r.trophyMagnificence)
+        // Other trophies still count in full beside them.
+        s.civs["egypt"]!.trophies.append(Trophy(kind: .totem("libya"), round: 2))
+        #expect(engine.magnificence(of: "egypt", in: s) == (r.raiderShieldCap + 1) * r.trophyMagnificence)
+    }
+
     @Test func aSplendidCourtShoresUpTheThroneAndCharmsTribes() throws {
         var s = try engine.newGame(seed: 1, civilizations: ["egypt"])
         s.land["libya"]!.owner = nil

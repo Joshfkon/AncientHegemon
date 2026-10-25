@@ -192,6 +192,7 @@ if CommandLine.arguments.contains("--trace") {
 let started = Date()
 var records: [MatchRecord] = []
 var partnersAtEnd: [[CivilizationID: Int]] = []
+var gameEngines: [Engine] = []
 for g in 0..<games {
     let seed = firstSeed + UInt64(g)
     let civsInOrder = engine.map.civilizations.map(\.id)
@@ -202,6 +203,7 @@ for g in 0..<games {
     let record = try playAIMatch(engine: gameEngine, seed: seed, personalities: personalities,
                                  civilizations: order, maxTurns: maxTurns)
     records.append(record)
+    gameEngines.append(gameEngine)
     let routes = gameEngine.tradeRoutes(in: record.finalState)
     partnersAtEnd.append(Dictionary(uniqueKeysWithValues: civsInOrder.map { c in
         (c, Set(routes.filter { $0.involves(c) }.map { $0.partner(of: c) }).count) }))
@@ -431,3 +433,46 @@ let tallWins = decided.filter { r in
     return Double(r.finalState.territories(of: w).count) <= mean
 }.count
 print("tall wins (winner held no more land than the average survivor): \(pct(tallWins, decided.count)) of decided games")
+print("")
+print("prestige at the end, by source (survivors; averages)")
+let sources = ["land", "people", "gold", "legitimacy", "capital", "court", "works", "sacked", "prizes", "vassals", "buildings", "trade"]
+print("civ          " + sources.map { pad($0, 11) }.joined() + pad("total", 8))
+for civ in civs {
+    let alive = records.indices.filter { records[$0].finalState.civs[civ].map { !$0.eliminated } ?? false }
+    var sum: [String: Int] = [:]
+    var total = 0
+    for i in alive {
+        let (e, final) = (gameEngines[i], records[i].finalState)
+        total += e.prestige(of: civ, in: final)
+        for (label, points) in e.prestigeBreakdown(of: civ, in: final) {
+            let l = label.lowercased()
+            let key = l.contains("vassal") ? "vassals" : l.contains("building") ? "buildings" : l.contains("trade") ? "trade"
+                : l.contains("land") ? "land" : l.contains("people") ? "people" : l.contains("gold") ? "gold"
+                : l.contains("legitimacy") ? "legitimacy" : l.contains("capital held") ? "capital" : l.contains("court") ? "court"
+                : l.contains("great works") ? "works" : l.contains("sacked") ? "sacked" : "prizes"
+            sum[key, default: 0] += points
+        }
+    }
+    let n = Double(max(1, alive.count))
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0)
+          + sources.map { pad(String(format: "%.1f", Double(sum[$0] ?? 0) / n), 11) }.joined()
+          + pad(String(format: "%.1f", Double(total) / n), 8))
+}
+print("")
+print("lands lost to, per game (top 6)")
+for civ in civs {
+    var by: [String: Int] = [:]
+    for r in records { for (k, v) in r.civs[civ]?.landsLostTo ?? [:] { by[k, default: 0] += v } }
+    let top = by.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(6)
+        .map { "\($0.key) \(String(format: "%.2f", Double($0.value) / Double(max(1, records.count))))" }
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0) + top.joined(separator: ", "))
+}
+print("")
+print("attacked by, per game (top 6)")
+for civ in civs {
+    var by: [String: Int] = [:]
+    for r in records { for (k, v) in r.civs[civ]?.attackedBy ?? [:] { by[k, default: 0] += v } }
+    let top = by.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(6)
+        .map { "\($0.key) \(String(format: "%.1f", Double($0.value) / Double(max(1, records.count))))" }
+    print(civ.padding(toLength: 13, withPad: " ", startingAt: 0) + top.joined(separator: ", "))
+}

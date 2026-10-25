@@ -290,8 +290,10 @@ public struct AIPlayer: Sendable {
             let spare = max(0, state.civs[civ]!.gold - investmentReserve(civ, state))
             let imports = min(engine.grainImportCap(of: civ, in: state),
                               spare / (max(1, rules.trade.grainPrice) * importTurns))
-            // Out of danger, a builder leaves the people grain to grow on.
-            let growth = pressed ? 0 : growthReserve(civ, state)
+            // Out of danger, a builder leaves the people grain to grow on. So does a conqueror once
+            // its standing army is raised: its legions come from a growing people. Only the
+            // opportunist spends every grain on the soldiers of the moment.
+            let growth = pressed ? 0 : growthReserve(civ, state, warlikeToo: planner && soldiers >= standing)
             guard eaten + 1 + margin + growth + crews <= production + state.civs[civ]!.granary / 4 + imports else { return }
 
             let spots = home.filter { t in
@@ -313,12 +315,16 @@ public struct AIPlayer: Sendable {
     }
 
     /// Grain a builder keeps back for its people to grow on: one for each home land below its cap.
-    /// Warlike rulers keep none.
-    func growthReserve(_ civ: CivilizationID, _ state: GameState) -> Int {
-        guard personality.aggression <= 1 else { return 0 }
+    /// Warlike rulers keep none, unless `warlikeToo` (a conqueror's, when recruiting beyond its
+    /// standing army, fitting out ships or paying off idle crews).
+    func growthReserve(_ civ: CivilizationID, _ state: GameState, warlikeToo: Bool = false) -> Int {
+        guard personality.aggression <= 1 || warlikeToo else { return 0 }
         return engine.homeNetwork(of: civ, in: state).filter { state.population(of: $0) < engine.populationCap(of: $0, in: state) }.count
             * rules.economy.growthPerTerritory
     }
+
+    /// A conqueror plans for the long war; an opportunist lives for the chance of the moment.
+    var planner: Bool { personality.aggression > 1 && personality.opportunism < 0.5 }
 
     /// Turns of grain imports the treasury must be able to pay for before the AI raises troops on them.
     var importTurns: Int { 8 }
@@ -406,6 +412,17 @@ public struct AIPlayer: Sendable {
             guard swear, let t = lands.first(where: { engine.tribe(at: $0, for: civ, in: state) != nil && !state.parleyed.contains($0) }),
                   engine.swearChance(t, to: civ, in: state) >= 40 else { continue }
             attempt(.parley(territory: t, .vassalage), &state, &turn)
+        }
+        // A merchant court buys with silver what others take by the sword: once a turn, gifts to a
+        // people next door that would likely welcome them, from gold well beyond any need.
+        guard personality.trade >= 0.8 else { return }
+        let reserve = investmentReserve(civ, state)
+        let neighbors = Set(state.territories(of: civ).flatMap { map.landNeighbors(of: $0) })
+        for t in neighbors.sorted() where engine.tribe(at: t, for: civ, in: state) != nil
+            && !state.parleyed.contains(t) && !engine.spared(t, state) && value(of: t, for: civ, state) > 2 {
+            guard state.civs[civ]!.gold - engine.giftCost(at: t, in: state) >= 2 * reserve,
+                  engine.giftChance(at: t, for: civ, in: state) >= 65 else { continue }
+            if attempt(.parley(territory: t, .gifts), &state, &turn) { return }
         }
     }
 
