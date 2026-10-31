@@ -157,6 +157,8 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case monumentLost(civ: CivilizationID, territory: TerritoryID, monument: MonumentID)
     case trophyWon(civ: CivilizationID, trophy: TrophyKind)
     case tribeRefused(civ: CivilizationID, territory: TerritoryID, parley: Parley)
+    /// A kingdom took an empire's gifts: its regard rose this much.
+    case giftsReceived(civ: CivilizationID, territory: TerritoryID, regard: Int)
     case moved(civ: CivilizationID, from: TerritoryID, to: TerritoryID, units: UnitCounts)
     case captured(civ: CivilizationID, territory: TerritoryID, from: CivilizationID?)
     case formationSet(civ: CivilizationID, territory: TerritoryID, formation: FormationID)

@@ -86,13 +86,18 @@ extension Engine {
         let joins: Bool
         switch kind {
         case .gifts:
+            // Gifts buy goodwill, never land: a kingdom remembers them, and one that welcomes
+            // them (as `giftChance` foresees) remembers them twice as warmly. A nameless tribe
+            // has no ruler to give them to.
+            guard let k else { throw GameError.noTribe(territory) }
             let cost = giftCost(at: territory, in: state)
             let gold = state.civs[civ]!.gold
             guard gold >= cost else { throw GameError.insufficientGold(needed: cost, available: gold) }
             state.civs[civ]!.gold -= cost
-            joins = Int(state.rng.next() % 100) < giftChance(at: territory, for: civ, in: state)
-            // Refused gifts are still remembered kindly.
-            if !joins, let k { changeAttitude(of: k, toward: civ, by: rules.minors.giftAttitude, &state) }
+            let welcomed = Int(state.rng.next() % 100) < giftChance(at: territory, for: civ, in: state)
+            let regard = rules.minors.giftAttitude * (welcomed ? 2 : 1)
+            changeAttitude(of: k, toward: civ, by: regard, &state)
+            return [.giftsReceived(civ: civ, territory: territory, regard: regard)]
         case .demand:
             joins = demandWorks(at: territory, for: civ, in: state)
             if !joins {

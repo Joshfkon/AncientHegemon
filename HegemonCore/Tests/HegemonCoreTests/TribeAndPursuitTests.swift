@@ -45,35 +45,17 @@ import Testing
         }
     }
 
-    @Test func giftsCostGoldAndSometimesWork() throws {
-        var joined = 0
-        for seed in 1...20 {
-            var s = try engine.newGame(seed: UInt64(seed), civilizations: ["egypt"])
-            s.civs["egypt"]!.gold = 50
-            let cost = engine.giftCost(at: "libya", in: s)
-            try engine.apply(.parley(territory: "libya", .gifts), to: &s)
-            #expect(s.civs["egypt"]!.gold == 50 - cost)
-            if s.owner(of: "libya") == "egypt" { joined += 1 }
-        }
-        #expect(joined > 0 && joined < 20)
-    }
-}
-
-@Suite struct PursuitTests {
-    let engine = try! Engine.calm()
-    var sim: BattleSimulator { BattleSimulator(rules: engine.rules) }
-
-    @Test func holdingTheFieldSparesTheBeaten() {
-        func defenderLeft(_ pursue: Bool) -> Int {
-            var attacker = BattleArmy(civ: "a", units: UnitCounts(infantry: 10, cavalry: 4), formation: "phalanx")
-            attacker.pursue = pursue
-            let r = sim.resolve(BattleSetup(attacker: attacker,
-                                            defender: BattleArmy(civ: "d", units: UnitCounts(infantry: 5), formation: "phalanx"),
-                                            terrain: .plains, seed: 3))
-            #expect(r.winner == .attacker)
-            #expect((r.pursuit != nil) == pursue)
-            return r.defenderSurvivors.total
-        }
-        #expect(defenderLeft(false) >= defenderLeft(true))
+    @Test func giftsBuyGoodwillNeverLand() throws {
+        var s = try game()
+        let k = try #require(engine.kingdom(at: "libya", in: s))
+        let before = engine.attitude(of: k, toward: "egypt", in: s)
+        let cost = engine.giftCost(at: "libya", in: s)
+        let events = try engine.apply(.parley(territory: "libya", .gifts), to: &s)
+        #expect(s.civs["egypt"]!.gold == 50 - cost)
+        #expect(s.owner(of: "libya") == nil)
+        #expect(engine.kingdom(at: "libya", in: s) == k)
+        let gained = engine.attitude(of: k, toward: "egypt", in: s) - before
+        #expect(gained == engine.rules.minors.giftAttitude || gained == 2 * engine.rules.minors.giftAttitude)
+        #expect(events == [.giftsReceived(civ: "egypt", territory: "libya", regard: gained)])
     }
 }

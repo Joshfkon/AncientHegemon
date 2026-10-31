@@ -63,6 +63,11 @@ extension Engine {
         // Kingdoms selling goods each turn count as partners too.
         let kingdoms = state.kingdomTrades.filter { $0.civ == civ && $0.until >= state.turn && $0.goods.resource == resource }
             .map { (partner: $0.kingdom, amount: $0.goods.amount) }
-        return (own, trade.map { (partner: $0.0, amount: $0.1) } + kingdoms)
+        // And kingdoms trading with it unasked, through open markets.
+        let markets = kingdomLands(in: state).keys.sorted().compactMap { k -> (partner: CivilizationID, amount: Int)? in
+            let n = marketGoods(from: k, to: civ, in: state)[resource] ?? 0
+            return n > 0 ? (partner: k, amount: n) : nil
+        }
+        return (own, trade.map { (partner: $0.0, amount: $0.1) } + kingdoms + markets)
     }
 }

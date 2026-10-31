@@ -76,6 +76,27 @@ private let thracians = kingdomID("thrace")
         #expect(t.kingdomTrades.isEmpty)
     }
 
+    @Test func neighboursTradeUnaskedUnlessTheyResentYou() throws {
+        let engine = try self.engine.modified { json in
+            var kt = json["kingdomTrade"] as! [String: Any]
+            kt["marketPercent"] = 50
+            json["kingdomTrade"] = kt
+        }
+        var s = try greece()
+        // The Macedones next door yield 2 timber: half reaches Greece with no deal at all.
+        #expect(engine.marketOpen(macedones, to: "greece", in: s))
+        #expect(engine.marketGoods(from: macedones, to: "greece", in: s)[.timber] == 1)
+        let open = engine.effectiveYield(of: .timber, for: "greece", in: s)
+        // Attacked, they close their market.
+        engine.notePeopleAttacked("macedonia", by: "greece", &s)
+        #expect(!engine.marketOpen(macedones, to: "greece", in: s))
+        #expect(engine.effectiveYield(of: .timber, for: "greece", in: s) == open - 1)
+        // Another's vassal trades only with its overlord.
+        s.kingdoms[macedones]!.attitude["greece"] = 50
+        s.kingdoms[macedones]!.overlord = "egypt"
+        #expect(!engine.marketOpen(macedones, to: "greece", in: s))
+    }
+
     @Test func savesFromBeforeTradeStillLoad() throws {
         let s = try greece()
         var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(s)) as! [String: Any]

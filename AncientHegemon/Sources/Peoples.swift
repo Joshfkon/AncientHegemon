@@ -148,8 +148,8 @@ struct KingdomAudienceView: View {
                 let gold = state.civs[human]?.gold ?? 0
                 Button("Send gifts · \(cost) gold") { act(.gifts) }
                     .buttonStyle(BronzeButtonStyle()).disabled(gold < cost)
-                Text(TribeTalks.likelihood(engine.giftChance(at: territory, for: human, in: state)).capitalizedFirst
-                     + ". Even refused, gifts are remembered kindly.")
+                let g = engine.rules.minors.giftAttitude
+                Text("Goodwill, not land: regard +\(g), or +\(2 * g) if they welcome it (\(engine.giftChance(at: territory, for: human, in: state))% likely)")
                     .font(.caption2).foregroundStyle(.white.opacity(0.6))
                 let swear = engine.swearChance(territory, to: human, in: state)
                 Button(swear > 0 ? "Offer protection: \(swear)% they swear" : "Offer protection") { act(.vassalage) }
@@ -178,6 +178,14 @@ struct KingdomAudienceView: View {
                 let left = t.until - state.turn + 1
                 Text("You buy \(DealText.goods(t.goods)) a turn for \(t.gold) gold · \(left) round\(left == 1 ? "" : "s") left")
                     .font(.caption).foregroundStyle(.green)
+            }
+            let market = engine.marketGoods(from: k, to: human, in: state)
+            if !market.isEmpty {
+                Text("Open market: they send you " + market.sorted { $0.key.rawValue < $1.key.rawValue }.map { "\($0.value) \(DealText.name($0.key))" }.joined(separator: ", ") + " a turn, unasked")
+                    .font(.caption).foregroundStyle(.green)
+            } else if engine.kingdom(at: territory, in: state).map({ !engine.marketOpen($0, to: human, in: state) }) ?? false {
+                Text("Their market is closed to you: too far, or they resent you. Buy below, or win them over.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.6))
             }
             let steps = engine.tradeSteps(from: k, to: human, in: state)
             ForEach(goods, id: \.key) { r, _ in

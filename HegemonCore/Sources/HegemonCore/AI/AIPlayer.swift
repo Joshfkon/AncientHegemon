@@ -421,6 +421,9 @@ public struct AIPlayer: Sendable {
         for t in neighbors.sorted() where engine.tribe(at: t, for: civ, in: state) != nil
             && !state.parleyed.contains(t) && !engine.spared(t, state) && value(of: t, for: civ, state) > 2 {
             guard state.civs[civ]!.gold - engine.giftCost(at: t, in: state) >= 2 * reserve,
+                  let k = engine.kingdom(at: t, in: state),
+                  // Gifts win friends, not land: courted until fond enough to come over unasked.
+                  engine.attitude(of: k, toward: civ, in: state) < rules.minors.joinAttitude,
                   engine.giftChance(at: t, for: civ, in: state) >= 65 else { continue }
             if attempt(.parley(territory: t, .gifts), &state, &turn) { return }
         }

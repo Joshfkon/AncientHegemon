@@ -1,5 +1,5 @@
 {
-  "version": 37,
+  "version": 38,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -280,6 +280,8 @@
     "mercantileDiscountPercent": 25,
     "rounds": 10,
     "maxSteps": 5,
+    "marketAttitude": { "warlike": -10, "proud": -10, "mercantile": -30, "peaceable": -20 },
+    "marketPercent": 50,
     "stepPrice": 1,
     "paidAttitude": 1,
     "brokenAttitude": -15

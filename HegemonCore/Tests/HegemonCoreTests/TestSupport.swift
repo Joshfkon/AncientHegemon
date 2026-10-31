@@ -40,6 +40,10 @@ extension Engine {
                                  "levyChanceMax": 100, "levyAttitude": 0, "rebelLegitimacy": 0, "rebelAttitudeStep": 1000,
                                  "renewChance": 100] { minors[key] = value }
             json["minors"] = minors
+            // Kingdoms' open markets off, as tests written before them expect.
+            var kt = json["kingdomTrade"] as! [String: Any]
+            kt["marketPercent"] = 0
+            json["kingdomTrade"] = kt
             // The empires start at war, as tests written before peaceful starts expect.
             var start = json["start"] as! [String: Any]
             start["atPeace"] = false

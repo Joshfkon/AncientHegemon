@@ -75,7 +75,7 @@ struct EmpireTable: View {
 /// Tapping a territory selects it.
 /// What the map emphasizes.
 enum MapLayer: String, CaseIterable {
-    case armies = "Armies", threats = "Threats", supply = "Supply", trade = "Trade", resources = "Resources"
+    case armies = "Armies", threats = "Threats", supply = "Supply", trade = "Trade", resources = "Goods"
 }
 
 /// A request to bring a territory into view, e.g. when the panel opens over it.
@@ -167,7 +167,7 @@ struct MapView: View {
                     withAnimation(.easeInOut(duration: 0.3)) { pan = clamped(pan, geo.size) }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    if zoom > 1.01 {
+                    if zoom > 1.01 || abs(pan.width) + abs(pan.height) > 4 {
                         Button {
                             withAnimation(.easeInOut(duration: 0.3)) { zoom = 1; pan = .zero }
                         } label: {
@@ -213,7 +213,9 @@ struct MapView: View {
     private func drag(_ size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                guard pinchStart == nil, zoom > 1 else { return }
+                // Drag pans at any zoom: zoomed out, there is still room to slide the board
+                // out from under the panels.
+                guard pinchStart == nil else { return }
                 let start = dragStart ?? pan
                 if dragStart == nil { dragStart = start }
                 pan = clamped(CGSize(width: start.width + value.translation.width,

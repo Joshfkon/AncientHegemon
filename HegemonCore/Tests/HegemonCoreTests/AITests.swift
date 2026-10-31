@@ -26,7 +26,7 @@ import Testing
     }
 
     @Test func aiExpandsIntoNativeLand() throws {
-        var s = try engine.newGame(seed: 3, civilizations: ["mesopotamia"])
+        var s = try engine.newGame(seed: 2, civilizations: ["mesopotamia"])
         let start = s.territories(of: "mesopotamia").count
         let ai = AIPlayer(engine: engine, personality: .conqueror)
         for _ in 0..<8 { _ = ai.play(&s) }

@@ -32,6 +32,11 @@ public struct KingdomTradeRules: Codable, Sendable, Equatable {
     /// the first adds `stepPrice` gold a unit.
     public let maxSteps: Int
     public let stepPrice: Int
+    /// Open markets: a kingdom next door to an empire, or across a sea their coasts share, trades
+    /// with it unasked while it regards the empire at least this well (by temperament), sending
+    /// `marketPercent` of what its lands yield of each good (rounded).
+    public let marketAttitude: [Temperament: Int]
+    public let marketPercent: Int
     /// Regard gained each turn the gold arrives, and lost when an empire breaks the trade.
     public let paidAttitude: Int
     public let brokenAttitude: Int
@@ -128,6 +133,51 @@ extension Engine {
     func kingdomTradeYield(_ resource: Resource, for civ: CivilizationID, in state: GameState) -> Int {
         state.kingdomTrades.filter { $0.civ == civ && $0.until >= state.turn && $0.goods.resource == resource }
             .reduce(0) { $0 + $1.goods.amount }
+    }
+
+    // MARK: Open markets
+
+    /// Each kingdom's lands, in one pass over the map.
+    func kingdomLands(in state: GameState) -> [CivilizationID: [TerritoryID]] {
+        var out: [CivilizationID: [TerritoryID]] = [:]
+        for t in map.territories { if let k = kingdom(at: t.id, in: state) { out[k, default: []].append(t.id) } }
+        return out
+    }
+
+    /// Whether a kingdom trades with `civ` unasked: it lies next door or across a sea their
+    /// coasts share, and doesn't resent the empire. A vassal trades only with its overlord.
+    public func marketOpen(_ kingdom: CivilizationID, to civ: CivilizationID, in state: GameState) -> Bool {
+        let coasts = Set(state.territories(of: civ).flatMap { map.seas(bordering: $0) })
+        return marketOpen(kingdom, to: civ, lands: lands(of: kingdom, in: state), coasts: coasts, state)
+    }
+
+    private func marketOpen(_ kingdom: CivilizationID, to civ: CivilizationID, lands: [TerritoryID],
+                            coasts: Set<SeaZoneID>, _ state: GameState) -> Bool {
+        guard let k = state.kingdoms[kingdom], let people = people(of: kingdom, in: state) else { return false }
+        if let lord = k.overlord, lord != civ { return false }
+        if k.overlord == nil, attitude(of: kingdom, toward: civ, in: state) < rules.kingdomTrade.marketAttitude[people.temperament] ?? 0 {
+            return false
+        }
+        return lands.contains { t in
+            map.landNeighbors(of: t).contains { state.owner(of: $0) == civ }
+                || map.seas(bordering: t).contains(where: coasts.contains)
+        }
+    }
+
+    /// What a kingdom's open market sends `civ` of each good a turn.
+    public func marketGoods(from kingdom: CivilizationID, to civ: CivilizationID, in state: GameState) -> [Resource: Int] {
+        guard marketOpen(kingdom, to: civ, in: state) else { return [:] }
+        return kingdomYield(kingdom, in: state).mapValues { ($0 * rules.kingdomTrade.marketPercent + 50) / 100 }.filter { $0.value > 0 }
+    }
+
+    /// Goods arriving from the kingdoms' open markets, as yield.
+    func marketYield(_ resource: Resource, for civ: CivilizationID, in state: GameState) -> Int {
+        guard Self.tradeGoods.contains(resource), state.civs[civ] != nil else { return 0 }
+        let coasts = Set(state.territories(of: civ).flatMap { map.seas(bordering: $0) })
+        return kingdomLands(in: state).sorted { $0.key < $1.key }.reduce(0) { total, entry in
+            guard marketOpen(entry.key, to: civ, lands: entry.value, coasts: coasts, state) else { return total }
+            return total + (yield(of: resource, in: entry.value, state) * rules.kingdomTrade.marketPercent + 50) / 100
+        }
     }
 
     // MARK: Orders

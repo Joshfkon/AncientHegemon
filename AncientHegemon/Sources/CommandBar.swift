@@ -101,6 +101,7 @@ struct CommandBar: View {
                 .font(.caption2.bold()).foregroundStyle(ready.total > 0 ? Color.green : .white.opacity(0.6))
             if ready.total > 0 {
                 Text("Tap a glowing land to march there.").font(.caption2).foregroundStyle(.white.opacity(0.65))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Button { switchView?(false) } label: {
                 Label("The land of \(engine.map.territory(id)?.name ?? id)", systemImage: "map.fill").font(.caption.bold())
@@ -131,7 +132,7 @@ struct CommandBar: View {
                 if session.human != nil {
                     Button { session.kingdomAudience = KingdomAudience(territory: id) } label: {
                         Label("Meet \(people.ruler)", systemImage: "person.crop.circle")
-                            .font(.caption.bold()).lineLimit(1)
+                            .font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.6)
                             .padding(.horizontal, 10).padding(.vertical, 4)
                             .background(Bronze.gradient, in: Capsule())
                             .foregroundStyle(.black)
@@ -157,7 +158,7 @@ struct CommandBar: View {
                     HStack(spacing: 8) {
                         Button { session.audience = Audience(civ: owner, reason: .visit) } label: {
                             Label("Meet \(ruler)", systemImage: "person.crop.circle")
-                                .font(.caption.bold()).lineLimit(1)
+                                .font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.6)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
                                 .background(Bronze.gradient, in: Capsule())
                                 .foregroundStyle(.black)
@@ -273,7 +274,7 @@ struct CommandBar: View {
             return "Restless: it pays no taxes and may revolt. March in at least \(engine.rules.unrest.garrisonToCalm) soldier to calm it."
         }
         if state.owner(of: id) == human { return engine.homeNetwork(of: human, in: state).contains(id) ? "" : "Cut off from your capital: no recruiting here." }
-        return "Select one of your armies next door and tap here to attack."
+        return "Tap one of your armies next door, then tap here to attack."
     }
 
     // MARK: Sections
@@ -435,11 +436,32 @@ struct CommandBar: View {
             }
     }
 
+    /// Trade with a kingdom: what its open market sends us unasked, and the way to buy more.
+    @ViewBuilder private func tradeSection(_ id: TerritoryID, _ k: CivilizationID, _ human: CivilizationID) -> some View {
+        let market = engine.marketGoods(from: k, to: human, in: state)
+        let bought = engine.trades(with: k, in: state).filter { $0.civ == human }
+        let goods = engine.kingdomYield(k, in: state)
+        if !goods.isEmpty || !bought.isEmpty {
+            section("Trade") {
+                let list = { (d: [Resource: Int]) in d.sorted { $0.key.rawValue < $1.key.rawValue }.map { "\($0.value) \(DealText.name($0.key))" }.joined(separator: ", ") }
+                Tile(symbol: "arrow.left.arrow.right", title: market.isEmpty ? "Market closed" : "Open market",
+                     detail: market.isEmpty ? "Too far, or they resent you" : "They send \(list(market)) a turn",
+                     cost: Text(market.isEmpty ? "Win them over" : "Free, while relations hold"), enabled: false) {}
+                Tile(symbol: "cart.fill", title: bought.isEmpty ? "Buy more" : "Buying",
+                     detail: bought.isEmpty ? "They sell \(list(goods))" : bought.map { "\(DealText.goods($0.goods)) a turn" }.joined(separator: ", "),
+                     cost: Text(bought.isEmpty ? "Gold each turn" : "\(bought.reduce(0) { $0 + $1.gold }) gold a turn"), enabled: true) {
+                    session.kingdomAudience = KingdomAudience(territory: id)
+                }
+            }
+        }
+    }
+
     @ViewBuilder private func tribeSection(_ id: TerritoryID, _ human: CivilizationID) -> some View {
         let warriors = state.armies[id].flatMap { isNative($0.owner) ? $0.units.total : nil } ?? 0
         if engine.overlord(of: id, in: state) == human {
             vassalSection(id, human, engine.warriors(at: id, in: state))
         } else {
+        if let k = engine.kingdom(at: id, in: state) { tradeSection(id, k, human) }
         section("Diplomacy") {
             if let lord = engine.overlord(of: id, in: state) {
                 Tile(symbol: "crown", title: "Vassal of \(Palette.name(lord, state))",
@@ -448,19 +470,21 @@ struct CommandBar: View {
             } else if warriors == 0 {
                 Tile(symbol: "flag.fill", title: "Empty land", detail: "March a single unit in to claim it", cost: Text(""), enabled: false) {}
             } else if engine.tribe(at: id, for: human, in: state) == nil {
-                Tile(symbol: "person.3.fill", title: session.sees(id) ? "\(warriors) warriors" : "A tribe", detail: "Your land must border theirs to send envoys",
+                Tile(symbol: "person.3.fill", title: session.sees(id) ? "\(warriors) warriors" : "A tribe", detail: "Envoys need a shared border",
                      cost: Text(""), enabled: false) {}
             } else if state.parleyed.contains(id) {
                 Tile(symbol: "hourglass", title: "Spoken with", detail: "Try again next turn, or attack", cost: Text(""), enabled: false) {}
             } else {
                 let cost = engine.giftCost(at: id, in: state)
-                let chance = engine.giftChance(at: id, for: human, in: state)
                 let bows = engine.demandWorks(at: id, for: human, in: state)
-                Tile(symbol: "gift.fill", title: "Gifts", detail: TribeTalks.likelihood(chance).capitalizedFirst,
-                     cost: Text("\(cost) gold"), enabled: (state.civs[human]?.gold ?? 0) >= cost) {
-                    if session.order(.parley(territory: id, .gifts)) { SoundBoard.shared.play(.coins, volume: 0.6) }
+                if engine.people(at: id, in: state) != nil {
+                    let g = engine.rules.minors.giftAttitude
+                    Tile(symbol: "gift.fill", title: "Gifts", detail: "Regard +\(g), +\(2 * g) if welcomed. Never land",
+                         cost: Text("\(cost) gold"), enabled: (state.civs[human]?.gold ?? 0) >= cost) {
+                        if session.order(.parley(territory: id, .gifts)) { SoundBoard.shared.play(.coins, volume: 0.6) }
+                    }
                 }
-                Tile(symbol: "crown.fill", title: "Demand", detail: bows ? "They will bow to your army" : "They'd refuse: you need \(engine.rules.tribes.demandRatio)× their warriors nearby",
+                Tile(symbol: "crown.fill", title: "Demand", detail: bows ? "They will bow to your army" : "Needs \(engine.rules.tribes.demandRatio)× their warriors next door",
                      cost: Text(bows ? "Free" : "Costs standing if refused"), enabled: true) {
                     session.order(.parley(territory: id, .demand))
                 }
@@ -471,7 +495,7 @@ struct CommandBar: View {
                     Tile(symbol: "crown", title: "Make vassal",
                          detail: defiant > 0 ? "Defiant: no terms for \(defiant) round\(defiant == 1 ? "" : "s")"
                              : chance > 0 ? "\(chance)% they swear; refused, they turn defiant"
-                             : "Needs \(need) troops next door, or their friendship",
+                             : "Needs \(need) troops next door, or friendship",
                          cost: Text(chance > 0 ? "+\(engine.tribute(at: id, in: state)) gold a turn" : "Sours them if refused"), enabled: defiant == 0) {
                         session.order(.parley(territory: id, .vassalage))
                     }
@@ -614,7 +638,7 @@ struct CommandBar: View {
                 }
                 (MapView.icon(.grain) + Text(" \(base + extra) grain a turn" + (extra > 0 ? " (\(base) + \(extra) carted)" : "")))
                     .font(.caption.bold())
-                (MapView.icon(.gold) + Text(" about \(pay.formatted(.number.precision(.fractionLength(0...1)))) gold a turn in pay"))
+                (MapView.icon(.gold) + Text(pay < 0.5 ? " No pay: within your standing army" : " About \(pay.formatted(.number.precision(.fractionLength(0...1)))) gold a turn in pay"))
                     .font(.caption.bold())
                 Group {
                     if steps == nil {

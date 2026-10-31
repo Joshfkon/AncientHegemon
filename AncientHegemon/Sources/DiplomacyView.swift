@@ -126,7 +126,12 @@ struct DiplomacyView: View {
             return (peace ? "They think we are weak, and covet our land" : "They think we are weak", "exclamationmark.triangle.fill", .red)
         }
         if edge < 0.75 { return ("They fear our armies", "shield.fill", .blue) }
-        if peace && trading { return ("Good friends: trade binds us", "heart.fill", .green) }
+        // Trade alone isn't friendship: their regard says whether it has warmed them.
+        if peace && trading {
+            return engine.regard(of: other, toward: human, in: state) >= 30
+                ? ("Good friends: trade binds us", "heart.fill", .green)
+                : ("Trading partners", "arrow.left.arrow.right", .secondary)
+        }
         if awed { return ("Awed by our court", "sparkles", .orange) }
         if peace { return (border ? "Wary neighbours" : "Distant but cordial", "hand.raised.fill", .secondary) }
         return (border ? "Hostile, at our border" : "Hostile, but far away", "flame.fill", .orange)

@@ -231,7 +231,7 @@ extension Engine {
         if resource == .iron, !ironWorked(civ, state) { return 0 }
         // Bargains move yields between courts: what comes in, less what goes out.
         let own = max(0, yield(of: resource, in: homeNetwork(of: civ, in: state), state) + bargainYield(resource, for: civ, in: state)
-                          + kingdomTradeYield(resource, for: civ, in: state))
+                          + kingdomTradeYield(resource, for: civ, in: state) + marketYield(resource, for: civ, in: state))
         guard resource != .grain else { return own }
         let shared = (routes ?? tradeRoutes(in: state)).filter { $0.involves(civ) }.reduce(0) {
             let partner = $1.partner(of: civ)

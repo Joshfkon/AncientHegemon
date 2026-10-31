@@ -757,14 +757,7 @@ struct TribeTalks: View {
         let next = engine.troopsNextTo(territory, for: civ, in: state)
         let bows = engine.demandWorks(at: territory, for: civ, in: state)
         let join = warriors * engine.rules.tribes.warriorsJoinPercent / 100
-        note("A tribe of \(warriors) warriors. Tribes don't trade or sign treaties, but they can be brought under your rule: they become your land, and \(join == 0 ? "their warriors go home" : "\(join) of their warriors join your army").")
-        Button {
-            if session.order(.parley(territory: territory, .gifts)) { SoundBoard.shared.play(.coins, volume: 0.6) }
-        } label: {
-            option("gift.fill", "Win them over with gifts",
-                   (gold < cost ? "\(cost) gold (you have \(gold))" : "\(cost) gold") + " · \(Self.likelihood(chance)). More of your troops next door makes them keener.")
-        }
-        .disabled(gold < cost)
+        note("A tribe of \(warriors) warriors. Tribes have no ruler to trade or treat with, but they can be brought under your rule: they become your land, and \(join == 0 ? "their warriors go home" : "\(join) of their warriors join your army").")
         Button {
             session.order(.parley(territory: territory, .demand))
         } label: {

@@ -2462,3 +2462,34 @@ meant to be the hardest empire) won 35%. New sim reports showed why. `hegemon-si
     in the middle on seeds 1001 and random worlds.
   - Every game is still decided by round 50; tall wins are 15–17% on the classic board and 7% on
     random worlds.
+
+### Open markets, gifts that buy goodwill, and a UX sweep (Josh: "giving gifts shouldn't annex a territory… trade needs to be the default… I should be able to get timber from a neighbouring country unless we're at war or have bad relations")
+- **Open markets.**
+  - Every kingdom next door to an empire, or across a sea their coasts share, trades with it
+    unasked. Half of what the kingdom's lands yield of each good arrives every turn (rounded:
+    1 timber of 1, 1 of 2), as yield, just like a peaceful trade route.
+  - The market stays open while the kingdom's regard holds. Thresholds: warlike and proud −10,
+    peaceable −20, mercantile −30, which is above every temperament's starting attitude. An
+    attack (−50) or a refused demand closes it.
+  - A vassal trades only with its overlord.
+  - Paid trade deals stay, for buying more than the open share or from farther off.
+- **Gifts never annex.** Gifts to a kingdom buy regard: +15, or +30 when welcomed. The welcome
+  chance is the old `giftChance`, so troops nearby, legitimacy, writing and the throne room
+  still help. A nameless tribe has no ruler to receive gifts; it can still be made to bow or be
+  conquered. The merchant AI now courts kingdoms with gifts until they are fond enough to come
+  over unasked (`joinAttitude`), instead of buying them outright.
+- **UX sweep.**
+  - The map pans at any zoom, and the reset button shows whenever it is moved.
+  - The "Resources" overlay tab is now "Goods", so it no longer truncates.
+  - "Meet …" buttons shrink long ruler names to fit.
+  - The attack hint matches how armies are picked now.
+  - Kingdom panels lead with a Trade section (open market, buying more), with shorter
+    Gifts, Demand and Make-vassal texts.
+  - Army supply says "No pay" instead of "about 0 gold".
+  - The rival card says "Trading partners" rather than "Good friends" when trade hasn't
+    warmed their regard.
+- Rules version 38.
+- Balance (80 games each): classic seed 501: Greece 20%, Egypt 35%, Italia 17%, Mesopotamia 27%.
+  Seed 1001: Greece 30%, Egypt 33%, Italia 12%, Mesopotamia 23%. Random worlds: Greece 17%, Egypt 38%,
+  Italia 15%, Mesopotamia 28%. Open markets favour Egypt, whose kingdom neighbours feed it, and
+  leave Italia at the low edge; a later pass should look at both.

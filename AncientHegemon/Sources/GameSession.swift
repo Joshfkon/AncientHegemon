@@ -827,7 +827,7 @@ final class GameSession {
         case let .navalBattle(_, r): return r.attacker == me || r.defender == me
         case let .storm(civ, _, _, _), let .piratesPlundered(civ, _, _), let .bountyPaid(civ, _): return civ == me
         case let .vassalSworn(civ, _), let .vassalFreed(civ, _), let .levied(civ, _, _, _), let .annexed(civ, _),
-             let .levyRefused(civ, _), let .oathRenewed(civ, _), let .kingdomTradeMade(civ, _, _, _), let .kingdomTradeEnded(civ, _),
+             let .levyRefused(civ, _), let .oathRenewed(civ, _), let .giftsReceived(civ, _, _), let .kingdomTradeMade(civ, _, _, _), let .kingdomTradeEnded(civ, _),
              let .peopleJoined(civ, _, _), let .peopleRaided(_, _, civ, _, _): return civ == me
         case let .generalKilled(id): return before.generals[id]?.owner == me
         case let .projectDestroyed(t, _): return before.owner(of: t) == me
@@ -1014,6 +1014,8 @@ final class GameSession {
             case let .tribeJoined(civ, t, parley, warriors) where civ == human:
                 add(civ, "\(place(t)) \(parley == .gifts ? "accepts your gifts" : "bows to your demand") and swears loyalty"
                     + (warriors > 0 ? "; \(warriors) warriors join you" : ""), at: t)
+            case let .giftsReceived(civ, t, regard) where civ == human:
+                add(civ, "\(peopleName(t).capitalizedFirst) " + (regard > engine.rules.minors.giftAttitude ? "welcome your gifts warmly" : "accept your gifts") + " (regard +\(regard))", at: t)
             case let .tribeRefused(civ, t, parley) where civ == human:
                 add(civ, "\(place(t)) " + (parley == .gifts ? "takes your gifts but will not bow" : "refuses your demand and sharpens its spears"), at: t)
             case let .recruited(civ, t, unit, count) where civ == human:
