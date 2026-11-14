@@ -487,6 +487,7 @@ private let thrace = kingdomID("thrace")
         var same = s
         #expect(!faithless.minorsRound(&same).contains(.vassalFreed(civ: "greece", territory: "thrace")))
         s.civs["greece"]!.ruler.name = "Someone New"
+        #expect(faithless.lapsedOath(of: thrace, in: s) == same.civs["greece"]!.ruler.name)
         #expect(faithless.minorsRound(&s).contains(.vassalFreed(civ: "greece", territory: "thrace")))
         #expect(faithless.overlord(of: "thrace", in: s) == nil)
     }
@@ -514,6 +515,12 @@ private let thrace = kingdomID("thrace")
         let hated = real.revoltChance(of: thrace, in: s)
         s.armies["macedonia"] = nil
         #expect(real.revoltChance(of: thrace, in: s) == hated + real.rules.minors.breakFreePercent)
+        // The odds come apart into their causes, for the player to see.
+        let odds = real.revoltOdds(of: thrace, in: s)
+        #expect(odds.unwatched == real.rules.minors.breakFreePercent)
+        #expect(odds.weakThrone == (real.rules.minors.rebelLegitimacy - 10) / real.rules.minors.rebelLegitimacyStep)
+        #expect(odds.illWill == 50 / real.rules.minors.rebelAttitudeStep)
+        #expect(odds.total == real.revoltChance(of: thrace, in: s))
     }
 
     @Test func aGarrisonThatOutnumbersTheRisingTakesTheLand() throws {

@@ -91,6 +91,8 @@ struct TurnReportCard: View {
         let state = session.state
         let mine = session.report.filter { $0.mine == true }
         let others = session.report.filter { $0.mine != true }
+        // What may go wrong soon, foreseen: a blow that comes later was warned of.
+        let warnings = session.human.map { Why(engine: session.engine, me: $0).warnings(state) } ?? []
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 CardTitle(text: "Since your last turn")
@@ -100,6 +102,20 @@ struct TurnReportCard: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
+                    if !warnings.isEmpty {
+                        Text("WATCH OUT").font(.caption2.bold()).tracking(1).foregroundStyle(.orange)
+                        ForEach(warnings) { w in
+                            Button { if let t = w.territory { jump(t) } } label: {
+                                HStack(alignment: .top, spacing: 6) {
+                                    Image(systemName: w.icon).font(.caption).foregroundStyle(.orange).frame(width: 14).padding(.top, 3)
+                                    Text(w.text).font(.callout).multilineTextAlignment(.leading).foregroundStyle(Color.primary)
+                                    Spacer(minLength: 0)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Divider().padding(.vertical, 2)
+                    }
                     if mine.isEmpty {
                         Text("Nothing touched your realm.").font(.callout).foregroundStyle(Color.primary.opacity(0.6))
                     }
@@ -120,7 +136,8 @@ struct TurnReportCard: View {
                     }
                 }
             }
-            .frame(height: min(260, CGFloat(mine.count) * 30 + (mine.isEmpty ? 24 : 0)
+            .frame(height: min(warnings.isEmpty ? 260 : 330, CGFloat(mine.count) * 30 + (mine.isEmpty ? 24 : 0)
+                                + (warnings.isEmpty ? 0 : CGFloat(warnings.count) * 64 + 30)
                                 + (others.isEmpty ? 0 : 34) + (showOthers ? CGFloat(others.count) * 30 : 0) + 6))
             Text("Arrows and markers on the map show these until you end your turn.")
                 .font(.caption2).foregroundStyle(.secondary)

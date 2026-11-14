@@ -237,7 +237,7 @@ enum Advisors {
         }
         if let (name, v) = vassals.first {
             intros.append(say("intro.vassals", .envoy, .calm,
-                "\(name) are our vassals now. They send tribute each turn and levies every few rounds, and need no garrison. Leave them unwatched too long and they may break free; after years of loyalty, they may be annexed.",
+                "\(name) are our vassals now. They send tribute each turn and levies every few rounds, and need no garrison. But they swore to our ruler, not our throne: a new ruler must win them again, and a weak throne, ill will or no troops nearby may make them rise. After years of loyalty, they may be annexed.",
                 go: .territory(v)))
         }
 

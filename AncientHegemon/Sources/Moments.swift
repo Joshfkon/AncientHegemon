@@ -35,6 +35,12 @@ struct Moment: Identifiable, Equatable {
         case splendour(began: Bool)
         /// The Iron Age dawns.
         case ironAge
+        /// A vassal threw off our rule, and why.
+        case vassalRose(TerritoryID, why: String?)
+        /// A kingdom closed its market to us, and why.
+        case marketClosed(TerritoryID, why: String)
+        /// Hunger took people or soldiers.
+        case hunger(people: Int, soldiers: Int)
         /// One of our generals rose in revolt and took land with him (and had he been paid off?).
         case rebellion(general: String, lands: [TerritoryID], rebel: CivilizationID, bribed: Bool)
     }
@@ -63,6 +69,7 @@ struct MomentBanner: View {
                     .foregroundStyle(.white)
                 if let sub = style.subtitle {
                     Text(sub).font(.callout).foregroundStyle(.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true).lineLimit(3)
                 }
             }
         }
@@ -176,9 +183,22 @@ struct MomentBanner: View {
                          subtitle: (bribed ? "Your gold bought only a season. " : "")
                             + (lands.isEmpty ? "His army turns on you" : "He seizes \(names)"),
                          color: Color(red: 0.55, green: 0.08, blue: 0.08), stamp: true)
+        case let .vassalRose(t, why):
+            let people = engine.people(from: t)?.name.capitalizedFirst ?? place(t)
+            return Style(icon: "link", title: "\(people) rise against you", subtitle: why,
+                         color: Color(red: 0.5, green: 0.12, blue: 0.1), stamp: true)
+        case let .marketClosed(t, why):
+            let people = engine.people(from: t)?.name.capitalizedFirst ?? place(t)
+            return Style(icon: "cart.badge.minus", title: "\(people) close their market", subtitle: why,
+                         color: Color(red: 0.45, green: 0.3, blue: 0.1), stamp: false)
+        case let .hunger(people, soldiers):
+            let lost = Why.join([people > 0 ? "\(people) people" : nil, soldiers > 0 ? "\(soldiers) soldiers" : nil].compactMap { $0 })
+            return Style(icon: "leaf.fill", title: "Hunger: \(lost) lost",
+                         subtitle: "The granary was empty and the harvest fell short of what your people and army eat",
+                         color: Color(red: 0.4, green: 0.25, blue: 0.1), stamp: false)
         case let .unpaid(n):
             return Style(icon: "dollarsign.circle", title: "\(n) unpaid soldier\(n == 1 ? "" : "s") went home",
-                         subtitle: "An army beyond what your people can spare costs full pay",
+                         subtitle: "Soldiers beyond your standing army cost full pay, and the treasury ran dry",
                          color: Color(red: 0.5, green: 0.35, blue: 0.08), stamp: false)
         case let .disaster(kind, t):
             let (icon, title): (String, String) = switch kind {

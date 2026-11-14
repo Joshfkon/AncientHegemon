@@ -511,8 +511,12 @@ struct CommandBar: View {
             if let k = engine.kingdom(at: id, in: state) {
                 let risk = engine.revoltChance(of: k, in: state)
                 let regard = engine.attitude(of: k, toward: human, in: state)
+                let odds = engine.revoltOdds(of: k, in: state)
+                let causes = [odds.unwatched > 0 ? "no troops near" : nil, odds.weakThrone > 0 ? "weak throne" : nil,
+                              odds.illWill > 0 ? "ill will" : nil].compactMap { $0 }
                 Tile(symbol: risk >= 10 ? "flame.fill" : "hand.raised.fill", title: "Loyalty",
-                     detail: "A new ruler must win their oath again",
+                     detail: causes.isEmpty ? "A new ruler must win their oath again"
+                        : "Restless: " + causes.joined(separator: ", ") + (odds.garrisoned ? " (garrison halves it)" : ""),
                      cost: Text("\(risk)% revolt · regard \(regard)").foregroundColor(risk >= 10 ? .orange : nil), enabled: false) {}
             }
             Tile(symbol: "dollarsign.circle.fill", title: "Tribute", detail: "Paid every turn; no garrison needed, no unrest",

@@ -30,6 +30,7 @@
 		5A8C3BEE15D78A51658DDEC1 /* Standings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B6EFEC6B7A04539C9215408 /* Standings.swift */; };
 		63F5C71E7723073D5709C9A6 /* ThroneRoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B315D268B5CD7AC01D1F1C /* ThroneRoom.swift */; };
 		64BF5AA30EDE587F90306A86 /* italia.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 0FCEE35A1C25107FDE363ED9 /* italia.m4a */; };
+		69D821009C5417D17909748D /* Why.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19C6A7246B41DFC7D3F29C8C /* Why.swift */; };
 		6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B35133F6C1422877D8A459 /* UnitIcons.swift */; };
 		70EA2B8C6234F2DCB9445465 /* MapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEFB823D986E1A428DCF40F /* MapLayout.swift */; };
 		7E4348ABA726684162F1B759 /* GuidedOpening.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821EC596738E6EAD5B72DCA9 /* GuidedOpening.swift */; };
@@ -74,6 +75,7 @@
 		13FE3E02A39FAB86B12271F8 /* BattlePlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattlePlan.swift; sourceTree = "<group>"; };
 		14768232649EF1859B451DAC /* Peoples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Peoples.swift; sourceTree = "<group>"; };
 		185BAB29A57542F88154144A /* Guidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Guidance.swift; sourceTree = "<group>"; };
+		19C6A7246B41DFC7D3F29C8C /* Why.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Why.swift; sourceTree = "<group>"; };
 		2667C91D6FAAAA9BC1E6F955 /* DiplomacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiplomacyView.swift; sourceTree = "<group>"; };
 		274DD8EB3BAAB27A38991F2C /* WorldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldView.swift; sourceTree = "<group>"; };
 		2ED27BCD3EBA9EA24D94359E /* war.m4a */ = {isa = PBXFileReference; path = war.m4a; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				9E2CF376F9E0AE28E930B3BE /* TradeView.swift */,
 				D1B35133F6C1422877D8A459 /* UnitIcons.swift */,
 				87DF88279096FCF589EA9D0E /* Walkthrough.swift */,
+				19C6A7246B41DFC7D3F29C8C /* Why.swift */,
 				274DD8EB3BAAB27A38991F2C /* WorldView.swift */,
 			);
 			path = Sources;
@@ -385,6 +388,7 @@
 				AB98FE64DAE66DDF159BE715 /* TradeView.swift in Sources */,
 				6CE014C35C2029CF0CA617F4 /* UnitIcons.swift in Sources */,
 				94B96818F56FA0365A6EDCC9 /* Walkthrough.swift in Sources */,
+				69D821009C5417D17909748D /* Why.swift in Sources */,
 				B21F04A2C0CBE11850268E66 /* WorldView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -296,16 +296,41 @@ extension Engine {
         max(0, rules.minors.rebelLegitimacy - (state.civs[lord]?.legitimacy ?? 0))
     }
 
+    /// What makes a vassal restless, part by part (percent a round each), for the player to see.
+    public struct RevoltOdds: Equatable, Sendable {
+        /// None of the overlord's troops at hand.
+        public var unwatched = 0
+        /// The overlord's legitimacy below the awe it needs.
+        public var weakThrone = 0
+        /// Their ill will toward the overlord.
+        public var illWill = 0
+        /// A garrison in their land halves it all.
+        public var garrisoned = false
+        public var total: Int { min(100, (unwatched + weakThrone + illWill) / (garrisoned ? 2 : 1)) }
+    }
+
+    public func revoltOdds(of kingdom: CivilizationID, in state: GameState) -> RevoltOdds {
+        guard let lord = state.kingdoms[kingdom]?.overlord else { return RevoltOdds() }
+        let m = rules.minors
+        var odds = RevoltOdds()
+        odds.unwatched = watched(kingdom, by: lord, in: state) ? 0 : m.breakFreePercent
+        odds.weakThrone = legitimacyShortfall(lord, in: state) / max(1, m.rebelLegitimacyStep)
+        odds.illWill = max(0, -attitude(of: kingdom, toward: lord, in: state)) / max(1, m.rebelAttitudeStep)
+        odds.garrisoned = lands(of: kingdom, in: state).contains { garrisoned($0, in: state) }
+        return odds
+    }
+
+    /// The ruler a vassal swore to, when that ruler no longer holds its overlord's throne: its oath
+    /// must be won again.
+    public func lapsedOath(of kingdom: CivilizationID, in state: GameState) -> String? {
+        guard let k = state.kingdoms[kingdom], let lord = k.overlord, let sworn = k.swornTo,
+              sworn != state.civs[lord]?.ruler.name else { return nil }
+        return sworn
+    }
+
     /// The chance, in percent, that a vassal kingdom rises this round.
     public func revoltChance(of kingdom: CivilizationID, in state: GameState) -> Int {
-        guard let lord = state.kingdoms[kingdom]?.overlord else { return 0 }
-        let m = rules.minors
-        let held = lands(of: kingdom, in: state)
-        var chance = watched(kingdom, by: lord, in: state) ? 0 : m.breakFreePercent
-        chance += legitimacyShortfall(lord, in: state) / max(1, m.rebelLegitimacyStep)
-        chance += max(0, -attitude(of: kingdom, toward: lord, in: state)) / max(1, m.rebelAttitudeStep)
-        if held.contains(where: { garrisoned($0, in: state) }) { chance /= 2 }
-        return min(100, chance)
+        revoltOdds(of: kingdom, in: state).total
     }
 
     /// The chance, in percent, that a vassal renews its oath to a new ruler on its overlord's throne.

@@ -2493,3 +2493,30 @@ meant to be the hardest empire) won 35%. New sim reports showed why. `hegemon-si
   Seed 1001: Greece 30%, Egypt 33%, Italia 12%, Mesopotamia 23%. Random worlds: Greece 17%, Egypt 38%,
   Italia 15%, Mesopotamia 28%. Open markets favour Egypt, whose kingdom neighbours feed it, and
   leave Italia at the low edge; a later pass should look at both.
+
+### Cause and effect (after Josh's playtesting review: outcomes should feel earned, not random)
+Rule: every important setback says why it happened, at the moment it happens, and the
+foreseeable ones are warned of first. The reasons are read in the app from the state just before
+the event (`Why.swift`), so the engine adds only `revoltOdds` (a vassal's restlessness by cause)
+and `lapsedOath`.
+- **News with reasons.** These lines in the news now end with their cause:
+  - A vassal rising: "They swore to Thutmose, not to Amenhotep, and would not renew their
+    oath", or "none of your troops were near, your legitimacy (32) is too low to awe them and they
+    resent you".
+  - A levy unanswered, a kingdom trade lapsing, unpaid soldiers leaving.
+
+  Hunger and soldiers lost out of supply were missing from the player's news entirely; they now
+  appear with their reasons. A kingdom closing its market to you, which no single event reports,
+  is found by comparing before and after.
+- **Moments with reasons.** A vassal rising, a market closing and hunger now get the
+  full-screen moment, with the reason as its subtitle, and the map moves to where it happened.
+- **Warnings before the blow.** A "Watch out" section heads the "Since your last turn" card, and
+  a "⚠️ N things to watch" notice sits on the map. Each warning taps through to its land. It
+  covers:
+  - vassals with an 8%+ chance to rise, with their causes;
+  - an old ruler (60+), naming the vassals likely to refuse a new oath;
+  - armies with no road home.
+- **Why on the spot.** A vassal's Loyalty tile names what makes it restless ("no troops near,
+  weak throne, ill will"), and notes when a garrison halves it.
+- The envoy's vassal advice now explains oaths to the ruler, weak thrones and ill will.
+- Debug: `-demoWeak YES` gives the player a weak, old ruler to see the warnings.

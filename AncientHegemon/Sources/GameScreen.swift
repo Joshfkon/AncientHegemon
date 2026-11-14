@@ -283,6 +283,8 @@ struct GameScreen: View {
                 session.demoFlash(seat)
             }
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
+            // -demoWeak YES: a weak, old ruler, so vassals' warnings show.
+            if UserDefaults.standard.bool(forKey: "demoWeak") { session.demoWeak() }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
@@ -468,6 +470,9 @@ struct GameScreen: View {
                         }
                         if offers.count > 2 { notice("🕊️ +\(offers.count - 2) more", "View") { open(.diplomacy) } }
                     }
+                    if let human = session.human, case let warnings = Why(engine: engine, me: human).warnings(state), !warnings.isEmpty {
+                        notice("⚠️ \(warnings.count == 1 ? warnings[0].text : "\(warnings.count) things to watch")", "See") { session.showReport = true }
+                    }
                     if !session.report.isEmpty, !session.report.contains(where: { $0.mine == true }) {
                         notice("📜 \(session.report.count) event\(session.report.count == 1 ? "" : "s") elsewhere", "Read") { session.showReport = true }
                     }
@@ -622,6 +627,9 @@ struct GameScreen: View {
         case let .sacked(_, by, _): SoundBoard.shared.play(by == session.human ? .victory : .defeat, volume: 0.6); Feedback.outcome(by == session.human)
         case let .splendour(began): SoundBoard.shared.play(began ? .horn : .click, volume: 0.5); Feedback.outcome(began)
         case .ironAge: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(0.8)
+        case .vassalRose: SoundBoard.shared.play(.wardrums, volume: 0.6); Feedback.outcome(false)
+        case .marketClosed: SoundBoard.shared.play(.coins, volume: 0.4); Feedback.outcome(false)
+        case .hunger: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
         }
         let fx = MomentBanner.effect(moment.kind)
         if fx.shake { withAnimation(.linear(duration: 0.5)) { shake += 1 } }
@@ -634,6 +642,9 @@ struct GameScreen: View {
         if case let .captured(t) = moment.kind {
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
         }
+        // Show where it happened, so the cause is on the map, not just in words.
+        if case let .vassalRose(t, _) = moment.kind { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
+        if case let .marketClosed(t, _) = moment.kind { mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1) }
         if case let .rebellion(_, lands, _, _) = moment.kind, let t = lands.first {
             mapCenter = MapCenter(territory: t, id: (mapCenter?.id ?? 0) + 1)
         }

@@ -759,6 +759,11 @@ final class GameSession {
                 new.append(Moment(kind: .monumentLost(id)))
             case let .armyPaid(civ, _, deserted) where civ == me && deserted > 0:
                 new.append(Moment(kind: .unpaid(deserted)))
+            case let .vassalFreed(civ, t) where civ == me:
+                flashes[t] = .now
+                new.append(Moment(kind: .vassalRose(t, why: Why(engine: engine, me: me).vassalFreed(t, before: before, after: after))))
+            case let .starvation(civ, people, units) where civ == me && people + units > 0:
+                new.append(Moment(kind: .hunger(people: people, soldiers: units)))
             case let .event(r) where r.civ == me:
                 if [.famine, .drought, .flood, .plague, .earthquake, .seaPeoples, .barbarians, .revolt].contains(r.kind) {
                     new.append(Moment(kind: .disaster(r.kind, r.territory)))
@@ -766,6 +771,9 @@ final class GameSession {
             default:
                 break
             }
+        }
+        for closed in Why(engine: engine, me: me).marketsClosed(before: before, after: after) {
+            new.append(Moment(kind: .marketClosed(closed.homeland, why: closed.why)))
         }
         moments.append(contentsOf: new)
         if moments.count > 4 { moments.removeFirst(moments.count - 4) }
@@ -781,6 +789,13 @@ final class GameSession {
 
     #if DEBUG
     func demoFlash(_ t: TerritoryID) { flashes[t] = .now }
+
+    /// A weak, old ruler.
+    func demoWeak() {
+        guard let human else { return }
+        state.civs[human]!.legitimacy = 20
+        state.civs[human]!.ruler.age = 64
+    }
 
     /// Stages a sea battle: four of our ships beside three enemy ships, at war.
     func demoSeaBattle() -> Muster? {
@@ -864,6 +879,9 @@ final class GameSession {
             return engine.map.landNeighbors(of: t).contains { after.owner(of: $0) == human }
         }
         func monumentName(_ id: MonumentID) -> String { engine.rules.monuments.list.first { $0.id == id }?.name ?? id }
+        // Why setbacks happened to the player, from the state before them.
+        let why = human.map { Why(engine: engine, me: $0) }
+        func because(_ reason: String?) -> String { reason.map { ". " + $0 } ?? "" }
         var mine = false
         func add(_ civ: CivilizationID?, _ text: String, at territory: TerritoryID? = nil) {
             nextID += 1
@@ -953,19 +971,27 @@ final class GameSession {
             case let .trophyWon(civ, kind) where civ == human && !{ if case .spoils = kind { true } else { false } }():
                 add(civ, "A trophy for the throne room: \(ThroneRoomView.trophyName(kind, engine, after).lowercased())")
             case let .armyPaid(civ, _, deserted) where civ == human && deserted > 0:
-                add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home")
+                add(civ, "The treasury is empty: \(deserted) unpaid soldier\(deserted == 1 ? "" : "s") went home" + because(why?.unpaid(deserted)))
+            case let .starvation(civ, people, units) where civ == human && people + units > 0:
+                mine = true
+                add(civ, why?.starvation(population: people, units: units, before: before) ?? "Hunger in your realm")
+            case let .outOfSupply(civ, t, units) where civ == human && units > 0:
+                mine = true
+                add(civ, why?.outOfSupply(t, units: units) ?? "Soldiers lost out of supply", at: t)
             case let .vassalSworn(civ, t):
                 if civ == human || isNeighbour(t) {
                     add(civ, "\(peopleName(t).capitalizedFirst) swear\(peopleName(t).hasPrefix("the ") ? "" : "s") fealty to \(name(civ))", at: t)
                 }
             case let .vassalFreed(civ, t) where civ == human:
-                add(civ, "\(peopleName(t).capitalizedFirst) rise\(peopleName(t).hasPrefix("the ") ? "" : "s") and no longer serve\(peopleName(t).hasPrefix("the ") ? "" : "s") you", at: t)
+                add(civ, "\(peopleName(t).capitalizedFirst) rise\(peopleName(t).hasPrefix("the ") ? "" : "s") and no longer serve\(peopleName(t).hasPrefix("the ") ? "" : "s") you"
+                    + because(why?.vassalFreed(t, before: before, after: after)), at: t)
             case let .levyRefused(civ, t) where civ == human:
-                add(civ, "\(peopleName(t).capitalizedFirst) send\(peopleName(t).hasPrefix("the ") ? "" : "s") no warriors: the levy goes unanswered", at: t)
+                add(civ, "\(peopleName(t).capitalizedFirst) send\(peopleName(t).hasPrefix("the ") ? "" : "s") no warriors: the levy goes unanswered"
+                    + because(why?.levyRefused(t, before: before)), at: t)
             case let .kingdomTradeMade(civ, t, goods, gold) where civ == human:
                 add(civ, "\(peopleName(t).capitalizedFirst) will sell you \(DealText.goods(goods)) a turn for \(gold) gold", at: t)
             case let .kingdomTradeEnded(civ, t) where civ == human:
-                add(civ, "Your trade with \(peopleName(t)) has lapsed", at: t)
+                add(civ, "Your trade with \(peopleName(t)) has lapsed" + because(why?.tradeEnded(t, before: before, after: after)), at: t)
             case let .oathRenewed(civ, t) where civ == human:
                 add(civ, "\(peopleName(t).capitalizedFirst) swear\(peopleName(t).hasPrefix("the ") ? "" : "s") fealty anew to your new ruler", at: t)
             case let .levied(civ, t, to, warriors) where civ == human:
@@ -1096,6 +1122,13 @@ final class GameSession {
             case let .eliminated(civ): add(civ, "\(name(civ)) is destroyed")
             case let .victory(civ): add(civ, "\(name(civ)) dominates the known world")
             default: break
+            }
+        }
+        // Markets that closed to the player, though no single event says so.
+        if let why {
+            for closed in why.marketsClosed(before: before, after: after) {
+                mine = true
+                add(nil, "\(peopleName(closed.homeland).capitalizedFirst) close their market to you. \(closed.why)", at: closed.homeland)
             }
         }
         noteMoments(events, before: before, after: after)
