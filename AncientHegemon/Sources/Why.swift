@@ -117,6 +117,19 @@ struct Why {
                                text: "Your army at \(engine.map.territory(t)?.name ?? t) has no road home: it loses a soldier each turn",
                                territory: t))
         }
+        // Too far ahead: the world bands together.
+        if engine.menace(in: s) == me {
+            out.append(Warning(id: "feared", icon: "eye.fill",
+                               text: "The world fears you: rival courts will make common cause against you, and kingdoms' regard for you sinks (markets may close)",
+                               territory: nil))
+        }
+        // The turning of the age.
+        let until = engine.collapseRounds(s).start + 1 - s.turn
+        if (1...3).contains(until) {
+            out.append(Warning(id: "collapse", icon: "sailboat.fill",
+                               text: "The collapse begins in \(until) round\(until == 1 ? "" : "s"). Fill the granaries; keep tin flowing",
+                               territory: nil))
+        }
         return out
     }
 

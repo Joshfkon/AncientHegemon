@@ -37,6 +37,10 @@ public struct VictoryRules: Codable, Sendable, Equatable {
     public let decisiveBefore: Int
     /// Rounds a civ must hold every sea chokepoint while trading with every rival (trade victory).
     public let tradeRoundsHeld: Int
+    /// Rounds before this don't count toward a trade victory (in proportion in a short age),
+    /// and a world needs this many straits for one.
+    public let tradeEarliestRound: Int
+    public let tradeMinStraits: Int
     /// A legacy win is major when the winner's prestige is at least this percent of the runner-up's.
     public let majorLegacyMargin: Int
     public let prestige: PrestigeRules

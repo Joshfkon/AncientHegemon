@@ -130,9 +130,16 @@ extension Engine {
         inQuietOpening(state.owner(of: t), state) || inQuietOpening(state.armies[t]?.owner, state)
     }
 
+    /// Rounds in a short age.
+    public static let shortAge = 30
+
     public func prepare(_ state: inout GameState, human: CivilizationID?, difficulty: Difficulty, scenario: Scenario?,
-                        guided: Bool = false) {
+                        guided: Bool = false, rounds: Int? = nil) {
         if guided, human != nil { state.quietUntil = state.turn - 1 + Self.quietRounds }
+        if scenario == nil, let rounds, rounds != rules.victory.roundLimit {
+            state.ageLength = rounds
+            state.roundLimit = rounds
+        }
         if let scenario {
             scenario.setup(self, &state)
             state.scenario = scenario.id

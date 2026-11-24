@@ -561,6 +561,7 @@ extension Engine {
     /// Once a round, each kingdom acts on its own.
     func minorsRound(_ state: inout GameState) -> [GameEvent] {
         let m = rules.minors
+        let feared = menace(in: state)
         var events: [GameEvent] = []
         for k in state.kingdoms.keys.sorted() {
             guard let kingdom = state.kingdoms[k] else { continue }
@@ -571,10 +572,15 @@ extension Engine {
                 state.kingdoms[k] = nil
                 continue
             }
-            // Feelings fade back toward their nature.
+            // Feelings fade back toward their nature, and sour toward an empire that threatens
+            // to swallow the world (not its own overlord's: vassals already bow to it).
             let base = baseAttitude(of: k, in: state)
-            for (civ, a) in kingdom.attitude.sorted(by: { $0.key < $1.key }) {
-                state.kingdoms[k]!.attitude[civ] = a > base ? max(base, a - m.drift) : min(base, a + m.drift)
+            if let feared, kingdom.overlord != feared, kingdom.attitude[feared] == nil {
+                state.kingdoms[k]!.attitude[feared] = base
+            }
+            for (civ, a) in state.kingdoms[k]!.attitude.sorted(by: { $0.key < $1.key }) {
+                let target = base + (civ == feared && kingdom.overlord != civ ? rules.coalitions.kingdomRegard : 0)
+                state.kingdoms[k]!.attitude[civ] = a > target ? max(target, a - m.drift) : min(target, a + m.drift)
             }
             // Warriors grow back, land by land.
             if state.turn % max(1, m.growthRounds) == 0 {

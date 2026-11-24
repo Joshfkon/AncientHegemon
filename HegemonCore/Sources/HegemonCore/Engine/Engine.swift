@@ -342,7 +342,7 @@ public struct Engine: Sendable {
             state.disruptedRoutes = state.disruptedRoutes.filter { $0.value >= state.turn }
             let ended = roundVictoryChecks(&state)
             if !ended.isEmpty { return closing + ended }
-            age = dawnOfIron(&state) + piratesRound(&state) + minorsRound(&state) + diplomacyRound(&state)
+            age = ageTurns(state) + dawnOfIron(&state) + piratesRound(&state) + minorsRound(&state) + diplomacyRound(&state)
         }
 
         return closing + beginTurn(age, &state)

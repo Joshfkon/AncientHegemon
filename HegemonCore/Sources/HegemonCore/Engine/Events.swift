@@ -129,22 +129,7 @@ extension Engine {
             let fronts = barbarianFronts(civ, state)
             guard !fronts.isEmpty else { return [] }
             let (homeland, target) = fronts[Int(state.rng.next() % UInt64(fronts.count))]
-            let size = e.barbarianBase + state.turn / max(1, e.barbarianTurnsPerExtra)
-                + collapsePressure(state) / max(1, rules.collapse.migrationPressurePerExtra)
-            let horde = UnitCounts(infantry: size - size / 2, cavalry: size / 2)
-            var events = [report(target, size)]
-            if homeland != target {
-                // The horde gathers in its homeland, sweeping up the local tribes, then strikes.
-                if let local = state.armies[homeland], local.owner == nativesID || local.owner == barbariansID {
-                    state.armies[homeland]!.owner = barbariansID
-                } else if state.armies[homeland] == nil {
-                    state.armies[homeland] = Army(owner: barbariansID, units: .zero)
-                }
-            }
-            events += raid(barbariansID, horde, into: target,
-                           fallback: homeland == target ? nil : homeland, &state)
-            if state.armies[homeland]?.units.isEmpty == true { state.armies[homeland] = nil }
-            return events
+            return barbarianRaid(from: homeland, into: target, &state)
 
         case .revolt:
             let steps = supplyDistances(of: civ, in: state)
@@ -158,6 +143,24 @@ extension Engine {
         case .seaPeoples, .drought, .earthquake, .tradeDisrupted:
             return strikeCollapse(kind, civ, &state)
         }
+    }
+
+    /// A horde gathers in its homeland, sweeping up the local tribes, then strikes `target`.
+    func barbarianRaid(from homeland: TerritoryID, into target: TerritoryID, _ state: inout GameState) -> [GameEvent] {
+        guard let civ = state.owner(of: target) else { return [] }
+        let size = raidSize(state)
+        let horde = UnitCounts(infantry: size - size / 2, cavalry: size / 2)
+        var events: [GameEvent] = [.event(EventReport(kind: .barbarians, civ: civ, territory: target, amount: size))]
+        if homeland != target {
+            if let local = state.armies[homeland], local.owner == nativesID || local.owner == barbariansID {
+                state.armies[homeland]!.owner = barbariansID
+            } else if state.armies[homeland] == nil {
+                state.armies[homeland] = Army(owner: barbariansID, units: .zero)
+            }
+        }
+        events += raid(barbariansID, horde, into: target, fallback: homeland == target ? nil : homeland, &state)
+        if state.armies[homeland]?.units.isEmpty == true { state.armies[homeland] = nil }
+        return events
     }
 
     /// Plague strikes the most populous home territories and may kill the ruler. Unless it is

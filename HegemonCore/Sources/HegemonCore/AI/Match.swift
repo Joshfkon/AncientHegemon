@@ -119,9 +119,11 @@ public func shuffledTurnOrder(_ civs: [CivilizationID], seed: UInt64) -> [Civili
 /// Plays a full AI-vs-AI game. Deterministic for a given seed and personalities.
 /// `onRound` is called at the start of every round (all civs have moved), for tracing.
 public func playAIMatch(engine: Engine, seed: UInt64, personalities: [CivilizationID: Personality],
-                        civilizations: [CivilizationID]? = nil, maxTurns: Int,
+                        civilizations: [CivilizationID]? = nil, maxTurns: Int, rounds: Int? = nil,
                         onRound: ((GameState) -> Void)? = nil) throws -> MatchRecord {
     var state = try engine.newGame(seed: seed, civilizations: civilizations)
+    // A short age: fewer rounds, the collapse in proportion.
+    if let rounds { engine.prepare(&state, human: nil, difficulty: .medium, scenario: nil, rounds: rounds) }
     var civs: [CivilizationID: CivRecord] = [:]
     var ais: [CivilizationID: AIPlayer] = [:]
     for civ in state.players {

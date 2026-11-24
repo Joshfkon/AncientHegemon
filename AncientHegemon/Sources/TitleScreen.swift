@@ -48,7 +48,7 @@ struct CivPickerView: View {
                 // How the game is set: difficulty and scenario, with what they mean.
                 HStack(spacing: 12) {
                     setupRow
-                    Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? "")
+                    Text((scenario.map { "\($0.name): \($0.rounds) rounds. " } ?? (shortAge ? "A short age: \(Engine.shortAge) rounds. " : ""))
                          + (engine.rules.difficulty[difficulty]?.blurb ?? "")
                          + (guided && scenario == nil ? " Guided: a quiet start, and your council shows you the ropes." : ""))
                         .font(.caption).foregroundStyle(.white.opacity(0.8))
@@ -100,8 +100,13 @@ struct CivPickerView: View {
             Text("Your council can walk you through the first few turns, while the world leaves you in peace until round \(Engine.quietRounds). You can change this later with the Guided switch.")
         }
         .sheet(isPresented: $showScenarios) {
-            ScenarioPicker(engine: session.classic, state: session.state) { picked in
+            ScenarioPicker(engine: session.classic, state: session.state, short: { short in
+                scenario = nil
+                shortAge = short
+                showScenarios = false
+            }) { picked in
                 scenario = picked
+                if picked != nil { shortAge = false }
                 showScenarios = false
                 // Scenarios are fought on the classic board.
                 if picked != nil, randomWorld {
@@ -175,6 +180,8 @@ struct CivPickerView: View {
     /// The difficulty chosen for new games (remembered), and the scenario, if one is picked.
     @AppStorage("difficulty") private var difficultyRaw = Difficulty.medium.rawValue
     @State private var scenario: Scenario?
+    /// A whole age played over fewer rounds (remembered).
+    @AppStorage("shortAge") private var shortAge = false
     /// A guided start: asked of new players once, then a switch on the title screen.
     @AppStorage("guidedStart") private var guided = true
     @AppStorage("guideAsked") private var guideAsked = false
@@ -236,17 +243,17 @@ struct CivPickerView: View {
             .padding(3)
             .woodPanel(Capsule())
             Button { showScenarios = true } label: {
-                Label(scenario.map { "\($0.name) · \($0.year)" } ?? "Scenarios", systemImage: "scroll.fill")
+                Label(scenario.map { "\($0.name) · \($0.year)" } ?? (shortAge ? "Short age" : "Scenarios"), systemImage: "scroll.fill")
                     .lineLimit(1).fixedSize()
                     .font(.callout.bold())
                     .padding(.horizontal, 14).padding(.vertical, 9)
-                    .foregroundStyle(scenario == nil ? Color.white : .black)
-                    .background(Capsule().fill(scenario == nil ? AnyShapeStyle(Color.clear) : AnyShapeStyle(Bronze.gradient)))
+                    .foregroundStyle(scenario == nil && !shortAge ? Color.white : .black)
+                    .background(Capsule().fill(scenario == nil && !shortAge ? AnyShapeStyle(Color.clear) : AnyShapeStyle(Bronze.gradient)))
                     .woodPanel(Capsule())
             }
             .buttonStyle(.plain)
-            if scenario != nil {
-                Button { scenario = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.7)) }
+            if scenario != nil || shortAge {
+                Button { scenario = nil; shortAge = false } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.7)) }
                     .buttonStyle(.plain).accessibilityLabel("The whole age instead")
             }
             // A guided start: a quiet opening, and the council walking you through the basics.
@@ -284,7 +291,8 @@ struct CivPickerView: View {
         withAnimation(.spring(duration: 0.4)) { chosen = civ }
         Task {
             try? await Task.sleep(for: .milliseconds(650))
-            session.start(as: civ, difficulty: difficulty, scenario: scenario, guided: guided && scenario == nil)
+            session.start(as: civ, difficulty: difficulty, scenario: scenario, guided: guided && scenario == nil,
+                          rounds: scenario == nil && shortAge ? Engine.shortAge : nil)
             chosen = nil
             scenario = nil
         }
@@ -394,14 +402,20 @@ struct BannerShape: Shape {
 struct ScenarioPicker: View {
     let engine: Engine
     let state: GameState
+    /// The whole age, full (false) or short (true).
+    let short: (Bool) -> Void
     let pick: (Scenario?) -> Void
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Button { pick(nil) } label: {
+                    Button { short(false) } label: {
                         row(title: "The whole age", year: "1200 BC", blurb: "Fifty rounds from the end of the Bronze Age to the dawn of iron. The full game.", suggested: [], rounds: engine.rules.victory.roundLimit)
+                    }
+                    .buttonStyle(.plain)
+                    Button { short(true) } label: {
+                        row(title: "A short age", year: "1200 BC", blurb: "The whole age in \(Engine.shortAge) rounds: the Sea Peoples come sooner and the collapse runs faster. A game for an evening.", suggested: [], rounds: Engine.shortAge)
                     }
                     .buttonStyle(.plain)
                     ForEach(Scenario.all) { s in

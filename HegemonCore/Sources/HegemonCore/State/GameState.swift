@@ -110,6 +110,8 @@ public struct CivState: Codable, Sendable, Equatable {
     public var patronage: KnowledgeField?
     /// A dilemma waiting for a person's answer this turn.
     public var decision: DecisionKind?
+    /// The round the court was last put a dilemma (added after 1.0: optional).
+    public var lastDecision: Int?
     /// Rounds left in an age of splendour, and rounds before another can begin.
     public var splendour = 0
     public var splendourRest = 0
@@ -250,6 +252,9 @@ public struct GameState: Codable, Sendable, Equatable {
     public var difficulty: Difficulty?
     public var scenario: ScenarioID?
     public var roundLimit: Int?
+    /// A whole-age game played over fewer rounds than the rules' (a short age): the collapse
+    /// comes in proportion. Nil for the full age and for scenarios.
+    public var ageLength: Int?
     /// A guided start: through this round, the player is left alone (no attacks on their land,
     /// no raids, no disasters) while they learn the ropes.
     public var quietUntil: Int?

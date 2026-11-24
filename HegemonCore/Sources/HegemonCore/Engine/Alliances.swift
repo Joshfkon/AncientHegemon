@@ -206,6 +206,10 @@ public struct CoalitionRules: Codable, Sendable, Equatable {
     public let prestigeLeadPercent: Int
     /// …or once it holds this share (percent) of the land needed to win by domination.
     public let dominationSharePercent: Int
+    /// Fear of the menace: where the other courts' and the kingdoms' regard for it settles,
+    /// relative to where it would otherwise.
+    public let rivalRegard: Int
+    public let kingdomRegard: Int
 }
 
 extension Engine {

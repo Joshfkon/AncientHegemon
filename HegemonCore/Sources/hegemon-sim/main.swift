@@ -6,6 +6,7 @@ import HegemonCore
 //   hegemon-sim [--games N] [--turns T] [--seed S] [--personality NAME] [--fixed-order]
 //       N games (default 20) of at most T turns (default 150), seeds S, S+1, ...
 //       --personality gives every civ the same temperament, so differences come from the map.
+//       --rounds N plays a short age of N rounds (the collapse in proportion);
 //       --random-map plays each game on a freshly generated world (seeded by the game's seed);
 //       --world W plays every game on generated world W.
 //   hegemon-sim world [--seed S] [--count N] [--json PATH]
@@ -201,7 +202,8 @@ for g in 0..<games {
     let world: UInt64? = CommandLine.arguments.contains("--random-map") ? seed : option("--world").flatMap { UInt64($0) }
     let gameEngine = try world.map { engine.on(try WorldGenerator.generate(seed: $0, template: engine.map)) } ?? engine
     let record = try playAIMatch(engine: gameEngine, seed: seed, personalities: personalities,
-                                 civilizations: order, maxTurns: maxTurns)
+                                 civilizations: order, maxTurns: maxTurns,
+                                 rounds: option("--rounds").flatMap { Int($0) })
     records.append(record)
     gameEngines.append(gameEngine)
     let routes = gameEngine.tradeRoutes(in: record.finalState)

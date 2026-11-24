@@ -202,6 +202,10 @@ public enum GameEvent: Codable, Sendable, Equatable {
     case splendourBegan(civ: CivilizationID)
     case splendourEnded(civ: CivilizationID)
     case ironAgeBegan
+    /// Sea Peoples sighted: the troubles of the age begin next round.
+    case collapseNear
+    /// The collapse has begun: raids, migrations, droughts and broken trade from now on.
+    case collapseBegan
     case playingOn
     case capitalSacked(by: CivilizationID, from: CivilizationID, territory: TerritoryID, gold: Int)
     case siegeLaid(civ: CivilizationID, territory: TerritoryID, camp: TerritoryID)

@@ -177,6 +177,12 @@ import Testing
         for t in ["baetica", "mauretania", "thrace", "anatolia", "sicilia"] { s.land[t]!.owner = "greece" }
         s.peace.insert(CivPair("greece", "egypt"))
         #expect(engine.meetsTradeConditions("greece", in: s))
+        // Holding the straits early counts for nothing: trade takes an age to command.
+        for _ in 0..<(2 * engine.rules.victory.tradeRoundsHeld) where s.winner == nil {
+            try engine.apply(.endTurn, to: &s)
+        }
+        #expect(s.winner == nil)
+        s.turn = engine.rules.victory.tradeEarliestRound
         for _ in 0..<(2 * engine.rules.victory.tradeRoundsHeld) where s.winner == nil {
             try engine.apply(.endTurn, to: &s)
         }

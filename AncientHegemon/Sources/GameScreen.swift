@@ -285,6 +285,8 @@ struct GameScreen: View {
             if UserDefaults.standard.bool(forKey: "demoCrisis") { session.demoCrisis() }
             // -demoWeak YES: a weak, old ruler, so vassals' warnings show.
             if UserDefaults.standard.bool(forKey: "demoWeak") { session.demoWeak() }
+            // -demoDilemma raiders|plea|offerings: a dilemma on the table and the collapse announced.
+            if let which = UserDefaults.standard.string(forKey: "demoDilemma") { session.demoDilemma(which) }
             if UserDefaults.standard.bool(forKey: "demoHost") { session.demoHost() }
             if UserDefaults.standard.bool(forKey: "demoSiege") { session.demoSiege() }
             if UserDefaults.standard.bool(forKey: "demoBesieged") { session.demoBesieged() }
@@ -627,6 +629,8 @@ struct GameScreen: View {
         case let .sacked(_, by, _): SoundBoard.shared.play(by == session.human ? .victory : .defeat, volume: 0.6); Feedback.outcome(by == session.human)
         case let .splendour(began): SoundBoard.shared.play(began ? .horn : .click, volume: 0.5); Feedback.outcome(began)
         case .ironAge: SoundBoard.shared.play(.clash, volume: 0.6); Feedback.impact(0.8)
+        case let .collapse(near): SoundBoard.shared.play(near ? .horn : .wardrums, volume: 0.6); Feedback.impact(near ? 0.5 : 0.9)
+        case let .feared(began): SoundBoard.shared.play(began ? .wardrums : .click, volume: 0.5); Feedback.impact(began ? 0.8 : 0.3)
         case .vassalRose: SoundBoard.shared.play(.wardrums, volume: 0.6); Feedback.outcome(false)
         case .marketClosed: SoundBoard.shared.play(.coins, volume: 0.4); Feedback.outcome(false)
         case .hunger: SoundBoard.shared.play(.defeat, volume: 0.5); Feedback.outcome(false)
@@ -650,7 +654,7 @@ struct GameScreen: View {
         }
         // A cancelled sleep throws: only the moment that's still showing may dismiss itself.
         // Discoveries stay up longer: there's something to read.
-        let linger = switch moment.kind { case .discovery, .monument, .rebellion, .splendour, .ironAge, .sacked: 4200; default: 1900 }
+        let linger = switch moment.kind { case .discovery, .monument, .rebellion, .splendour, .ironAge, .sacked, .collapse, .feared: 4200; default: 1900 }
         do { try await Task.sleep(for: .milliseconds(linger)) } catch { return }
         guard session.moments.first?.id == moment.id else { return }
         withAnimation(.easeInOut(duration: 0.3)) { session.dismissMoment() }

@@ -1,5 +1,5 @@
 {
-  "version": 38,
+  "version": 39,
   "notes": "Balancing data, first-pass estimates. Tune from hegemon-sim results (build step 5). See docs/DESIGN.md section 6.",
   "units": {
     "infantry": {
@@ -21,6 +21,8 @@
     "roundLimit": 50,
     "decisiveBefore": 30,
     "tradeRoundsHeld": 5,
+    "tradeEarliestRound": 16,
+    "tradeMinStraits": 2,
     "majorLegacyMargin": 150,
     "prestige": {
       "perTerritory": 10,
@@ -861,7 +863,17 @@
     "honoursSnubLoyalty": 15,
     "mercenaryChancePercent": 12,
     "mercenaryWarriors": 3,
-    "mercenaryGold": 9
+    "mercenaryGold": 9,
+    "offeringsGold": 6,
+    "offeringsLegitimacy": 6,
+    "offeringsRefusedLegitimacy": 3,
+    "pleaChancePercent": 15,
+    "pleaGrain": 3,
+    "pleaAttitude": 25,
+    "pleaRefusedAttitude": 10,
+    "raidersChancePercent": 12,
+    "raidersGoldPerRider": 2,
+    "quietRounds": 4
   },
   "patronage": {
     "gold": 3,
@@ -879,7 +891,9 @@
   },
   "coalitions": {
     "prestigeLeadPercent": 160,
-    "dominationSharePercent": 70
+    "dominationSharePercent": 70,
+    "rivalRegard": -20,
+    "kingdomRegard": -20
   },
   "unrest": {
     "recentRounds": 5,

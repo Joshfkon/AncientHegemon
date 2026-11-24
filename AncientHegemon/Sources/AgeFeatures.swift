@@ -81,6 +81,12 @@ struct DecisionCard: View {
             return ("−\(gold) gold · +\(engine.rules.government.honorLoyalty) loyalty", "−\(d.honoursSnubLoyalty) loyalty")
         case let .mercenaries(warriors, gold):
             return ("−\(gold) gold · +\(warriors) blooded infantry", "Nothing lost")
+        case let .offerings(gold):
+            return ("−\(gold) gold · +\(d.offeringsLegitimacy) legitimacy", "−\(d.offeringsRefusedLegitimacy) legitimacy")
+        case let .plea(_, grain):
+            return ("−\(grain) grain · +\(d.pleaAttitude) regard", "−\(d.pleaRefusedAttitude) regard")
+        case let .raiders(_, _, gold):
+            return ("−\(gold) gold", "\(engine.raidSize(state)) raiders strike")
         }
     }
 
@@ -101,8 +107,29 @@ struct DecisionCard: View {
             return ("sailboat.fill", "Sea raiders offer their swords",
                     "A chieftain of the Sea Peoples, tired of raiding, offers \(warriors) hardened warriors for \(gold) gold. They would serve at your capital. Blooded men, ready to march this turn; such offers don't come often.",
                     "Hire them (\(gold) gold)", "Send them away")
+        case let .offerings(gold):
+            return ("flame.fill", "The priests ask for offerings",
+                    "Disaster has struck your land, and the priests say the gods are angry. Offerings of \(gold) gold would show the people their ruler is pious; refuse, and they will whisper that the throne has lost heaven's favour.",
+                    "Make offerings (\(gold) gold)", "Refuse")
+        case let .plea(k, grain):
+            let who = state.kingdoms[k]?.name ?? "A neighbouring kingdom"
+            let now = engine.attitude(of: k, toward: session.human ?? "", in: state)
+            return ("leaf.fill", "\(who.capitalizedFirst) ask for grain",
+                    "Their harvest has failed, and their envoy kneels before you asking for \(grain) grain. Kingdoms remember who fed them in a bad year, and who didn't. (Their regard for you: \(now).)",
+                    "Send grain (\(grain))", "Refuse")
+        case let .raiders(homeland, target, gold):
+            let size = engine.raidSize(state)
+            return ("figure.equestrian.sports", "Raiders on the frontier",
+                    "\(size) riders gather in \(place(homeland)) and send word: \(gold) gold, and they will ride elsewhere. Refuse, and they fall on \(place(target)) this turn. \(defenders(target)) stand there.",
+                    "Pay them (\(gold) gold)", "Let them come")
         }
     }
+
+    private func defenders(_ t: TerritoryID) -> String {
+        let n = state.armies[t].map { $0.owner == session.human ? $0.units.total : 0 } ?? 0
+        return n == 0 ? "No soldiers" : "\(n) soldier\(n == 1 ? "" : "s")"
+    }
+
 }
 
 /// The age's great works: who holds which, who is building what, and (in your land) what

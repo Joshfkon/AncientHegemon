@@ -92,3 +92,48 @@ import Testing
         #expect(engine.bronzePercent("greece", s) == 80)
     }
 }
+
+@Suite struct PacingTests {
+    let engine = try! Engine.calm()
+
+    @Test func aShortAgeBringsTheCollapseSooner() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        engine.prepare(&s, human: "egypt", difficulty: .medium, scenario: nil, rounds: Engine.shortAge)
+        #expect(engine.roundLimit(s) == Engine.shortAge)
+        let c = engine.rules.collapse
+        let short = engine.collapseRounds(s)
+        #expect(short.start == c.startRound * Engine.shortAge / engine.rules.victory.roundLimit)
+        #expect(short.peak < c.peakRound)
+        s.turn = short.start + 1
+        #expect(engine.collapsePressure(s) > 0)
+        // The full age is untouched.
+        let full = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        #expect(engine.collapseRounds(full) == (c.startRound, c.peakRound))
+    }
+
+    @Test func theCollapseIsAnnounced() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece"])
+        let start = engine.collapseRounds(s).start
+        s.turn = start
+        #expect(engine.ageTurns(s) == [.collapseNear])
+        s.turn = start + 1
+        #expect(engine.ageTurns(s) == [.collapseBegan])
+        s.turn = start + 2
+        #expect(engine.ageTurns(s).isEmpty)
+    }
+
+    @Test func theWorldFearsAMenace() throws {
+        var s = try engine.newGame(seed: 1, civilizations: ["egypt", "greece", "italia"])
+        // Egypt sweeps the board.
+        let free = engine.map.territories.map(\.id).filter { s.owner(of: $0) == nil }.sorted()
+        for t in free.prefix(free.count / 2) { s.land[t]!.owner = "egypt" }
+        #expect(engine.menace(in: s) == "egypt")
+        let k = try #require(s.kingdoms.keys.sorted().first { s.kingdoms[$0]?.overlord == nil })
+        let before = engine.attitude(of: k, toward: "egypt", in: s)
+        for _ in 0..<20 { _ = engine.minorsRound(&s); _ = engine.diplomacyRound(&s) }
+        if s.kingdoms[k] != nil {
+            #expect(engine.attitude(of: k, toward: "egypt", in: s) < before)
+        }
+        #expect(engine.regard(of: "greece", toward: "egypt", in: s) < engine.regard(of: "greece", toward: "italia", in: s))
+    }
+}

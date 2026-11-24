@@ -163,9 +163,12 @@ extension Engine {
     }
 
     /// Where regard between two courts settles, given how things stand between them.
-    func regardTarget(_ a: CivilizationID, _ b: CivilizationID, routes: [TradeRoute], _ state: GameState) -> Int {
+    func regardTarget(_ a: CivilizationID, _ b: CivilizationID, routes: [TradeRoute], menace: CivilizationID?,
+                      _ state: GameState) -> Int {
         let d = rules.diplomacy
         var t = 0
+        // Everyone fears the empire pulling away from the rest.
+        if b == menace { t += rules.coalitions.rivalRegard }
         if state.atWar(a, b) { t += d.warRegard }
         if routes.contains(where: { $0.involves(a) && $0.involves(b) }) { t += d.tradeRegard }
         if married(a, b, in: state) { t += d.kinRegard }
@@ -184,9 +187,10 @@ extension Engine {
         let d = rules.diplomacy
         let alive = state.players.filter { !(state.civs[$0]?.eliminated ?? true) }
         let routes = tradeRoutes(in: state)
+        let feared = menace(in: state)
         for a in alive {
             for b in alive where a != b {
-                let target = regardTarget(a, b, routes: routes, state)
+                let target = regardTarget(a, b, routes: routes, menace: feared, state)
                 let now = regard(of: a, toward: b, in: state)
                 let next = now > target ? max(target, now - d.drift) : min(target, now + d.drift)
                 if next != now { state.regard[Opinion(a, about: b)] = next }

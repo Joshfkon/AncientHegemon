@@ -92,19 +92,29 @@ extension Engine {
     /// Whether a civ meets the trade-victory conditions right now: every sea chokepoint held,
     /// and a trade route with every surviving rival.
     public func meetsTradeConditions(_ civ: CivilizationID, in state: GameState) -> Bool {
+        guard tradeVictoryPossible else { return false }
         let straits = map.chokepoints.filter { $0.gatesSeaLink != nil }
-        guard !straits.isEmpty, straits.allSatisfy({ holder(of: $0, in: state) == civ }) else { return false }
+        guard straits.allSatisfy({ holder(of: $0, in: state) == civ }) else { return false }
         let rivals = state.players.filter { $0 != civ && !state.civs[$0]!.eliminated }
         guard !rivals.isEmpty else { return false }
         let partners = Set(tradeRoutes(in: state).filter { $0.involves(civ) }.map { $0.partner(of: civ) })
         return rivals.allSatisfy(partners.contains)
     }
 
+    /// Whether this world's seas can be commanded at all: one lone strait is a toll gate, not
+    /// a trading world, so a trade victory needs at least two.
+    public var tradeVictoryPossible: Bool {
+        map.chokepoints.filter { $0.gatesSeaLink != nil }.count >= rules.victory.tradeMinStraits
+    }
+
     /// Checked as each new round begins: trade holds advance, and the round limit may end the game.
     func roundVictoryChecks(_ state: inout GameState) -> [GameEvent] {
         guard state.playingOn != true else { return [] }
         for civ in state.players where !state.civs[civ]!.eliminated {
-            state.tradeHold[civ] = meetsTradeConditions(civ, in: state) ? (state.tradeHold[civ] ?? 0) + 1 : 0
+            // Trade takes an age to command: the holding only counts from the earliest round.
+            let earliest = rules.victory.tradeEarliestRound * (state.ageLength ?? rules.victory.roundLimit) / max(1, rules.victory.roundLimit)
+            let counts = state.turn >= earliest && meetsTradeConditions(civ, in: state)
+            state.tradeHold[civ] = counts ? (state.tradeHold[civ] ?? 0) + 1 : 0
             if state.tradeHold[civ]! >= rules.victory.tradeRoundsHeld {
                 return declareVictory(civ, .trade, &state)
             }

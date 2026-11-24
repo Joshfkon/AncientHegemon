@@ -234,7 +234,8 @@ final class GameSession {
     }
 
     /// Starts a game as `civ`, or as a spectator when nil.
-    func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil, guided: Bool = false) {
+    func start(as civ: CivilizationID?, difficulty: Difficulty = .medium, scenario: Scenario? = nil, guided: Bool = false,
+               rounds: Int? = nil) {
         playing = false
         // Scenarios are set on the classic board.
         if scenario != nil, world != nil { chooseWorld(nil) }
@@ -242,7 +243,7 @@ final class GameSession {
         state = try! engine.newGame(seed: seed, civilizations: Self.order(engine, seed))
         human = civ
         if let civ { state.civs[civ]!.isHuman = true }
-        engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario, guided: guided)
+        engine.prepare(&state, human: civ, difficulty: difficulty, scenario: scenario, guided: guided, rounds: rounds)
         refreshEconomy()
         log = []
         battles = []
@@ -582,6 +583,15 @@ final class GameSession {
             return accepted ? "\(g) is honoured with \(gold) gold" : "\(g) is refused honours and sulks"
         case let .mercenaries(warriors, gold):
             return accepted ? "\(warriors) Sea People warriors take your \(gold) gold and your orders" : "The Sea People mercenaries sail away"
+        case let .offerings(gold):
+            return accepted ? "Offerings of \(gold) gold smoke on the altars; the priests praise your piety"
+                            : "The altars stay bare; the priests mutter that the gods are angry"
+        case let .plea(k, grain):
+            let who = state.kingdoms[k]?.name ?? "the kingdom"
+            return accepted ? "\(grain) grain sent to \(who); they will remember it" : "\(who.capitalizedFirst) go hungry, and remember who refused them"
+        case let .raiders(_, t, gold):
+            let place = engine.map.territory(t)?.name ?? t
+            return accepted ? "The raiders take \(gold) gold and ride elsewhere" : "You refuse the raiders; they fall on \(place)"
         }
     }
 
@@ -753,6 +763,10 @@ final class GameSession {
                 new.append(Moment(kind: .splendour(began: false)))
             case .ironAgeBegan:
                 new.append(Moment(kind: .ironAge))
+            case .collapseNear:
+                new.append(Moment(kind: .collapse(near: true)))
+            case .collapseBegan:
+                new.append(Moment(kind: .collapse(near: false)))
             case let .monumentCompleted(civ, _, id):
                 new.append(Moment(kind: .monument(id, civ)))
             case let .monumentLost(civ, _, id) where civ == me:
@@ -775,6 +789,9 @@ final class GameSession {
         for closed in Why(engine: engine, me: me).marketsClosed(before: before, after: after) {
             new.append(Moment(kind: .marketClosed(closed.homeland, why: closed.why)))
         }
+        // Pulled far ahead (or caught): the world turns against us (or lets it go).
+        let wasFeared = engine.menace(in: before) == me, feared = engine.menace(in: after) == me
+        if wasFeared != feared { new.append(Moment(kind: .feared(feared))) }
         moments.append(contentsOf: new)
         if moments.count > 4 { moments.removeFirst(moments.count - 4) }
         // Let the sweeps fade, then forget them, so the map stops redrawing.
@@ -795,6 +812,27 @@ final class GameSession {
         guard let human else { return }
         state.civs[human]!.legitimacy = 20
         state.civs[human]!.ruler.age = 64
+    }
+
+    /// Puts a dilemma to the court (`raiders`, `plea` or `offerings`) and announces the
+    /// collapse, so the pacing pass's cards and moments can be seen.
+    func demoDilemma(_ which: String) {
+        guard let human else { return }
+        state.civs[human]!.gold = max(state.civs[human]!.gold, 20)
+        state.civs[human]!.granary = max(state.civs[human]!.granary, 6)
+        let ours = Set(state.territories(of: human))
+        switch which {
+        case "plea":
+            let near = ours.flatMap { engine.map.landNeighbors(of: $0) }.compactMap { engine.kingdom(at: $0, in: state) }.sorted()
+            if let k = near.first { state.civs[human]!.decision = .plea(kingdom: k, grain: engine.rules.decisions.pleaGrain) }
+        case "offerings":
+            state.civs[human]!.decision = .offerings(gold: engine.rules.decisions.offeringsGold)
+        default:
+            let seat = engine.seat(of: human, in: state) ?? ours.sorted().first!
+            let home = engine.map.landNeighbors(of: seat).sorted().first { state.owner(of: $0) == nil } ?? seat
+            state.civs[human]!.decision = .raiders(homeland: home, target: seat, gold: engine.raidersPrice(state))
+        }
+        moments.append(Moment(kind: .collapse(near: true)))
     }
 
     /// Stages a sea battle: four of our ships beside three enemy ships, at war.
@@ -851,7 +889,7 @@ final class GameSession {
             return civ == me || before.owner(of: t) == me
         case let .capitalSacked(by, from, _, _): return by == me || from == me
         case let .splendourBegan(civ), let .splendourEnded(civ), let .projectQueued(civ, _, _): return civ == me
-        case .ironAgeBegan: return true
+        case .ironAgeBegan, .collapseNear, .collapseBegan: return true
         case let .peaceDeclined(by, offerer): return by == me || offerer == me
         case let .submissionDemanded(a, b), let .submitted(a, b), let .submissionRefused(a, b),
              let .tributePaid(a, b, _), let .vassalEmpireFreed(a, b, _):
@@ -1103,6 +1141,10 @@ final class GameSession {
                 add(nil, "The age is reckoned, but the world goes on: one more turn")
             case .ironAgeBegan:
                 add(nil, "The Iron Age dawns: iron needs no tin, and every realm can arm with it")
+            case .collapseNear:
+                add(nil, "Sea Peoples sighted off the coasts: the troubles of the age begin next round")
+            case .collapseBegan:
+                add(nil, "The collapse begins: raids, migrations, droughts and broken trade will grow worse each round")
             case let .peaceDeclined(by, offerer):
                 add(by, "\(name(by)) turn\(by == human ? "" : "s") down \(name(offerer))'s offer of peace")
             case let .projectQueued(civ, t, kind) where civ == human:

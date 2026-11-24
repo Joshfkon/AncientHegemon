@@ -35,6 +35,10 @@ struct Moment: Identifiable, Equatable {
         case splendour(began: Bool)
         /// The Iron Age dawns.
         case ironAge
+        /// The Sea Peoples are sighted (near), or the collapse has begun.
+        case collapse(near: Bool)
+        /// The player has pulled so far ahead that the world turns against them (or no longer).
+        case feared(Bool)
         /// A vassal threw off our rule, and why.
         case vassalRose(TerritoryID, why: String?)
         /// A kingdom closed its market to us, and why.
@@ -173,6 +177,22 @@ struct MomentBanner: View {
             return Style(icon: "sun.max.fill", title: began ? "An age of splendour" : "The age of splendour fades",
                          subtitle: began ? "\(r.rounds) rounds: building twice as fast, +\(r.goldPercent)% gold, faster growth" : "Build it again: a secure throne and a leading name",
                          color: Color(red: 0.62, green: 0.45, blue: 0.12), stamp: began)
+        case let .collapse(near):
+            return near
+                ? Style(icon: "sailboat.fill", title: "Sea Peoples sighted",
+                        subtitle: "Strange ships off the coasts. Next round the troubles begin: raids, migrations, drought and broken trade, worse each round. Fill the granaries and man the coasts",
+                        color: Color(red: 0.2, green: 0.3, blue: 0.45), stamp: false)
+                : Style(icon: "flame.fill", title: "The collapse begins",
+                        subtitle: "The old world is breaking. Raids, migrations, droughts and failing trade grow worse each round; bronze wears out unless tin keeps flowing",
+                        color: Color(red: 0.45, green: 0.12, blue: 0.08), stamp: true)
+        case let .feared(began):
+            return began
+                ? Style(icon: "eye.fill", title: "The world fears you",
+                        subtitle: "You have pulled far ahead. Rival courts will band together against you, and kingdoms' regard for you will sink",
+                        color: Color(red: 0.45, green: 0.12, blue: 0.08), stamp: true)
+                : Style(icon: "eye.slash.fill", title: "The fear fades",
+                        subtitle: "Your rivals have closed the gap: they no longer band together against you",
+                        color: Color(red: 0.3, green: 0.36, blue: 0.3), stamp: false)
         case .ironAge:
             return Style(icon: "hammer.fill", title: "The Iron Age dawns",
                          subtitle: "Iron needs no tin: every realm can now arm with it",

@@ -4,9 +4,27 @@
 extension Engine {
     /// How far the collapse has gone, 0–100.
     public func collapsePressure(_ state: GameState) -> Int {
+        let c = collapseRounds(state)
+        guard state.turn > c.start else { return 0 }
+        return min(100, (state.turn - c.start) * 100 / max(1, c.peak - c.start))
+    }
+
+    /// The round the collapse begins after, and the round it peaks: the rules', or in a short
+    /// age, the same share of its rounds.
+    public func collapseRounds(_ state: GameState) -> (start: Int, peak: Int) {
         let c = rules.collapse
-        guard state.turn > c.startRound else { return 0 }
-        return min(100, (state.turn - c.startRound) * 100 / max(1, c.peakRound - c.startRound))
+        guard let length = state.ageLength else { return (c.startRound, c.peakRound) }
+        let full = max(1, rules.victory.roundLimit)
+        return (c.startRound * length / full, c.peakRound * length / full)
+    }
+
+    /// The turning of the age, announced: the first Sea Peoples sighted a round before the
+    /// troubles begin, and their beginning. Checked as each round begins.
+    func ageTurns(_ state: GameState) -> [GameEvent] {
+        let c = collapseRounds(state)
+        if state.turn == c.start { return [.collapseNear] }
+        if state.turn == c.start + 1 { return [.collapseBegan] }
+        return []
     }
 
     func collapseWeights(_ civ: CivilizationID, _ state: GameState) -> [(EventKind, Int)] {

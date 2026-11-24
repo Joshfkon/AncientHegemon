@@ -2520,3 +2520,48 @@ and `lapsedOath`.
   weak throne, ill will"), and notes when a garrison halves it.
 - The envoy's vassal advice now explains oaths to the ruler, weak thrones and ill will.
 - Debug: `-demoWeak YES` gives the player a weak, old ruler to see the warnings.
+
+### Pacing: choices in the middle, the world against the leader, a turning age, a short age (after Josh's playtesting review: "over the long middle stretch, rounds can blur together")
+The aim: a fresh threat or decision every few rounds, a leader who has to fight to stay ahead,
+and an age whose turning you can see coming. No artificial goals: every piece follows from how
+the period worked.
+- **More of the court's dilemmas, and a steady beat.** Three new ones join famine, honours and
+  mercenaries, each a wood card with what each answer costs:
+  - *Offerings*: after a flood, plague, earthquake, drought or bad omen on your land, the priests
+    ask 6 gold. Pay for +6 legitimacy; refuse and lose 3.
+  - *A neighbour's plea*: a kingdom next to you (not hostile, not already devoted) asks 3 grain
+    after a bad harvest. Send it for +25 regard; refuse for −10. It shows their regard now.
+  - *Raiders on the frontier*: riders gather in a barbarian homeland next to your land and
+    ask gold (2 a rider) to ride elsewhere. Refuse and they strike that land at once (the same
+    raid as the barbarian event); the card says how many soldiers stand there.
+
+  The chance ones (raiders, honours, plea, mercenaries) are twice as likely once 4 rounds have
+  passed without a dilemma (`decisions.quietRounds`). None come in a guided start's quiet rounds.
+- **The world fears the leader.** The coalition rule (a *menace*: prestige 160% of the
+  runner-up's with a large share of the land, or 70% of the way to domination) already made AIs
+  gang up. Now the fear is felt everywhere: every other court's regard for the menace settles
+  20 lower, and every kingdom not its vassal drifts 20 lower too (so its markets can close and
+  its people grow harder to win). It fades when the gap closes. The player gets a moment when it
+  begins and ends ("The world fears you" / "The fear fades") and a Watch-out line while it lasts.
+- **The age turns, announced.** A round before the collapse begins, "Sea Peoples sighted": a
+  moment, a news line and a Watch-out warning from three rounds out. When it begins, "The
+  collapse begins" says what will now get worse. The Iron Age moment already marked the third
+  turning.
+- **A short age.** "A short age" in the scenario list plays the whole age in 30 rounds, with the
+  collapse in proportion (beginning after round 7, peaking at 24) and the earliest trade
+  victory in proportion. Remembered like the difficulty. `hegemon-sim --rounds 30` plays it.
+- **Fixed: instant trade wins on generated worlds.** A world with a single sea strait let
+  whoever held it win by trade from round 6, since every rival trades with everyone at the
+  start: 9 of 80 simulated games ended that way, one by round 6. A trade victory now needs a
+  world with at least two straits, and holding counts only from round 16 (so the earliest win
+  is round 20). The codex says so.
+- Debug: `-demoDilemma raiders|plea|offerings` puts that dilemma on the table and announces the
+  collapse.
+- Balance (`hegemon-sim --games 80 --seed 501 --random-map`), before → after: trade wins before
+  round 30 9 → 0 (every game now runs the age); lead changes per game 1.1 → 1.2; games where
+  the lead never changed 26% → 23%; wins Greece 22 → 18%, Egypt 31 → 31%, Italia 25 → 25%,
+  Mesopotamia 21 → 25%. A short age (60 games, `--rounds 30`): Greece 36%, Egypt 25%, Italia
+  20%, Mesopotamia 18%; a merchant realm's trade and buildings count for more over fewer
+  rounds. The sims can't see the dilemmas (AI courts aren't asked), which are the main change
+  for a player.
+- Rules version 39.

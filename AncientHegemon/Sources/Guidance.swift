@@ -312,7 +312,7 @@ struct TipBanner: View {
 struct CodexView: View {
     private let sections: [(String, String, String)] = [
         ("flag.fill", "Winning",
-         "Hold 60% of the land for a domination victory, dominate trade for a trade victory, or have the most prestige when the age ends at round 50 (land, people, gold, legitimacy, buildings, trade partners, great works and vassals all count). Wins come in decisive, major and minor grades."),
+         "Hold 60% of the land for a domination victory, hold every sea strait while trading with every rival for 5 rounds for a trade victory (from round 20, on worlds with at least two straits), or have the most prestige when the age ends (round 50, or 30 in a short age) (land, people, gold, legitimacy, buildings, trade partners, great works and vassals all count). Wins come in decisive, major and minor grades."),
         ("arrow.triangle.turn.up.right.diamond.fill", "A turn",
          "Your turn starts with events and the harvest. Then move armies (each unit once), recruit, build, sail and make peace or war. End the turn and every rival moves in turn."),
         ("leaf.fill", "Grain and supply",
